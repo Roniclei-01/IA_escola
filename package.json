@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "tauri": "tauri",
+    "desktop": "env -u SNAP -u SNAP_NAME -u SNAP_REVISION -u SNAP_VERSION -u SNAP_INSTANCE_NAME -u SNAP_USER_DATA -u SNAP_USER_COMMON -u SNAP_DATA -u SNAP_COMMON -u SNAP_CONTEXT -u SNAP_COOKIE -u SNAP_LIBRARY_PATH -u GTK_PATH -u GIO_MODULE_DIR -u LD_LIBRARY_PATH tauri dev",
     "check": "npm run test && cargo test --manifest-path src-tauri/Cargo.toml --no-default-features"
   },
   "dependencies": {

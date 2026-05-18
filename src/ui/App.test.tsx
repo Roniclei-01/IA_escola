@@ -636,6 +636,53 @@ describe("App", () => {
     expect(screen.queryByText("Documento cancelado nao deve aparecer.")).not.toBeInTheDocument();
   });
 
+  it("shows card generation progress while Ollama processes chunks", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-progress",
+      book_id: "book-progress",
+      content: "Conteudo para acompanhar progresso.",
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/progresso.txt"
+    });
+    const chunks = Array.from({ length: 3 }, (_, index) => ({
+      id: `chunk-${index + 1}`,
+      book_id: "book-progress",
+      document_id: "document-progress",
+      position: index,
+      content: `Chunk ${index + 1}.`,
+      token_estimate: 2
+    }));
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks });
+    const generateCards = vi.fn(
+      (
+        _chunks: typeof chunks,
+        options?: { onProgress?: (progress: { current: number; total: number }) => void }
+      ) => {
+        options?.onProgress?.({ current: 2, total: 3 });
+        return new Promise<StudyCard[]>(() => {
+          // Keep generation pending so progress remains visible.
+        });
+      }
+    );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      generateCards,
+      enableDevelopmentFallback: false
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/progresso.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Gerando cards com Ollama. Chunk 2 de 3."
+    );
+  });
+
   it("shows an error when the native file picker fails", async () => {
     const selectStudyFile = vi.fn().mockRejectedValue(new Error("dialog failed"));
 
@@ -710,16 +757,19 @@ describe("App", () => {
     await waitFor(() => {
       expect(listDocumentChunks).toHaveBeenCalledWith("document-saved");
     });
-    expect(generateCards).toHaveBeenCalledWith([
-      {
-        id: "chunk-saved",
-        book_id: "book-saved",
-        document_id: "document-saved",
-        position: 1,
-        content: "Chunk persistido.",
-        token_estimate: 2
-      }
-    ]);
+    expect(generateCards).toHaveBeenCalledWith(
+      [
+        {
+          id: "chunk-saved",
+          book_id: "book-saved",
+          document_id: "document-saved",
+          position: 1,
+          content: "Chunk persistido.",
+          token_estimate: 2
+        }
+      ],
+      expect.objectContaining({ onProgress: expect.any(Function) })
+    );
     expect(await screen.findByText("1 chunk gerado")).toBeInTheDocument();
     expect(screen.getByText("1 card gerado")).toBeInTheDocument();
     expect(screen.getByText("Pergunta salva")).toBeInTheDocument();
@@ -786,16 +836,19 @@ describe("App", () => {
         max_words_per_chunk: 180
       });
     });
-    expect(generateCards).toHaveBeenCalledWith([
-      {
-        id: "chunk-retry",
-        book_id: "book-without-cards",
-        document_id: "document-without-cards",
-        position: 1,
-        content: "Conteudo importado sem cards.",
-        token_estimate: 4
-      }
-    ]);
+    expect(generateCards).toHaveBeenCalledWith(
+      [
+        {
+          id: "chunk-retry",
+          book_id: "book-without-cards",
+          document_id: "document-without-cards",
+          position: 1,
+          content: "Conteudo importado sem cards.",
+          token_estimate: 4
+        }
+      ],
+      expect.objectContaining({ onProgress: expect.any(Function) })
+    );
     expect(await screen.findByText("Pergunta gerada depois")).toBeInTheDocument();
     expect(screen.getByText("1 card gerado")).toBeInTheDocument();
   });
@@ -1205,7 +1258,10 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     await waitFor(() => {
-      expect(generateCards).toHaveBeenCalledWith(chunks.slice(0, 3));
+      expect(generateCards).toHaveBeenCalledWith(
+        chunks.slice(0, 3),
+        expect.objectContaining({ onProgress: expect.any(Function) })
+      );
     });
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Para evitar travamentos, foram gerados cards dos 3 primeiros chunks de 5."
@@ -1296,7 +1352,10 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Gerar mais cards" }));
 
     await waitFor(() => {
-      expect(generateCards).toHaveBeenLastCalledWith(chunks.slice(3, 5));
+      expect(generateCards).toHaveBeenLastCalledWith(
+        chunks.slice(3, 5),
+        expect.objectContaining({ onProgress: expect.any(Function) })
+      );
     });
     expect(await screen.findByText("5 cards gerados")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Gerar mais cards" })).not.toBeInTheDocument();

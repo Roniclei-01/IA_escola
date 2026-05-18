@@ -34,7 +34,10 @@ import {
 import type { StudyCard } from "../domain/model-adapter";
 import { MockModelAdapter } from "../domain/mock-model-adapter";
 import { generateStudyCards } from "../app/generate-study-cards";
-import { generateStudyCardsWithOllama } from "../infrastructure/tauri/generate-study-cards";
+import {
+  generateStudyCardsWithOllama,
+  type GenerateStudyCardsProgress
+} from "../infrastructure/tauri/generate-study-cards";
 import {
   listStudyCards as defaultListStudyCards,
   saveStudyCards as defaultSaveStudyCards
@@ -100,7 +103,10 @@ interface AppProps {
   chunkTextDocument?: (
     request: ReturnType<typeof toChunkRequest>
   ) => Promise<ChunkTextDocumentResponse>;
-  generateCards?: (chunks: ImportedDocumentChunk[]) => Promise<StudyCard[]>;
+  generateCards?: (
+    chunks: ImportedDocumentChunk[],
+    options?: { onProgress?: (progress: GenerateStudyCardsProgress) => void }
+  ) => Promise<StudyCard[]>;
   saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
   listStudyCards?: (documentId: string) => Promise<StudyCard[]>;
   saveStudyReview?: (
@@ -1003,6 +1009,8 @@ export function App({
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
+  const [cardGenerationProgress, setCardGenerationProgress] =
+    useState<GenerateStudyCardsProgress | null>(null);
   const [document, setDocument] = useState<ImportTextBookResponse | null>(null);
   const [chunkCount, setChunkCount] = useState<number | null>(null);
   const [cards, setCards] = useState<StudyCard[]>([]);
@@ -1126,11 +1134,16 @@ export function App({
     operationTokenRef.current += 1;
     setIsImporting(false);
     setOperationStatus(null);
+    setCardGenerationProgress(null);
     setWarning(t("library.operationCanceled"));
   }
 
-  async function generateCardsWithFallback(chunks: ImportedDocumentChunk[]): Promise<StudyCard[]> {
+  async function generateCardsWithFallback(
+    chunks: ImportedDocumentChunk[],
+    operationToken: number
+  ): Promise<StudyCard[]> {
     const chunksForGeneration = chunks.slice(0, INITIAL_CARD_GENERATION_CHUNK_LIMIT);
+    setCardGenerationProgress(null);
 
     if (chunks.length > INITIAL_CARD_GENERATION_CHUNK_LIMIT) {
       setWarning(
@@ -1142,7 +1155,13 @@ export function App({
     }
 
     try {
-      return await generateCards(chunksForGeneration);
+      return await generateCards(chunksForGeneration, {
+        onProgress: (progress) => {
+          if (isCurrentOperation(operationToken)) {
+            setCardGenerationProgress(progress);
+          }
+        }
+      });
     } catch (unknownError) {
       if (!enableDevelopmentFallback) {
         throw unknownError;
@@ -1155,6 +1174,7 @@ export function App({
       );
 
       setWarning(t("library.mockGenerationFallback"));
+      setCardGenerationProgress(null);
       return fallbackCards;
     }
   }
@@ -1395,6 +1415,7 @@ export function App({
     setStudySessionSummaries([]);
     setPrintableReportPreviewHtml(null);
     setCardReviewSchedules({});
+    setCardGenerationProgress(null);
     const operationToken = startCancellableOperation();
 
     try {
@@ -1411,11 +1432,12 @@ export function App({
         return;
       }
       setOperationStatus("generatingCardsWithOllama");
-      const generatedCards = await generateCardsWithFallback(chunkResponse.chunks);
+      const generatedCards = await generateCardsWithFallback(chunkResponse.chunks, operationToken);
       if (!isCurrentOperation(operationToken)) {
         return;
       }
       setOperationStatus("savingStudyCards");
+      setCardGenerationProgress(null);
       const persistedCards =
         generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
       if (!isCurrentOperation(operationToken)) {
@@ -1469,6 +1491,7 @@ export function App({
       if (isCurrentOperation(operationToken)) {
         setIsImporting(false);
         setOperationStatus(null);
+        setCardGenerationProgress(null);
       }
     }
   }
@@ -1485,6 +1508,7 @@ export function App({
     setStudySessionReviewCount(0);
     setStudySessionSummaries([]);
     setCardReviewSchedules({});
+    setCardGenerationProgress(null);
     setError(null);
     setWarning(null);
     setOperationStatus("loadingSavedCards");
@@ -1553,11 +1577,14 @@ export function App({
       }
       setOperationStatus("generatingCardsWithOllama");
       const generatedCards =
-        chunkResponse.chunks.length > 0 ? await generateCardsWithFallback(chunkResponse.chunks) : [];
+        chunkResponse.chunks.length > 0
+          ? await generateCardsWithFallback(chunkResponse.chunks, operationToken)
+          : [];
       if (!isCurrentOperation(operationToken)) {
         return;
       }
       setOperationStatus("savingStudyCards");
+      setCardGenerationProgress(null);
       const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
       if (!isCurrentOperation(operationToken)) {
         return;
@@ -1595,6 +1622,7 @@ export function App({
     } finally {
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
+        setCardGenerationProgress(null);
       }
     }
   }
@@ -1650,6 +1678,7 @@ export function App({
     setError(null);
     setWarning(null);
     setOperationStatus("chunkingDocument");
+    setCardGenerationProgress(null);
     const operationToken = startCancellableOperation();
 
     try {
@@ -1658,11 +1687,12 @@ export function App({
         return;
       }
       setOperationStatus("generatingCardsWithOllama");
-      const generatedCards = await generateCardsWithFallback(chunkResponse.chunks);
+      const generatedCards = await generateCardsWithFallback(chunkResponse.chunks, operationToken);
       if (!isCurrentOperation(operationToken)) {
         return;
       }
       setOperationStatus("savingStudyCards");
+      setCardGenerationProgress(null);
       const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
       if (!isCurrentOperation(operationToken)) {
         return;
@@ -1698,6 +1728,7 @@ export function App({
     } finally {
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
+        setCardGenerationProgress(null);
       }
     }
   }
@@ -1710,6 +1741,7 @@ export function App({
     setError(null);
     setWarning(null);
     setOperationStatus("chunkingDocument");
+    setCardGenerationProgress(null);
     const operationToken = startCancellableOperation();
 
     try {
@@ -1724,11 +1756,14 @@ export function App({
 
       setOperationStatus("generatingCardsWithOllama");
       const generatedCards =
-        remainingChunks.length > 0 ? await generateCardsWithFallback(remainingChunks) : [];
+        remainingChunks.length > 0
+          ? await generateCardsWithFallback(remainingChunks, operationToken)
+          : [];
       if (!isCurrentOperation(operationToken)) {
         return;
       }
       setOperationStatus("savingStudyCards");
+      setCardGenerationProgress(null);
       const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
       if (!isCurrentOperation(operationToken)) {
         return;
@@ -1756,6 +1791,7 @@ export function App({
     } finally {
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
+        setCardGenerationProgress(null);
       }
     }
   }
@@ -2176,6 +2212,12 @@ export function App({
           <div className="operation-status">
             <p className="message info" role="status">
               {t(`library.${operationStatus}`)}
+              {operationStatus === "generatingCardsWithOllama" && cardGenerationProgress
+                ? ` ${t("library.cardGenerationProgress", {
+                    current: cardGenerationProgress.current,
+                    total: cardGenerationProgress.total
+                  })}`
+                : null}
             </p>
             <button type="button" onClick={handleCancelOperation}>
               {t("library.cancelOperation")}

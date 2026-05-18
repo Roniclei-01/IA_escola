@@ -146,6 +146,34 @@ describe("generateStudyCardsWithOllama", () => {
     ]);
   });
 
+  it("reports generation progress before each chunk request", async () => {
+    const chunks = [
+      {
+        id: "chunk-1",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 1,
+        content: "primeiro conteudo",
+        token_estimate: 1
+      },
+      {
+        id: "chunk-2",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 2,
+        content: "segundo conteudo",
+        token_estimate: 1
+      }
+    ];
+    const onProgress = vi.fn();
+    invokeMock.mockResolvedValue({ cards: [] });
+
+    await generateStudyCardsWithOllama(chunks, { onProgress });
+
+    expect(onProgress).toHaveBeenNthCalledWith(1, { current: 1, total: 2 });
+    expect(onProgress).toHaveBeenNthCalledWith(2, { current: 2, total: 2 });
+  });
+
   it("rejects when card generation times out", async () => {
     vi.useFakeTimers();
     const chunk = {

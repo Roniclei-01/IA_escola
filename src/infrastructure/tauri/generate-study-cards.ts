@@ -17,9 +17,14 @@ export interface GenerateStudyCardsResponse {
   cards: PersistedStudyCard[];
 }
 
+export interface GenerateStudyCardsProgress {
+  current: number;
+  total: number;
+}
+
 export async function generateStudyCardsWithOllama(
   chunks: ImportedDocumentChunk[],
-  options: { timeoutMs?: number } = {}
+  options: { timeoutMs?: number; onProgress?: (progress: GenerateStudyCardsProgress) => void } = {}
 ): Promise<StudyCard[]> {
   if (chunks.length === 0) {
     return [];
@@ -28,7 +33,12 @@ export async function generateStudyCardsWithOllama(
   const timeoutMs = options.timeoutMs ?? DEFAULT_CARD_GENERATION_TIMEOUT_MS;
   const cards: StudyCard[] = [];
 
-  for (const chunk of chunks) {
+  for (const [index, chunk] of chunks.entries()) {
+    options.onProgress?.({
+      current: index + 1,
+      total: chunks.length
+    });
+
     const response = await withTimeout(invoke<GenerateStudyCardsResponse>("generate_study_cards", {
       request: {
         chunks: [chunk],

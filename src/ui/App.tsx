@@ -13,6 +13,9 @@ import {
 import { MockModelAdapter } from "../domain/mock-model-adapter";
 import type { StudyCard } from "../domain/model-adapter";
 import { generateStudyCards } from "../app/generate-study-cards";
+import { ImportPanel } from "./components/ImportPanel";
+import { DocumentSummary } from "./components/DocumentSummary";
+import { StudyCardViewer } from "./components/StudyCardViewer";
 
 interface AppProps {
   importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
@@ -101,21 +104,18 @@ export function App({
           <span className="status-pill">{t("library.status")}</span>
         </header>
 
-        <form className="import-panel" onSubmit={handleSubmit}>
-          <label htmlFor="file-path">{t("library.filePathLabel")}</label>
-          <div className="import-row">
-            <input
-              id="file-path"
-              type="text"
-              value={filePath}
-              onChange={(event) => setFilePath(event.target.value)}
-              placeholder={t("library.filePathPlaceholder")}
-            />
-            <button type="submit" disabled={isImporting}>
-              {isImporting ? t("library.importing") : t("library.import")}
-            </button>
-          </div>
-        </form>
+        <ImportPanel
+          filePath={filePath}
+          isImporting={isImporting}
+          labels={{
+            filePathLabel: t("library.filePathLabel"),
+            filePathPlaceholder: t("library.filePathPlaceholder"),
+            import: t("library.import"),
+            importing: t("library.importing")
+          }}
+          onFilePathChange={setFilePath}
+          onSubmit={handleSubmit}
+        />
 
         {error ? (
           <p className="message error" role="alert">
@@ -124,46 +124,39 @@ export function App({
         ) : null}
 
         {document ? (
-          <section className="document-preview" aria-labelledby="document-title">
-            <div>
-              <p className="eyebrow">{t("library.importedDocument")}</p>
-              <h2 id="document-title">{t("library.documentTitle")}</h2>
-            </div>
-            {chunkCount !== null ? (
-              <p className="chunk-count">
-                {t("library.chunkCount", { count: chunkCount })}
-              </p>
-            ) : null}
-            <p className="card-count">{t("library.cardCount", { count: cards.length })}</p>
-            <p>{document.content}</p>
+          <DocumentSummary
+            document={document}
+            chunkCount={chunkCount}
+            cardCount={cards.length}
+            labels={{
+              importedDocument: t("library.importedDocument"),
+              documentTitle: t("library.documentTitle"),
+              chunkCount: chunkCount !== null ? t("library.chunkCount", { count: chunkCount }) : null,
+              cardCount: t("library.cardCount", { count: cards.length })
+            }}
+          >
             {activeCard ? (
-              <article className="card-preview" aria-labelledby="card-preview-title">
-                <div className="study-header">
-                  <h3 id="card-preview-title">{t("study.title")}</h3>
-                  <span>{t("study.progress", { current: activeCardIndex + 1, total: cards.length })}</span>
-                </div>
-                <p className="card-front">{activeCard.front}</p>
-                {isAnswerVisible ? <p className="card-back">{activeCard.back}</p> : null}
-                <div className="study-actions">
-                  <button type="button" onClick={() => setIsAnswerVisible(true)}>
-                    {t("study.revealAnswer")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveCardIndex((currentIndex) =>
-                        Math.min(currentIndex + 1, cards.length - 1)
-                      );
-                      setIsAnswerVisible(false);
-                    }}
-                    disabled={activeCardIndex >= cards.length - 1}
-                  >
-                    {t("study.nextCard")}
-                  </button>
-                </div>
-              </article>
+              <StudyCardViewer
+                card={activeCard}
+                isAnswerVisible={isAnswerVisible}
+                isNextDisabled={activeCardIndex >= cards.length - 1}
+                labels={{
+                  title: t("study.title"),
+                  progress: t("study.progress", {
+                    current: activeCardIndex + 1,
+                    total: cards.length
+                  }),
+                  revealAnswer: t("study.revealAnswer"),
+                  nextCard: t("study.nextCard")
+                }}
+                onRevealAnswer={() => setIsAnswerVisible(true)}
+                onNextCard={() => {
+                  setActiveCardIndex((currentIndex) => Math.min(currentIndex + 1, cards.length - 1));
+                  setIsAnswerVisible(false);
+                }}
+              />
             ) : null}
-          </section>
+          </DocumentSummary>
         ) : (
           <section className="empty-state" aria-label={t("library.emptyStateLabel")}>
             <p>{t("library.emptyState")}</p>

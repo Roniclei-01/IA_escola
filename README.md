@@ -62,6 +62,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - geracao de flashcards com `MockModelAdapter`;
 - exibicao da quantidade de cards gerados e previa do primeiro card;
 - area de estudo para revelar resposta e avancar entre cards;
+- UI separada em componentes `ImportPanel`, `DocumentSummary` e `StudyCardViewer`;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase

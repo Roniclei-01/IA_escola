@@ -626,6 +626,81 @@ describe("App", () => {
     expect(screen.getByText("Pergunta salva")).toBeInTheDocument();
   });
 
+  it("offers a visible card generation retry when a saved document has no cards", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-without-cards",
+          book_id: "book-without-cards",
+          content: "Conteudo importado sem cards.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/material.pdf"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([]);
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+    const chunkTextDocument = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-retry",
+          book_id: "book-without-cards",
+          document_id: "document-without-cards",
+          position: 1,
+          content: "Conteudo importado sem cards.",
+          token_estimate: 4
+        }
+      ]
+    });
+    const generateCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-retry",
+        bookId: "book-without-cards",
+        chunkId: "chunk-retry",
+        front: "Pergunta gerada depois",
+        back: "Resposta gerada depois",
+        tags: ["retry"]
+      }
+    ]);
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listDocumentChunks,
+      chunkTextDocument,
+      generateCards,
+      saveStudyCards: saveCards
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
+
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
+
+    await waitFor(() => {
+      expect(chunkTextDocument).toHaveBeenCalledWith({
+        document_id: "document-without-cards",
+        book_id: "book-without-cards",
+        content: "Conteudo importado sem cards.",
+        language: "Pt",
+        max_words_per_chunk: 180
+      });
+    });
+    expect(generateCards).toHaveBeenCalledWith([
+      {
+        id: "chunk-retry",
+        book_id: "book-without-cards",
+        document_id: "document-without-cards",
+        position: 1,
+        content: "Conteudo importado sem cards.",
+        token_estimate: 4
+      }
+    ]);
+    expect(await screen.findByText("Pergunta gerada depois")).toBeInTheDocument();
+    expect(screen.getByText("1 card gerado")).toBeInTheDocument();
+  });
+
   it("uses persisted cards when selecting a saved document", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [

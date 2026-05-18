@@ -1545,6 +1545,48 @@ export function App({
     }
   }
 
+  async function handleGenerateCardsForActiveDocument() {
+    if (!document) {
+      return;
+    }
+
+    setError(null);
+    setWarning(null);
+    setOperationStatus("chunkingDocument");
+
+    try {
+      const chunkResponse = await chunkTextDocument(toChunkRequest(document, 180));
+      setOperationStatus("generatingCardsWithOllama");
+      const generatedCards = await generateCardsWithFallback(chunkResponse.chunks);
+      setOperationStatus("savingStudyCards");
+      const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
+
+      setChunkCount(chunkResponse.chunks.length);
+      setCards(savedCards);
+      setActiveCardIndex(0);
+      setIsAnswerVisible(false);
+      setCardReviews({});
+      setReviewHistory([]);
+      setStudySessionSummaries([]);
+      await beginStudySession(document.document_id);
+      setCardReviewSchedules({});
+    } catch (unknownError) {
+      setChunkCount(null);
+      setCards([]);
+      setActiveCardIndex(0);
+      setIsAnswerVisible(false);
+      setCardReviews({});
+      setReviewHistory([]);
+      setActiveStudySession(null);
+      setStudySessionReviewCount(0);
+      setStudySessionSummaries([]);
+      setCardReviewSchedules({});
+      setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+    } finally {
+      setOperationStatus(null);
+    }
+  }
+
   async function handleArchiveDocument(documentToArchive: ImportTextBookResponse) {
     setError(null);
     setWarning(null);
@@ -2104,7 +2146,11 @@ export function App({
                 path: document.source_path
               }),
               chunkCount: chunkCount !== null ? t("library.chunkCount", { count: chunkCount }) : null,
-              cardCount: t("library.cardCount", { count: cards.length })
+              cardCount: t("library.cardCount", { count: cards.length }),
+              generateCards: t("library.generateCards")
+            }}
+            onGenerateCards={() => {
+              void handleGenerateCardsForActiveDocument();
             }}
           >
             <div className="document-actions">

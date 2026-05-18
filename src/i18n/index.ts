@@ -73,6 +73,7 @@ export const resources = {
         chunkCount_other: "{{count}} chunks gerados",
         cardCount_one: "{{count}} card gerado",
         cardCount_other: "{{count}} cards gerados",
+        generateCards: "Gerar cards",
         emptyState: "Nenhum documento importado nesta sessao.",
         emptyStateLabel: "Estado vazio da biblioteca"
       },
@@ -266,6 +267,7 @@ export const resources = {
         chunkCount_other: "{{count}} chunks generated",
         cardCount_one: "{{count}} card generated",
         cardCount_other: "{{count}} cards generated",
+        generateCards: "Generate cards",
         emptyState: "No document imported in this session.",
         emptyStateLabel: "Empty library state"
       },
@@ -459,6 +461,7 @@ export const resources = {
         chunkCount_other: "{{count}} chunks generados",
         cardCount_one: "{{count}} card generado",
         cardCount_other: "{{count}} cards generados",
+        generateCards: "Generar cards",
         emptyState: "Ningun documento importado en esta sesion.",
         emptyStateLabel: "Estado vacio de la biblioteca"
       },

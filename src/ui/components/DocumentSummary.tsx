@@ -12,7 +12,9 @@ interface DocumentSummaryProps {
     sourcePath: string;
     chunkCount: string | null;
     cardCount: string;
+    generateCards: string;
   };
+  onGenerateCards?: () => void;
   children?: ReactNode;
 }
 
@@ -21,6 +23,7 @@ export function DocumentSummary({
   chunkCount,
   cardCount,
   labels,
+  onGenerateCards,
   children
 }: DocumentSummaryProps) {
   return (
@@ -37,6 +40,13 @@ export function DocumentSummary({
         <p className="chunk-count">{labels.chunkCount}</p>
       ) : null}
       <p className="card-count">{labels.cardCount}</p>
+      {cardCount === 0 && onGenerateCards ? (
+        <div className="document-actions document-actions-empty">
+          <button type="button" onClick={onGenerateCards}>
+            {labels.generateCards}
+          </button>
+        </div>
+      ) : null}
       <p>{document.content}</p>
       {cardCount > 0 ? children : null}
     </section>

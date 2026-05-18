@@ -461,6 +461,10 @@ h1 {
   margin-top: 16px;
 }
 
+.document-actions-empty {
+  margin-top: 10px;
+}
+
 .document-actions button {
   min-height: 40px;
   padding: 0 14px;

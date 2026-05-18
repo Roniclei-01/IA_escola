@@ -29,6 +29,11 @@ import {
   testOllamaConnection as defaultTestOllamaConnection,
   type TestOllamaConnectionResponse
 } from "../infrastructure/tauri/ollama";
+import {
+  loadOllamaSettings as defaultLoadOllamaSettings,
+  saveOllamaSettings as defaultSaveOllamaSettings,
+  type OllamaSettings
+} from "../infrastructure/tauri/ollama-settings";
 import { ImportPanel } from "./components/ImportPanel";
 import { DocumentSummary } from "./components/DocumentSummary";
 import { StudyCardViewer } from "./components/StudyCardViewer";
@@ -49,6 +54,8 @@ interface AppProps {
     model: string;
     base_url?: string;
   }) => Promise<TestOllamaConnectionResponse>;
+  loadOllamaSettings?: () => Promise<OllamaSettings>;
+  saveOllamaSettings?: (settings: OllamaSettings) => Promise<OllamaSettings>;
 }
 
 const mockModelAdapter = new MockModelAdapter();
@@ -72,7 +79,9 @@ export function App({
   generateCards = defaultGenerateCards,
   saveStudyCards = defaultSaveStudyCards,
   listStudyCards = defaultListStudyCards,
-  testOllamaConnection = defaultTestOllamaConnection
+  testOllamaConnection = defaultTestOllamaConnection,
+  loadOllamaSettings = defaultLoadOllamaSettings,
+  saveOllamaSettings = defaultSaveOllamaSettings
 }: AppProps) {
   const { t } = useTranslation();
   const [filePath, setFilePath] = useState("");
@@ -121,6 +130,31 @@ export function App({
       isCurrent = false;
     };
   }, [listImportedDocuments, t]);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadSettings() {
+      try {
+        const settings = await loadOllamaSettings();
+
+        if (isCurrent) {
+          setOllamaBaseUrl(settings.base_url);
+          setOllamaModel(settings.model);
+        }
+      } catch {
+        if (isCurrent) {
+          setError(t("settings.ollamaSettingsLoadError"));
+        }
+      }
+    }
+
+    void loadSettings();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [loadOllamaSettings, t]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -211,8 +245,14 @@ export function App({
         model: ollamaModel.trim(),
         base_url: ollamaBaseUrl.trim()
       });
+      const savedSettings = await saveOllamaSettings({
+        model: response.model,
+        base_url: ollamaBaseUrl.trim()
+      });
 
-      setOllamaStatus(t("settings.ollamaConnectionOk", { model: response.model }));
+      setOllamaBaseUrl(savedSettings.base_url);
+      setOllamaModel(savedSettings.model);
+      setOllamaStatus(t("settings.ollamaConnectionOk", { model: savedSettings.model }));
     } catch (unknownError) {
       setOllamaStatus(null);
       setError(unknownError instanceof Error ? unknownError.message : t("settings.ollamaConnectionError"));

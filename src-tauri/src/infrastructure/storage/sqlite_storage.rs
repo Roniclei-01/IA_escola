@@ -24,6 +24,10 @@ pub enum StorageError {
     SaveStudyCardsFailed(#[source] rusqlite::Error),
     #[error("failed to list study cards")]
     ListStudyCardsFailed(#[source] rusqlite::Error),
+    #[error("failed to save app setting")]
+    SaveSettingFailed(#[source] rusqlite::Error),
+    #[error("failed to load app setting")]
+    LoadSettingFailed(#[source] rusqlite::Error),
     #[error("stored document has invalid id")]
     InvalidDocumentId(#[source] uuid::Error),
     #[error("stored document has invalid book id")]
@@ -282,6 +286,37 @@ impl SQLiteStorage {
         Ok(cards)
     }
 
+    pub fn save_setting(&self, key: &str, value: &str) -> Result<(), StorageError> {
+        self.connection
+            .execute(
+                "INSERT OR REPLACE INTO app_settings (key, value)
+                 VALUES (?1, ?2)",
+                params![key, value],
+            )
+            .map_err(StorageError::SaveSettingFailed)?;
+
+        Ok(())
+    }
+
+    pub fn load_setting(&self, key: &str) -> Result<Option<String>, StorageError> {
+        let mut statement = self
+            .connection
+            .prepare("SELECT value FROM app_settings WHERE key = ?1")
+            .map_err(StorageError::LoadSettingFailed)?;
+        let mut rows = statement
+            .query([key])
+            .map_err(StorageError::LoadSettingFailed)?;
+
+        if let Some(row) = rows.next().map_err(StorageError::LoadSettingFailed)? {
+            return row
+                .get(0)
+                .map(Some)
+                .map_err(StorageError::LoadSettingFailed);
+        }
+
+        Ok(None)
+    }
+
     fn migrate(&self) -> Result<(), StorageError> {
         self.connection
             .execute_batch(
@@ -311,6 +346,12 @@ impl SQLiteStorage {
                     back TEXT NOT NULL,
                     tags TEXT NOT NULL,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    key TEXT PRIMARY KEY NOT NULL,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );",
             )
             .map_err(StorageError::MigrationFailed)
@@ -443,6 +484,13 @@ mod tests {
                 .unwrap(),
             Vec::<StudyCard>::new()
         );
+    }
+
+    #[test]
+    fn creates_app_settings_table_on_open() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+
+        assert_eq!(storage.load_setting("ollama.model").unwrap(), None);
     }
 
     #[test]
@@ -611,5 +659,30 @@ mod tests {
         let cards = storage.list_study_cards_by_document(document_id).unwrap();
 
         assert_eq!(cards, vec![replacement_card]);
+    }
+
+    #[test]
+    fn saves_and_loads_app_setting() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+
+        storage.save_setting("ollama.model", "llama3.2").unwrap();
+
+        assert_eq!(
+            storage.load_setting("ollama.model").unwrap(),
+            Some("llama3.2".to_owned())
+        );
+    }
+
+    #[test]
+    fn replaces_app_setting() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+
+        storage.save_setting("ollama.model", "llama3.2").unwrap();
+        storage.save_setting("ollama.model", "mistral").unwrap();
+
+        assert_eq!(
+            storage.load_setting("ollama.model").unwrap(),
+            Some("mistral".to_owned())
+        );
     }
 }

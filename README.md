@@ -80,6 +80,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - comando `test_ollama_connection` para validar conexao e modelo;
 - ponte TypeScript `testOllamaConnection`;
 - painel de configuracao na UI para URL/modelo Ollama e teste de conexao;
+- persistencia SQLite das configuracoes do Ollama em `app_settings`;
+- comandos `load_ollama_settings` e `save_ollama_settings`;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -154,10 +156,9 @@ docs/
 
 ## Proximos passos
 
-1. Persistir configuracoes de modelo local em SQLite.
-2. Trocar a geracao mockada por Ollama quando o modelo estiver configurado.
-3. Evoluir tela de biblioteca, estudo e configuracoes.
-4. Preparar importacao de PDF como proxima expansao de parser.
+1. Trocar a geracao mockada por Ollama quando o modelo estiver configurado.
+2. Evoluir tela de biblioteca, estudo e configuracoes.
+3. Preparar importacao de PDF como proxima expansao de parser.
 
 ## Comandos de desenvolvimento
 

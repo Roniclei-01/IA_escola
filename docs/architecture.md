@@ -132,12 +132,12 @@ Tabelas ja iniciadas:
 - `documents`.
 - `document_chunks`.
 - `study_cards`.
+- `app_settings`.
 
 Tabelas futuras:
 
 - `books`.
 - `model_profiles`.
-- `user_settings`.
 - `study_sessions`.
 - `exercises`.
 - `review_events`.

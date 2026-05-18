@@ -5,6 +5,7 @@ pub mod import_text_book;
 pub mod list_document_chunks;
 pub mod list_imported_documents;
 pub mod list_study_cards;
+pub mod ollama_settings;
 pub mod save_study_cards;
 pub mod test_ollama_connection;
 
@@ -18,6 +19,8 @@ pub use list_document_chunks::list_document_chunks;
 pub use list_imported_documents::list_imported_documents;
 #[cfg(feature = "tauri-app")]
 pub use list_study_cards::list_study_cards;
+#[cfg(feature = "tauri-app")]
+pub use ollama_settings::{load_ollama_settings, save_ollama_settings};
 #[cfg(feature = "tauri-app")]
 pub use save_study_cards::save_study_cards;
 #[cfg(feature = "tauri-app")]
@@ -34,6 +37,10 @@ pub use list_imported_documents::{
     list_imported_documents_from_storage, ListImportedDocumentsResponse,
 };
 pub use list_study_cards::{list_study_cards_from_storage, ListStudyCardsResponse};
+pub use ollama_settings::{
+    default_ollama_settings, load_ollama_settings_from_storage, save_ollama_settings_with_storage,
+    OllamaSettings,
+};
 pub use save_study_cards::{save_study_cards_with_storage, SaveStudyCardsResponse};
 pub use test_ollama_connection::{
     test_ollama_connection_with_adapter, TestOllamaConnectionRequest, TestOllamaConnectionResponse,

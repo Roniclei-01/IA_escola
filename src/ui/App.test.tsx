@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import "../i18n";
@@ -6,10 +7,26 @@ import "../i18n";
 const listNoDocuments = vi.fn().mockResolvedValue({ documents: [] });
 const listNoStudyCards = vi.fn().mockResolvedValue([]);
 const saveCards = vi.fn().mockImplementation(async (cards: unknown[]) => cards);
+const loadDefaultOllamaSettings = vi.fn().mockResolvedValue({
+  base_url: "http://127.0.0.1:11434",
+  model: "llama3.2"
+});
+const saveOllamaSettings = vi.fn().mockImplementation(async (settings: unknown) => settings);
+
+function renderApp(props: ComponentProps<typeof App> = {}) {
+  return render(
+    <App
+      listImportedDocuments={listNoDocuments}
+      loadOllamaSettings={loadDefaultOllamaSettings}
+      saveOllamaSettings={saveOllamaSettings}
+      {...props}
+    />
+  );
+}
 
 describe("App", () => {
   it("renders the product name", async () => {
-    render(<App listImportedDocuments={listNoDocuments} />);
+    renderApp();
 
     expect(screen.getByRole("heading", { name: "Estudo IA Local" })).toBeInTheDocument();
     expect(await screen.findByText("Nenhum documento salvo ainda.")).toBeInTheDocument();
@@ -27,7 +44,7 @@ describe("App", () => {
       ]
     });
 
-    render(<App listImportedDocuments={listImportedDocuments} />);
+    renderApp({ listImportedDocuments });
 
     expect(listImportedDocuments).toHaveBeenCalled();
     expect(await screen.findByText("Documentos salvos")).toBeInTheDocument();
@@ -41,12 +58,7 @@ describe("App", () => {
       response: "ok"
     });
 
-    render(
-      <App
-        listImportedDocuments={listNoDocuments}
-        testOllamaConnection={testOllamaConnection}
-      />
-    );
+    renderApp({ testOllamaConnection });
 
     fireEvent.change(screen.getByLabelText("URL local do Ollama"), {
       target: { value: "http://127.0.0.1:11434" }
@@ -62,7 +74,23 @@ describe("App", () => {
         base_url: "http://127.0.0.1:11434"
       });
     });
+    expect(saveOllamaSettings).toHaveBeenCalledWith({
+      model: "mistral",
+      base_url: "http://127.0.0.1:11434"
+    });
     expect(await screen.findByText("Ollama conectado com o modelo mistral.")).toBeInTheDocument();
+  });
+
+  it("loads persisted Ollama settings on startup", async () => {
+    const loadOllamaSettings = vi.fn().mockResolvedValue({
+      base_url: "http://127.0.0.1:11435",
+      model: "mistral"
+    });
+
+    renderApp({ loadOllamaSettings });
+
+    expect(await screen.findByDisplayValue("http://127.0.0.1:11435")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("mistral")).toBeInTheDocument();
   });
 
   it("shows an error when the Ollama connection test fails", async () => {
@@ -70,12 +98,7 @@ describe("App", () => {
       .fn()
       .mockRejectedValue(new Error("Nao foi possivel conectar ao Ollama."));
 
-    render(
-      <App
-        listImportedDocuments={listNoDocuments}
-        testOllamaConnection={testOllamaConnection}
-      />
-    );
+    renderApp({ testOllamaConnection });
 
     fireEvent.click(screen.getByRole("button", { name: "Testar" }));
 
@@ -119,15 +142,13 @@ describe("App", () => {
       }
     ]);
 
-    render(
-      <App
-        listImportedDocuments={listImportedDocuments}
-        listDocumentChunks={listDocumentChunks}
-        listStudyCards={listStudyCards}
-        saveStudyCards={saveCards}
-        generateCards={generateCards}
-      />
-    );
+    renderApp({
+      listImportedDocuments,
+      listDocumentChunks,
+      listStudyCards,
+      saveStudyCards: saveCards,
+      generateCards
+    });
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -173,14 +194,12 @@ describe("App", () => {
     const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
     const generateCards = vi.fn().mockResolvedValue([]);
 
-    render(
-      <App
-        listImportedDocuments={listImportedDocuments}
-        listDocumentChunks={listDocumentChunks}
-        listStudyCards={listStudyCards}
-        generateCards={generateCards}
-      />
-    );
+    renderApp({
+      listImportedDocuments,
+      listDocumentChunks,
+      listStudyCards,
+      generateCards
+    });
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -213,14 +232,11 @@ describe("App", () => {
       ]
     });
 
-    render(
-      <App
-        importTextBook={importTextBook}
-        listImportedDocuments={listNoDocuments}
-        chunkTextDocument={chunkTextDocument}
-        saveStudyCards={saveCards}
-      />
-    );
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      saveStudyCards: saveCards
+    });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
       target: { value: "/tmp/book.txt" }
@@ -291,15 +307,12 @@ describe("App", () => {
       }
     ]);
 
-    render(
-      <App
-        importTextBook={importTextBook}
-        listImportedDocuments={listNoDocuments}
-        chunkTextDocument={chunkTextDocument}
-        generateCards={generateCards}
-        saveStudyCards={saveCards}
-      />
-    );
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      generateCards,
+      saveStudyCards: saveCards
+    });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
       target: { value: "/tmp/book.txt" }
@@ -323,13 +336,10 @@ describe("App", () => {
   it("shows an error when import fails", async () => {
     const importTextBook = vi.fn().mockRejectedValue(new Error("Arquivo de texto nao encontrado."));
 
-    render(
-      <App
-        importTextBook={importTextBook}
-        listImportedDocuments={listNoDocuments}
-        listStudyCards={listNoStudyCards}
-      />
-    );
+    renderApp({
+      importTextBook,
+      listStudyCards: listNoStudyCards
+    });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
       target: { value: "/tmp/missing.txt" }
@@ -348,14 +358,11 @@ describe("App", () => {
     });
     const chunkTextDocument = vi.fn().mockRejectedValue(new Error("Falha ao gerar chunks."));
 
-    render(
-      <App
-        importTextBook={importTextBook}
-        listImportedDocuments={listNoDocuments}
-        chunkTextDocument={chunkTextDocument}
-        saveStudyCards={saveCards}
-      />
-    );
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      saveStudyCards: saveCards
+    });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
       target: { value: "/tmp/book.txt" }
@@ -386,15 +393,12 @@ describe("App", () => {
     });
     const generateCards = vi.fn().mockRejectedValue(new Error("Falha ao gerar cards."));
 
-    render(
-      <App
-        importTextBook={importTextBook}
-        listImportedDocuments={listNoDocuments}
-        chunkTextDocument={chunkTextDocument}
-        generateCards={generateCards}
-        saveStudyCards={saveCards}
-      />
-    );
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      generateCards,
+      saveStudyCards: saveCards
+    });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
       target: { value: "/tmp/book.txt" }

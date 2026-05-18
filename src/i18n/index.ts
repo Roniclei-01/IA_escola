@@ -44,7 +44,8 @@ export const resources = {
         testOllama: "Testar",
         testingOllama: "Testando",
         ollamaConnectionOk: "Ollama conectado com o modelo {{model}}.",
-        ollamaConnectionError: "Nao foi possivel testar o Ollama."
+        ollamaConnectionError: "Nao foi possivel testar o Ollama.",
+        ollamaSettingsLoadError: "Nao foi possivel carregar as configuracoes do Ollama."
       }
     }
   },
@@ -90,7 +91,8 @@ export const resources = {
         testOllama: "Test",
         testingOllama: "Testing",
         ollamaConnectionOk: "Ollama connected with model {{model}}.",
-        ollamaConnectionError: "Could not test Ollama."
+        ollamaConnectionError: "Could not test Ollama.",
+        ollamaSettingsLoadError: "Could not load Ollama settings."
       }
     }
   },
@@ -136,7 +138,8 @@ export const resources = {
         testOllama: "Probar",
         testingOllama: "Probando",
         ollamaConnectionOk: "Ollama conectado con el modelo {{model}}.",
-        ollamaConnectionError: "No fue posible probar Ollama."
+        ollamaConnectionError: "No fue posible probar Ollama.",
+        ollamaSettingsLoadError: "No fue posible cargar la configuracion de Ollama."
       }
     }
   }

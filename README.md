@@ -93,7 +93,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - comando `generate_study_cards` usando Ollama e configuracoes salvas;
 - UI usando Ollama por padrao com `llama3.2:1b` para reduzir gargalo local, com testes ainda injetando geradores previsiveis;
 - timeout na geracao de cards com Ollama para evitar espera indefinida em modelos lentos;
-- geracao inicial limitada aos primeiros chunks, com acao incremental para gerar mais cards sem sobrecarregar o modelo local;
+- importacao separada da geracao de cards, permitindo subir TXT/PDF, revisar a previa e iniciar a IA apenas quando o usuario desejar;
+- geracao sob demanda limitada aos primeiros chunks, com acao incremental para gerar mais cards sem sobrecarregar o modelo local;
 - feedback visual para importacao, chunking, geracao com Ollama, salvamento e carregamento de cards;
 - fallback de desenvolvimento para gerar cards mockados quando o Ollama falhar;
 - revisao com marcacao de acerto, erro, dificuldade, prioridade e proxima data;
@@ -146,10 +147,12 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 1. Instale um modelo leve no Ollama, como `llama3.2:1b`.
 2. Abra o app desktop e clique em `Testar` na secao Ollama.
 3. Importe um arquivo `.txt` ou `.pdf`.
-4. Aguarde a importacao, chunking e primeira geracao de cards.
-5. Se o documento tiver muitos chunks, o app gera cards apenas do lote inicial para evitar travamentos.
-6. Use `Gerar mais cards` para processar os proximos chunks sob demanda.
-7. Revise os cards gerados e acompanhe historico, fila de revisao e metas.
+4. Aguarde a importacao e a divisao em chunks.
+5. Revise a previa do conteudo importado.
+6. Clique em `Gerar cards` quando quiser iniciar a IA.
+7. Se o documento tiver muitos chunks, a acao de geracao processa apenas o lote inicial para evitar travamentos.
+8. Use `Gerar mais cards` para processar os proximos chunks sob demanda.
+9. Revise os cards gerados e acompanhe historico, fila de revisao e metas.
 
 Durante operacoes longas, botoes de geracao e acoes da biblioteca ficam bloqueados para evitar cliques duplicados ou troca de documento no meio do processamento.
 

@@ -71,6 +71,9 @@ describe("i18n", () => {
     expect(i18n.getResource("es", "translation", "study.revealAnswer")).toBe(
       "Revelar respuesta"
     );
+    expect(i18n.getResource("pt", "translation", "study.previousCard")).toBe("Card anterior");
+    expect(i18n.getResource("en", "translation", "study.previousCard")).toBe("Previous card");
+    expect(i18n.getResource("es", "translation", "study.previousCard")).toBe("Card anterior");
   });
 
   it("has study review labels in every supported language", () => {

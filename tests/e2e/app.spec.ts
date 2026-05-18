@@ -130,6 +130,9 @@ test("imports a document, generates a card and records a review", async ({ page 
   await page.getByRole("button", { name: "Importar" }).click();
 
   await expect(page.getByText("1 chunk gerado")).toBeVisible();
+  await expect(page.getByText("0 card gerado")).toBeVisible();
+  await page.getByRole("button", { name: "Gerar cards" }).click();
+
   await expect(page.getByText("1 card gerado")).toBeVisible();
   await expect(page.getByText("Qual e o objetivo do fluxo E2E?")).toBeVisible();
 

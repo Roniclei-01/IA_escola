@@ -106,8 +106,10 @@ Arquivos gerados:
 
 - [ ] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-pdf-text.pdf`.
 - [ ] Confirmar origem `PDF`.
+- [ ] Confirmar que a importacao termina sem gerar cards automaticamente.
+- [ ] Clicar em `Gerar cards` para iniciar a IA sob demanda.
 - [ ] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-large.txt` para validar geracao incremental com arquivo maior.
-- [ ] Confirmar limite inicial de geracao em documento grande.
+- [ ] Confirmar limite de geracao sob demanda em documento grande.
 - [ ] Usar `Gerar mais cards`.
 - [ ] Confirmar que novos cards sao adicionados sem remover os anteriores.
 

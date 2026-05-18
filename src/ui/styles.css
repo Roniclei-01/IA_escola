@@ -1122,7 +1122,7 @@ h1 {
   border-color: #5b4b8a;
 }
 
-.study-actions button:first-child {
+.study-actions .reveal-answer-button {
   color: #ffffff;
   background: #276f4e;
   border-color: #276f4e;

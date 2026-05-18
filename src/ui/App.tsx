@@ -1040,6 +1040,7 @@ export function App({
     useState<GenerateStudyCardsProgress | null>(null);
   const [document, setDocument] = useState<ImportTextBookResponse | null>(null);
   const [chunkCount, setChunkCount] = useState<number | null>(null);
+  const [documentChunks, setDocumentChunks] = useState<ImportedDocumentChunk[]>([]);
   const [cards, setCards] = useState<StudyCard[]>([]);
   const [savedDocuments, setSavedDocuments] = useState<ImportTextBookResponse[]>([]);
   const [archivedDocuments, setArchivedDocuments] = useState<ImportTextBookResponse[]>([]);
@@ -1470,6 +1471,7 @@ export function App({
     setWarning(null);
     setOperationStatus("importingDocument");
     setChunkCount(null);
+    setDocumentChunks([]);
     setCards([]);
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
@@ -1482,31 +1484,26 @@ export function App({
     setCardReviewSchedules({});
     setCardGenerationProgress(null);
     const operationToken = startCancellableOperation();
-    let importedDocument: ImportTextBookResponse | null = null;
-    let generatedChunkCount: number | null = null;
-    const incrementallySavedCardIds = new Set<string>();
-    const partiallySavedCards: StudyCard[] = [];
 
     try {
       await waitForUiPaint();
       if (!isCurrentOperation(operationToken)) {
         return;
       }
-      importedDocument = await importTextBook(trimmedPath, {
+      const currentImportedDocument = await importTextBook(trimmedPath, {
         ocrEnabled: isOcrEnabled,
         ocrLanguage
       });
       if (!isCurrentOperation(operationToken)) {
         return;
       }
-      const currentImportedDocument = importedDocument;
       setOperationStatus("chunkingDocument");
       const chunkResponse = await chunkTextDocument(toChunkRequest(currentImportedDocument, 180));
       if (!isCurrentOperation(operationToken)) {
         return;
       }
-      generatedChunkCount = chunkResponse.chunks.length;
       setDocument(currentImportedDocument);
+      setDocumentChunks(chunkResponse.chunks);
       setSavedDocuments((currentDocuments) => [...currentDocuments, currentImportedDocument]);
       setDocumentReviewCounts((currentCounts) => ({
         ...currentCounts,
@@ -1523,62 +1520,20 @@ export function App({
         })
       );
       setChunkCount(chunkResponse.chunks.length);
-      setOperationStatus("generatingCardsWithOllama");
-      const generatedCards = await generateCardsWithFallback(chunkResponse.chunks, operationToken, {
-        onChunkCards: async (chunkCards) => {
-          await saveGeneratedChunkCards(
-            chunkCards,
-            operationToken,
-            incrementallySavedCardIds,
-            (savedChunkCards) => {
-              partiallySavedCards.push(...savedChunkCards);
-              setCards((currentCards) => [...currentCards, ...savedChunkCards]);
-
-              if (savedChunkCards.length > 0) {
-                setActiveCardIndex(0);
-                setIsAnswerVisible(false);
-              }
-            }
-          );
-        }
-      });
-      if (!isCurrentOperation(operationToken)) {
-        return;
-      }
-      setOperationStatus("savingStudyCards");
-      setCardGenerationProgress(null);
-      const unsavedGeneratedCards = generatedCards.filter(
-        (generatedCard) => !incrementallySavedCardIds.has(generatedCard.id)
-      );
-      const persistedCards =
-        unsavedGeneratedCards.length > 0 ? await saveStudyCards(unsavedGeneratedCards) : [];
-      if (!isCurrentOperation(operationToken)) {
-        return;
-      }
-      setCards((currentCards) => [...currentCards, ...persistedCards]);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
       setReviewHistory([]);
       setStudySessionSummaries([]);
-      await beginStudySession(currentImportedDocument.document_id);
-      if (!isCurrentOperation(operationToken)) {
-        return;
-      }
       setCardReviewSchedules({});
     } catch (unknownError) {
       if (!isCurrentOperation(operationToken)) {
         return;
       }
-      if (partiallySavedCards.length > 0 && importedDocument) {
-        setDocument(importedDocument);
-        setChunkCount(generatedChunkCount);
-        setCards(partiallySavedCards);
-      } else {
-        setDocument(null);
-        setChunkCount(null);
-        setCards([]);
-      }
+      setDocument(null);
+      setChunkCount(null);
+      setDocumentChunks([]);
+      setCards([]);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
@@ -1587,12 +1542,8 @@ export function App({
       setStudySessionReviewCount(0);
       setStudySessionSummaries([]);
       setCardReviewSchedules({});
-      if (partiallySavedCards.length > 0) {
-        setWarning(t("library.partialCardsSaved", { count: partiallySavedCards.length }));
-      } else {
-        setWarning(null);
-        setError(getErrorMessage(unknownError, t("library.unknownError")));
-      }
+      setWarning(null);
+      setError(getErrorMessage(unknownError, t("library.unknownError")));
     } finally {
       if (isCurrentOperation(operationToken)) {
         setIsImporting(false);
@@ -1606,6 +1557,7 @@ export function App({
   async function handleSelectSavedDocument(selectedDocument: ImportTextBookResponse) {
     setDocument(selectedDocument);
     setChunkCount(null);
+    setDocumentChunks([]);
     setCards([]);
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
@@ -1657,7 +1609,19 @@ export function App({
         if (!isCurrentOperation(operationToken)) {
           return;
         }
-        setChunkCount(new Set(persistedCards.map((card) => card.chunkId)).size);
+        const fallbackChunkCount = new Set(persistedCards.map((card) => card.chunkId)).size;
+        let persistedChunks: ImportedDocumentChunk[] = [];
+        try {
+          const chunkResponse = await listDocumentChunks(selectedDocument.document_id);
+          if (!isCurrentOperation(operationToken)) {
+            return;
+          }
+          persistedChunks = chunkResponse.chunks;
+        } catch {
+          persistedChunks = [];
+        }
+        setDocumentChunks(persistedChunks);
+        setChunkCount(persistedChunks.length > 0 ? persistedChunks.length : fallbackChunkCount);
         setCards(persistedCards);
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
@@ -1682,32 +1646,14 @@ export function App({
       if (!isCurrentOperation(operationToken)) {
         return;
       }
-      setOperationStatus("generatingCardsWithOllama");
-      const generatedCards =
-        chunkResponse.chunks.length > 0
-          ? await generateCardsWithFallback(chunkResponse.chunks, operationToken)
-          : [];
-      if (!isCurrentOperation(operationToken)) {
-        return;
-      }
-      setOperationStatus("savingStudyCards");
-      setCardGenerationProgress(null);
-      const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
-      if (!isCurrentOperation(operationToken)) {
-        return;
-      }
-
+      setDocumentChunks(chunkResponse.chunks);
       setChunkCount(chunkResponse.chunks.length);
-      setCards(savedCards);
+      setCards([]);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
       setReviewHistory([]);
       setStudySessionSummaries([]);
-      await beginStudySession(selectedDocument.document_id);
-      if (!isCurrentOperation(operationToken)) {
-        return;
-      }
       setCardReviewSchedules({});
       setOperationStatus(null);
     } catch (unknownError) {
@@ -1715,6 +1661,7 @@ export function App({
         return;
       }
       setChunkCount(null);
+      setDocumentChunks([]);
       setCards([]);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
@@ -1791,14 +1738,37 @@ export function App({
     const partiallySavedCards: StudyCard[] = [];
     const incrementallySavedCardIds = new Set<string>();
     let generatedChunkCount: number | null = null;
+    let chunksForGeneration = documentChunks;
 
     try {
-      const chunkResponse = await chunkTextDocument(toChunkRequest(document, 180));
+      await waitForUiPaint();
       if (!isCurrentOperation(operationToken)) {
         return;
       }
+      let chunkResponse = { chunks: chunksForGeneration };
+      if (chunkResponse.chunks.length === 0) {
+        chunkResponse = await listDocumentChunks(document.document_id);
+        if (!isCurrentOperation(operationToken)) {
+          return;
+        }
+      }
+      if (chunkResponse.chunks.length === 0) {
+        chunkResponse = await chunkTextDocument(toChunkRequest(document, 180));
+        if (!isCurrentOperation(operationToken)) {
+          return;
+        }
+      }
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
+      chunksForGeneration = chunkResponse.chunks;
+      setDocumentChunks(chunkResponse.chunks);
       generatedChunkCount = chunkResponse.chunks.length;
       setOperationStatus("generatingCardsWithOllama");
+      await waitForUiPaint();
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       const generatedCards = await generateCardsWithFallback(chunkResponse.chunks, operationToken, {
         onChunkCards: async (chunkCards) => {
           await saveGeneratedChunkCards(
@@ -1849,9 +1819,11 @@ export function App({
       }
       if (partiallySavedCards.length > 0) {
         setChunkCount(generatedChunkCount);
+        setDocumentChunks(chunksForGeneration);
         setCards(partiallySavedCards);
       } else {
         setChunkCount(null);
+        setDocumentChunks([]);
         setCards([]);
       }
       setActiveCardIndex(0);
@@ -1889,16 +1861,25 @@ export function App({
     const partiallySavedCards: StudyCard[] = [];
 
     try {
+      await waitForUiPaint();
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       const chunkResponse = await listDocumentChunks(document.document_id);
       if (!isCurrentOperation(operationToken)) {
         return;
       }
+      setDocumentChunks(chunkResponse.chunks);
       const currentChunkIds = new Set(cards.map((card) => card.chunkId));
       const remainingChunks = chunkResponse.chunks.filter(
         (chunk) => !currentChunkIds.has(chunk.id)
       );
 
       setOperationStatus("generatingCardsWithOllama");
+      await waitForUiPaint();
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       const incrementallySavedCardIds = new Set<string>();
       const generatedCards =
         remainingChunks.length > 0
@@ -1998,6 +1979,7 @@ export function App({
       if (document?.document_id === documentToArchive.document_id) {
         setDocument(null);
         setChunkCount(null);
+        setDocumentChunks([]);
         setCards([]);
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
@@ -2570,6 +2552,7 @@ export function App({
               <StudyCardViewer
                 card={activeCard}
                 isAnswerVisible={isAnswerVisible}
+                isPreviousDisabled={activeCardIndex <= 0}
                 isNextDisabled={activeCardIndex >= cards.length - 1}
                 selectedReview={cardReviews[activeCard.id] ?? null}
                 reviewSchedule={
@@ -2592,12 +2575,17 @@ export function App({
                     hard: reviewCounts.hard
                   }),
                   revealAnswer: t("study.revealAnswer"),
+                  previousCard: t("study.previousCard"),
                   nextCard: t("study.nextCard"),
                   again: t("study.again"),
                   hard: t("study.hard"),
                   easy: t("study.easy")
                 }}
                 onRevealAnswer={() => setIsAnswerVisible(true)}
+                onPreviousCard={() => {
+                  setActiveCardIndex((currentIndex) => Math.max(currentIndex - 1, 0));
+                  setIsAnswerVisible(false);
+                }}
                 onNextCard={() => {
                   setActiveCardIndex((currentIndex) => Math.min(currentIndex + 1, cards.length - 1));
                   setIsAnswerVisible(false);

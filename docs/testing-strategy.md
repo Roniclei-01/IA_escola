@@ -128,9 +128,11 @@ Execute este roteiro no app desktop com `npm run tauri dev` e registre o resulta
 
 1. Importar um PDF com texto extraivel.
 2. Confirmar que a origem aparece como `PDF`.
-3. Confirmar que o app limita a geracao inicial aos primeiros chunks em documentos grandes.
-4. Usar `Gerar mais cards`.
-5. Confirmar que novos cards sao adicionados sem remover os anteriores.
+3. Confirmar que o PDF fica disponivel na previa sem gerar cards automaticamente.
+4. Usar `Gerar cards` quando o usuario quiser iniciar a IA.
+5. Confirmar que o app limita a geracao sob demanda aos primeiros chunks em documentos grandes.
+6. Usar `Gerar mais cards`.
+7. Confirmar que novos cards sao adicionados sem remover os anteriores.
 
 ### OCR
 

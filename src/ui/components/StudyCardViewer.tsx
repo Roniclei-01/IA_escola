@@ -5,6 +5,7 @@ export type CardReview = "again" | "hard" | "easy";
 interface StudyCardViewerProps {
   card: StudyCard;
   isAnswerVisible: boolean;
+  isPreviousDisabled: boolean;
   isNextDisabled: boolean;
   selectedReview: CardReview | null;
   reviewSchedule: string | null;
@@ -13,12 +14,14 @@ interface StudyCardViewerProps {
     progress: string;
     reviewSummary: string;
     revealAnswer: string;
+    previousCard: string;
     nextCard: string;
     again: string;
     hard: string;
     easy: string;
   };
   onRevealAnswer: () => void;
+  onPreviousCard: () => void;
   onNextCard: () => void;
   onReviewCard: (review: CardReview) => void;
 }
@@ -26,11 +29,13 @@ interface StudyCardViewerProps {
 export function StudyCardViewer({
   card,
   isAnswerVisible,
+  isPreviousDisabled,
   isNextDisabled,
   selectedReview,
   reviewSchedule,
   labels,
   onRevealAnswer,
+  onPreviousCard,
   onNextCard,
   onReviewCard
 }: StudyCardViewerProps) {
@@ -68,8 +73,11 @@ export function StudyCardViewer({
         </button>
       </div>
       <div className="study-actions">
-        <button type="button" onClick={onRevealAnswer}>
+        <button type="button" className="reveal-answer-button" onClick={onRevealAnswer}>
           {labels.revealAnswer}
+        </button>
+        <button type="button" onClick={onPreviousCard} disabled={isPreviousDisabled}>
+          {labels.previousCard}
         </button>
         <button type="button" onClick={onNextCard} disabled={isNextDisabled}>
           {labels.nextCard}

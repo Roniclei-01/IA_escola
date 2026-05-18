@@ -686,6 +686,8 @@ describe("App", () => {
       target: { value: "/tmp/progresso.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent(
@@ -747,9 +749,14 @@ describe("App", () => {
       target: { value: "/tmp/abortar.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+    });
+    await waitFor(() => {
+      expect(capturedSignal).toBeDefined();
     });
     fireEvent.click(screen.getByRole("button", { name: "Cancelar operacao" }));
 
@@ -782,7 +789,7 @@ describe("App", () => {
     );
   });
 
-  it("loads persisted chunks when selecting a saved document", async () => {
+  it("loads persisted chunks without generating cards when selecting a saved document", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [
         {
@@ -821,7 +828,6 @@ describe("App", () => {
       listImportedDocuments,
       listDocumentChunks,
       listStudyCards,
-      saveStudyCards: saveCards,
       generateCards
     });
 
@@ -830,22 +836,11 @@ describe("App", () => {
     await waitFor(() => {
       expect(listDocumentChunks).toHaveBeenCalledWith("document-saved");
     });
-    expect(generateCards).toHaveBeenCalledWith(
-      [
-        {
-          id: "chunk-saved",
-          book_id: "book-saved",
-          document_id: "document-saved",
-          position: 1,
-          content: "Chunk persistido.",
-          token_estimate: 2
-        }
-      ],
-      expect.objectContaining({ onProgress: expect.any(Function) })
-    );
+    expect(generateCards).not.toHaveBeenCalled();
     expect(await screen.findByText("1 chunk gerado")).toBeInTheDocument();
-    expect(screen.getByText("1 card gerado")).toBeInTheDocument();
-    expect(screen.getByText("Pergunta salva")).toBeInTheDocument();
+    expect(screen.getByText("0 card gerado")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gerar cards" })).toBeInTheDocument();
+    expect(screen.queryByText("Pergunta salva")).not.toBeInTheDocument();
   });
 
   it("offers a visible card generation retry when a saved document has no cards", async () => {
@@ -909,19 +904,21 @@ describe("App", () => {
         max_words_per_chunk: 180
       });
     });
-    expect(generateCards).toHaveBeenCalledWith(
-      [
-        {
-          id: "chunk-retry",
-          book_id: "book-without-cards",
-          document_id: "document-without-cards",
-          position: 1,
-          content: "Conteudo importado sem cards.",
-          token_estimate: 4
-        }
-      ],
-      expect.objectContaining({ onProgress: expect.any(Function) })
-    );
+    await waitFor(() => {
+      expect(generateCards).toHaveBeenCalledWith(
+        [
+          {
+            id: "chunk-retry",
+            book_id: "book-without-cards",
+            document_id: "document-without-cards",
+            position: 1,
+            content: "Conteudo importado sem cards.",
+            token_estimate: 4
+          }
+        ],
+        expect.objectContaining({ onProgress: expect.any(Function) })
+      );
+    });
     expect(await screen.findByText("Pergunta gerada depois")).toBeInTheDocument();
     expect(screen.getByText("1 card gerado")).toBeInTheDocument();
   });
@@ -940,7 +937,26 @@ describe("App", () => {
       ]
     });
     const listStudyCards = vi.fn().mockResolvedValue([]);
-    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+    const listDocumentChunks = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-saved",
+          book_id: "book-saved",
+          document_id: "document-saved",
+          position: 1,
+          content: "Chunk com cards persistidos.",
+          token_estimate: 4
+        },
+        {
+          id: "chunk-extra",
+          book_id: "book-saved",
+          document_id: "document-saved",
+          position: 2,
+          content: "Chunk ainda sem cards.",
+          token_estimate: 4
+        }
+      ]
+    });
     const chunkTextDocument = vi.fn().mockResolvedValue({
       chunks: [
         {
@@ -1117,7 +1133,26 @@ describe("App", () => {
         tags: ["saved"]
       }
     ]);
-    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+    const listDocumentChunks = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-saved",
+          book_id: "book-saved",
+          document_id: "document-saved",
+          position: 1,
+          content: "Chunk com cards persistidos.",
+          token_estimate: 4
+        },
+        {
+          id: "chunk-extra",
+          book_id: "book-saved",
+          document_id: "document-saved",
+          position: 2,
+          content: "Chunk ainda sem cards.",
+          token_estimate: 4
+        }
+      ]
+    });
     const generateCards = vi.fn().mockResolvedValue([]);
     const listStudyReviews = vi.fn().mockResolvedValue([
       {
@@ -1159,11 +1194,12 @@ describe("App", () => {
     await waitFor(() => {
       expect(listStudyCards).toHaveBeenCalledWith("document-saved");
     });
-    expect(listDocumentChunks).not.toHaveBeenCalled();
+    expect(listDocumentChunks).toHaveBeenCalledWith("document-saved");
     expect(generateCards).not.toHaveBeenCalled();
     expect(listStudyReviews).toHaveBeenCalledWith("document-saved");
     expect((await screen.findAllByText("Pergunta persistida")).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("3 cards gerados")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gerar mais cards" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dificil" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/Prioridade: 70/)).toBeInTheDocument();
     expect(screen.getByText("Fila de revisao")).toBeInTheDocument();
@@ -1248,8 +1284,10 @@ describe("App", () => {
     expect(screen.getByText("Arquivo: /tmp/book.txt")).toBeInTheDocument();
     expect(screen.getAllByText("Conteudo importado para estudo.").length).toBeGreaterThan(0);
     expect(screen.getByText("1 chunk gerado")).toBeInTheDocument();
-    expect(await screen.findByText("1 card gerado")).toBeInTheDocument();
-    expect(screen.getByText("Pergunta 1 sobre o trecho 0")).toBeInTheDocument();
+    expect(screen.getByText("0 card gerado")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gerar cards" })).toBeInTheDocument();
+    expect(generateCards).not.toHaveBeenCalled();
+    expect(screen.queryByText("Pergunta 1 sobre o trecho 0")).not.toBeInTheDocument();
     expect(screen.getAllByText("Conteudo importado para estudo.").length).toBeGreaterThan(0);
   });
 
@@ -1333,9 +1371,14 @@ describe("App", () => {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+    });
+    await waitFor(() => {
+      expect(generateCards).toHaveBeenCalled();
     });
 
     resolveCards([
@@ -1406,6 +1449,8 @@ describe("App", () => {
       target: { value: "/tmp/import-incremental.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     expect(await screen.findByText("1 card gerado")).toBeInTheDocument();
     expect(screen.getByText("Pergunta importada incremental")).toBeInTheDocument();
@@ -1467,6 +1512,8 @@ describe("App", () => {
       target: { value: "/tmp/large.pdf" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     await waitFor(() => {
       expect(generateCards).toHaveBeenCalledWith(
@@ -1558,6 +1605,8 @@ describe("App", () => {
       target: { value: "/tmp/more.pdf" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     expect(await screen.findByText("3 cards gerados")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar mais cards" }));
@@ -1652,6 +1701,8 @@ describe("App", () => {
       target: { value: "/tmp/incremental.pdf" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     expect(await screen.findByText("3 cards gerados")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar mais cards" }));
@@ -1741,6 +1792,8 @@ describe("App", () => {
       target: { value: "/tmp/more-partial.pdf" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     expect(await screen.findByText("3 cards gerados")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar mais cards" }));
@@ -1822,11 +1875,15 @@ describe("App", () => {
       target: { value: "/tmp/more-cancel.pdf" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     expect(await screen.findByText("3 cards gerados")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar mais cards" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+    });
     fireEvent.click(screen.getByRole("button", { name: "Cancelar operacao" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Operacao cancelada.");
@@ -1881,6 +1938,8 @@ describe("App", () => {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento."
@@ -1956,9 +2015,12 @@ describe("App", () => {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     expect(await screen.findByText("Pergunta 1")).toBeInTheDocument();
     expect(screen.queryByText("Resposta 1")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Card anterior" })).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Revelar resposta" }));
 
@@ -1969,6 +2031,13 @@ describe("App", () => {
     expect(screen.getByText("Pergunta 2")).toBeInTheDocument();
     expect(screen.queryByText("Resposta 1")).not.toBeInTheDocument();
     expect(screen.getByText("Card 2 de 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Card anterior" })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Card anterior" }));
+
+    expect(screen.getByText("Pergunta 1")).toBeInTheDocument();
+    expect(screen.queryByText("Resposta 1")).not.toBeInTheDocument();
+    expect(screen.getByText("Card 1 de 2")).toBeInTheDocument();
   });
 
   it("records review results while studying cards", async () => {
@@ -2037,6 +2106,8 @@ describe("App", () => {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     expect(await screen.findByText("Pergunta 1")).toBeInTheDocument();
     expect(screen.getAllByText("Acertos: 0 | Erros: 0 | Dificeis: 0")).toHaveLength(2);
@@ -2845,6 +2916,8 @@ describe("App", () => {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Modelo Ollama indisponivel.");
     expect(screen.queryByText("Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento.")).not.toBeInTheDocument();
@@ -2909,6 +2982,8 @@ describe("App", () => {
       target: { value: "/tmp/partial.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "A geracao parou, mas 1 card ja foi salvo."

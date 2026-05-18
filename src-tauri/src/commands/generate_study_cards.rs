@@ -35,22 +35,27 @@ pub fn generate_study_cards_with_adapter(
 
 #[cfg(feature = "tauri-app")]
 #[tauri::command]
-pub fn generate_study_cards(
+pub async fn generate_study_cards(
     app_handle: tauri::AppHandle,
     request: GenerateStudyCardsRequest,
 ) -> Result<GenerateStudyCardsResponse, String> {
-    use crate::infrastructure::ai::{OllamaHttpClient, OllamaModelAdapter, OllamaModelConfig};
+    tauri::async_runtime::spawn_blocking(move || {
+        use crate::infrastructure::ai::{OllamaHttpClient, OllamaModelAdapter, OllamaModelConfig};
 
-    let storage = crate::commands::app_storage::open_app_storage(&app_handle)?;
-    let settings = crate::commands::ollama_settings::load_ollama_settings_from_storage(&storage)?;
-    let adapter = OllamaModelAdapter::new(
-        OllamaHttpClient::new(settings.base_url),
-        OllamaModelConfig {
-            model: settings.model,
-        },
-    );
+        let storage = crate::commands::app_storage::open_app_storage(&app_handle)?;
+        let settings =
+            crate::commands::ollama_settings::load_ollama_settings_from_storage(&storage)?;
+        let adapter = OllamaModelAdapter::new(
+            OllamaHttpClient::new(settings.base_url),
+            OllamaModelConfig {
+                model: settings.model,
+            },
+        );
 
-    generate_study_cards_with_adapter(request, &adapter)
+        generate_study_cards_with_adapter(request, &adapter)
+    })
+    .await
+    .map_err(|_| "Nao foi possivel concluir a geracao de cards.".to_owned())?
 }
 
 fn format_generate_error(error: GenerateFlashcardsError) -> String {

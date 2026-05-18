@@ -104,6 +104,7 @@ interface AppProps {
   saveOllamaSettings?: (settings: OllamaSettings) => Promise<OllamaSettings>;
   testOcrDependencies?: () => Promise<OcrDependencies>;
   downloadTextFile?: (fileName: string, content: string) => void;
+  printStudySessionReport?: (fileName: string, html: string) => void;
   confirmDelete?: (message: string) => boolean;
   enableDevelopmentFallback?: boolean;
 }
@@ -344,6 +345,20 @@ function defaultDownloadTextFile(fileName: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
+function defaultPrintStudySessionReport(fileName: string, html: string) {
+  const printWindow = window.open("", "_blank", "noopener,noreferrer");
+
+  if (!printWindow) {
+    defaultDownloadTextFile(fileName.replace(/\.pdf$/, ".html"), html);
+    return;
+  }
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
 function sanitizeReportFileName(value: string): string {
   const normalizedValue = value
     .trim()
@@ -352,6 +367,15 @@ function sanitizeReportFileName(value: string): string {
     .replace(/^-+|-+$/g, "");
 
   return normalizedValue || "documento";
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function buildStudySessionReport(
@@ -390,6 +414,81 @@ function buildStudySessionReport(
     "",
     ...sessionLines
   ].join("\n");
+}
+
+function buildPrintableStudySessionReport(
+  document: ImportTextBookResponse,
+  summaries: StudySessionSummary[]
+): string {
+  const documentTitle = document.content.split("\n")[0]?.trim() || "Documento";
+  const totalAgain = summaries.reduce((total, summary) => total + summary.again_count, 0);
+  const totalHard = summaries.reduce((total, summary) => total + summary.hard_count, 0);
+  const totalEasy = summaries.reduce((total, summary) => total + summary.easy_count, 0);
+  const totalReviews = totalAgain + totalHard + totalEasy;
+  const sessionRows = summaries
+    .map((summary, index) => {
+      const startedAt = formatNextReview(summary.started_at);
+
+      return `
+        <tr>
+          <td>Sessao ${index + 1}</td>
+          <td>${escapeHtml(startedAt)}</td>
+          <td>${summary.easy_count}</td>
+          <td>${summary.hard_count}</td>
+          <td>${summary.again_count}</td>
+        </tr>`;
+    })
+    .join("");
+
+  return `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relatorio de estudo - ${escapeHtml(documentTitle)}</title>
+    <style>
+      @page { margin: 20mm; }
+      body { color: #17201b; font-family: Arial, sans-serif; line-height: 1.45; }
+      h1 { margin: 0 0 16px; font-size: 24px; }
+      h2 { margin: 28px 0 12px; font-size: 18px; }
+      .meta, .summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .box { border: 1px solid #dce2dc; border-radius: 6px; padding: 10px; }
+      strong { display: block; color: #536259; font-size: 11px; text-transform: uppercase; }
+      span { display: block; margin-top: 4px; font-weight: 700; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      th, td { border: 1px solid #dce2dc; padding: 8px; text-align: left; }
+      th { background: #f4f7f3; }
+    </style>
+  </head>
+  <body>
+    <h1>Relatorio de estudo - ${escapeHtml(documentTitle)}</h1>
+    <section class="meta">
+      <div class="box"><strong>Documento</strong><span>${escapeHtml(documentTitle)}</span></div>
+      <div class="box"><strong>Origem</strong><span>${escapeHtml(document.source_path ?? "Nao informada")}</span></div>
+      <div class="box"><strong>Tipo</strong><span>${escapeHtml(document.source_type ?? "txt")}</span></div>
+      <div class="box"><strong>Sessoes</strong><span>${summaries.length}</span></div>
+    </section>
+    <h2>Resumo</h2>
+    <section class="summary">
+      <div class="box"><strong>Revisoes</strong><span>${totalReviews}</span></div>
+      <div class="box"><strong>Acertos</strong><span>${totalEasy}</span></div>
+      <div class="box"><strong>Dificeis</strong><span>${totalHard}</span></div>
+      <div class="box"><strong>Erros</strong><span>${totalAgain}</span></div>
+    </section>
+    <h2>Sessoes</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Sessao</th>
+          <th>Inicio</th>
+          <th>Acertos</th>
+          <th>Dificeis</th>
+          <th>Erros</th>
+        </tr>
+      </thead>
+      <tbody>${sessionRows}</tbody>
+    </table>
+  </body>
+</html>`;
 }
 
 function toAnkiField(value: string): string {
@@ -519,6 +618,7 @@ export function App({
   saveOllamaSettings = defaultSaveOllamaSettings,
   testOcrDependencies = defaultTestOcrDependencies,
   downloadTextFile = defaultDownloadTextFile,
+  printStudySessionReport = defaultPrintStudySessionReport,
   confirmDelete = (message: string) => window.confirm(message),
   enableDevelopmentFallback = import.meta.env.DEV
 }: AppProps) {
@@ -1212,6 +1312,18 @@ export function App({
     downloadTextFile(fileName, buildStudySessionReport(document, studySessionSummaries));
   }
 
+  function handleExportPrintableStudySessionReport() {
+    if (!document || studySessionSummaries.length === 0) {
+      return;
+    }
+
+    const fileName = `relatorio-estudo-${sanitizeReportFileName(document.document_id)}.pdf`;
+    printStudySessionReport(
+      fileName,
+      buildPrintableStudySessionReport(document, studySessionSummaries)
+    );
+  }
+
   function handleExportAnkiDeck() {
     if (!document || cards.length === 0) {
       return;
@@ -1562,6 +1674,7 @@ export function App({
                 title: t("study.sessionHistoryTitle"),
                 empty: t("study.sessionHistoryEmpty"),
                 exportReport: t("study.exportSessionReport"),
+                exportPdfReport: t("study.exportSessionPdfReport"),
                 itemLabel: (summary, index) =>
                   t("study.sessionHistoryItem", {
                     number: index,
@@ -1575,6 +1688,7 @@ export function App({
                   })
               }}
               onExportReport={handleExportStudySessionReport}
+              onExportPdfReport={handleExportPrintableStudySessionReport}
             />
           </DocumentSummary>
         ) : (

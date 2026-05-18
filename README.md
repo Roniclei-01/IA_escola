@@ -105,6 +105,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - resumo historico de desempenho por sessao;
 - comparativo de progresso por documento com sessoes, revisoes e percentual de acertos;
 - exportacao local de relatorio Markdown das sessoes do documento;
+- exportacao imprimivel em PDF do relatorio de estudo;
 - exportacao local de cards para Anki em TSV;
 - arquivamento de documentos da biblioteca ativa sem exclusao fisica imediata;
 - listagem de documentos arquivados com restauracao para a biblioteca ativa;
@@ -188,9 +189,9 @@ docs/
 
 ## Proximos passos
 
-1. Evoluir exportacao para PDF e formatos avancados de Anki.
-2. Melhorar exportacao PDF do relatorio de estudo.
-3. Adicionar evolucao dos cards mais dificeis por periodo.
+1. Evoluir exportacao para formatos avancados de Anki.
+2. Adicionar evolucao dos cards mais dificeis por periodo.
+3. Melhorar a paginacao e identidade visual do relatorio PDF.
 
 ## Comandos de desenvolvimento
 

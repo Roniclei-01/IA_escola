@@ -1164,6 +1164,60 @@ describe("App", () => {
     expect(downloadTextFile.mock.calls[0][1]).toContain("## Sessao 1");
   });
 
+  it("exports a printable PDF study session report", async () => {
+    const printStudySessionReport = vi.fn();
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-pdf-report",
+          book_id: "book-pdf-report",
+          content: "Historia geral\nIdade Media.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/historia.pdf"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-pdf-report",
+        bookId: "book-pdf-report",
+        chunkId: "chunk-pdf-report",
+        front: "O que foi o feudalismo?",
+        back: "Sistema social e economico medieval.",
+        tags: ["historia"]
+      }
+    ]);
+    const listStudySessionSummaries = vi.fn().mockResolvedValue([
+      {
+        session_id: "session-pdf-report",
+        document_id: "document-pdf-report",
+        started_at: 1700000000,
+        again_count: 1,
+        hard_count: 0,
+        easy_count: 4
+      }
+    ]);
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listStudySessionSummaries,
+      printStudySessionReport
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Historia geral/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Exportar PDF" }));
+
+    expect(printStudySessionReport).toHaveBeenCalledWith(
+      "relatorio-estudo-document-pdf-report.pdf",
+      expect.stringContaining("<title>Relatorio de estudo - Historia geral</title>")
+    );
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("<h1>Relatorio de estudo - Historia geral</h1>");
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("<strong>Acertos</strong>");
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("<span>4</span>");
+  });
+
   it("shows retention trend across study sessions", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [

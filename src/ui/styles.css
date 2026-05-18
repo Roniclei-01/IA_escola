@@ -644,7 +644,14 @@ h1 {
   gap: 12px;
 }
 
-.session-history-header button {
+.session-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.session-history-actions button {
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid #c9d6cd;
@@ -655,7 +662,7 @@ h1 {
   cursor: pointer;
 }
 
-.session-history-header button:disabled {
+.session-history-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }

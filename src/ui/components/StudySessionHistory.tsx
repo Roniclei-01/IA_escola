@@ -6,13 +6,20 @@ interface StudySessionHistoryProps {
     title: string;
     empty: string;
     exportReport: string;
+    exportPdfReport: string;
     itemLabel: (summary: StudySessionSummary, index: number) => string;
     itemCounts: (summary: StudySessionSummary) => string;
   };
   onExportReport: () => void;
+  onExportPdfReport: () => void;
 }
 
-export function StudySessionHistory({ summaries, labels, onExportReport }: StudySessionHistoryProps) {
+export function StudySessionHistory({
+  summaries,
+  labels,
+  onExportReport,
+  onExportPdfReport
+}: StudySessionHistoryProps) {
   const latestSummaries = summaries.slice(-5).reverse();
   const hasSummaries = summaries.length > 0;
 
@@ -20,9 +27,14 @@ export function StudySessionHistory({ summaries, labels, onExportReport }: Study
     <section className="session-history" aria-labelledby="session-history-title">
       <div className="session-history-header">
         <h3 id="session-history-title">{labels.title}</h3>
-        <button type="button" disabled={!hasSummaries} onClick={onExportReport}>
-          {labels.exportReport}
-        </button>
+        <div className="session-history-actions">
+          <button type="button" disabled={!hasSummaries} onClick={onExportReport}>
+            {labels.exportReport}
+          </button>
+          <button type="button" disabled={!hasSummaries} onClick={onExportPdfReport}>
+            {labels.exportPdfReport}
+          </button>
+        </div>
       </div>
       {latestSummaries.length === 0 ? <p>{labels.empty}</p> : null}
       {latestSummaries.length > 0 ? (

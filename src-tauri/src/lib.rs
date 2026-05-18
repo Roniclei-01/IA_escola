@@ -16,7 +16,8 @@ pub fn run() {
             health_check,
             commands::import_text_book::import_text_book,
             commands::chunk_text_document::chunk_text_document,
-            commands::list_imported_documents::list_imported_documents
+            commands::list_imported_documents::list_imported_documents,
+            commands::list_document_chunks::list_document_chunks
         ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");

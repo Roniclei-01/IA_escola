@@ -32,6 +32,68 @@ describe("App", () => {
     expect(screen.getByText("Documento salvo anteriormente.")).toBeInTheDocument();
   });
 
+  it("loads persisted chunks when selecting a saved document", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-saved",
+          book_id: "book-saved",
+          content: "Documento salvo anteriormente.",
+          language: "Pt"
+        }
+      ]
+    });
+    const listDocumentChunks = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-saved",
+          book_id: "book-saved",
+          document_id: "document-saved",
+          position: 1,
+          content: "Chunk persistido.",
+          token_estimate: 2
+        }
+      ]
+    });
+    const generateCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-saved",
+        bookId: "book-saved",
+        chunkId: "chunk-saved",
+        front: "Pergunta salva",
+        back: "Resposta salva",
+        tags: ["saved"]
+      }
+    ]);
+
+    render(
+      <App
+        listImportedDocuments={listImportedDocuments}
+        listDocumentChunks={listDocumentChunks}
+        generateCards={generateCards}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
+
+    await waitFor(() => {
+      expect(listDocumentChunks).toHaveBeenCalledWith("document-saved");
+    });
+    expect(generateCards).toHaveBeenCalledWith([
+      {
+        id: "chunk-saved",
+        book_id: "book-saved",
+        document_id: "document-saved",
+        position: 1,
+        content: "Chunk persistido.",
+        token_estimate: 2
+      }
+    ]);
+    expect(await screen.findByText("1 chunk gerado")).toBeInTheDocument();
+    expect(screen.getByText("1 card gerado")).toBeInTheDocument();
+    expect(screen.getByText("Pergunta salva")).toBeInTheDocument();
+  });
+
   it("imports a text book from a file path", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-1",

@@ -9,6 +9,10 @@ import {
   type ListImportedDocumentsResponse
 } from "../infrastructure/tauri/list-imported-documents";
 import {
+  listDocumentChunks as defaultListDocumentChunks,
+  type ListDocumentChunksResponse
+} from "../infrastructure/tauri/list-document-chunks";
+import {
   chunkTextDocument as defaultChunkTextDocument,
   toChunkRequest,
   type ImportedDocumentChunk,
@@ -25,6 +29,7 @@ import { SavedDocumentsList } from "./components/SavedDocumentsList";
 interface AppProps {
   importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
   listImportedDocuments?: () => Promise<ListImportedDocumentsResponse>;
+  listDocumentChunks?: (documentId: string) => Promise<ListDocumentChunksResponse>;
   chunkTextDocument?: (
     request: ReturnType<typeof toChunkRequest>
   ) => Promise<ChunkTextDocumentResponse>;
@@ -47,6 +52,7 @@ async function defaultGenerateCards(chunks: ImportedDocumentChunk[]) {
 export function App({
   importTextBook = defaultImportTextBook,
   listImportedDocuments = defaultListImportedDocuments,
+  listDocumentChunks = defaultListDocumentChunks,
   chunkTextDocument = defaultChunkTextDocument,
   generateCards = defaultGenerateCards
 }: AppProps) {
@@ -133,6 +139,32 @@ export function App({
     }
   }
 
+  async function handleSelectSavedDocument(selectedDocument: ImportTextBookResponse) {
+    setDocument(selectedDocument);
+    setChunkCount(null);
+    setCards([]);
+    setActiveCardIndex(0);
+    setIsAnswerVisible(false);
+    setError(null);
+
+    try {
+      const chunkResponse = await listDocumentChunks(selectedDocument.document_id);
+      const generatedCards =
+        chunkResponse.chunks.length > 0 ? await generateCards(chunkResponse.chunks) : [];
+
+      setChunkCount(chunkResponse.chunks.length);
+      setCards(generatedCards);
+      setActiveCardIndex(0);
+      setIsAnswerVisible(false);
+    } catch (unknownError) {
+      setChunkCount(null);
+      setCards([]);
+      setActiveCardIndex(0);
+      setIsAnswerVisible(false);
+      setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+    }
+  }
+
   return (
     <main className="app-shell">
       <section className="workspace" aria-labelledby="app-title">
@@ -173,12 +205,7 @@ export function App({
             itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 })
           }}
           onSelectDocument={(selectedDocument) => {
-            setDocument(selectedDocument);
-            setChunkCount(null);
-            setCards([]);
-            setActiveCardIndex(0);
-            setIsAnswerVisible(false);
-            setError(null);
+            void handleSelectSavedDocument(selectedDocument);
           }}
         />
 

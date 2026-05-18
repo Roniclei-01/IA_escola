@@ -726,7 +726,7 @@ h1 {
 
 .study-goal-header {
   display: grid;
-  grid-template-columns: 1fr auto minmax(92px, 120px) auto;
+  grid-template-columns: 1fr auto minmax(92px, 120px) auto minmax(120px, 160px) auto;
   align-items: center;
   gap: 10px;
 }
@@ -737,7 +737,8 @@ h1 {
   font-weight: 800;
 }
 
-.study-goal-header input {
+.study-goal-header input,
+.study-goal-header select {
   min-height: 36px;
   padding: 0 10px;
   border: 1px solid #cbd8ce;
@@ -945,6 +946,7 @@ h1 {
   .workspace-header,
   .import-row,
     .settings-row,
+    .study-goal-header,
     .library-filters {
     grid-template-columns: 1fr;
   }

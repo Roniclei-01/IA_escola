@@ -16,7 +16,8 @@ describe("study goals", () => {
   it("loads a document review goal from Tauri", async () => {
     invokeMock.mockResolvedValue({
       document_id: "document-1",
-      target_reviews: 12
+      target_reviews: 12,
+      recurrence: "weekly"
     });
 
     const goal = await loadStudyGoal("document-1");
@@ -26,24 +27,28 @@ describe("study goals", () => {
     });
     expect(goal).toEqual({
       document_id: "document-1",
-      target_reviews: 12
+      target_reviews: 12,
+      recurrence: "weekly"
     });
   });
 
   it("saves a document review goal through Tauri", async () => {
     invokeMock.mockResolvedValue({
       document_id: "document-1",
-      target_reviews: 8
+      target_reviews: 8,
+      recurrence: "daily"
     });
 
-    const goal = await saveStudyGoal("document-1", 8);
+    const goal = await saveStudyGoal("document-1", 8, "daily");
 
     expect(invokeMock).toHaveBeenCalledWith("save_study_goal", {
       request: {
         document_id: "document-1",
-        target_reviews: 8
+        target_reviews: 8,
+        recurrence: "daily"
       }
     });
     expect(goal.target_reviews).toBe(8);
+    expect(goal.recurrence).toBe("daily");
   });
 });

@@ -85,6 +85,8 @@ pub enum StorageError {
     InvalidStudySessionSummaryCount(i64),
     #[error("stored study goal target is invalid")]
     InvalidStudyGoalTarget(String),
+    #[error("stored study goal recurrence is invalid")]
+    InvalidStudyGoalRecurrence(String),
     #[error("stored document has invalid language")]
     InvalidLanguage(String),
     #[error("stored document has invalid source type")]
@@ -646,22 +648,32 @@ impl SQLiteStorage {
         &self,
         document_id: Uuid,
         target_reviews: u32,
+        recurrence: &str,
     ) -> Result<(), StorageError> {
         self.save_setting(
             &study_goal_setting_key(document_id),
             &target_reviews.to_string(),
-        )
+        )?;
+        self.save_setting(&study_goal_recurrence_setting_key(document_id), recurrence)
     }
 
-    pub fn load_study_goal(&self, document_id: Uuid) -> Result<Option<u32>, StorageError> {
+    pub fn load_study_goal(&self, document_id: Uuid) -> Result<Option<(u32, String)>, StorageError> {
         let Some(value) = self.load_setting(&study_goal_setting_key(document_id))? else {
             return Ok(None);
         };
 
-        value
+        let target_reviews = value
             .parse::<u32>()
-            .map(Some)
-            .map_err(|_| StorageError::InvalidStudyGoalTarget(value))
+            .map_err(|_| StorageError::InvalidStudyGoalTarget(value))?;
+        let recurrence = self
+            .load_setting(&study_goal_recurrence_setting_key(document_id))?
+            .unwrap_or_else(|| "all".to_owned());
+
+        if !is_valid_study_goal_recurrence(&recurrence) {
+            return Err(StorageError::InvalidStudyGoalRecurrence(recurrence));
+        }
+
+        Ok(Some((target_reviews, recurrence)))
     }
 
     fn migrate(&self) -> Result<(), StorageError> {
@@ -1013,6 +1025,14 @@ fn rating_from_code(code: &str) -> Result<StudyReviewRating, StorageError> {
 
 fn study_goal_setting_key(document_id: Uuid) -> String {
     format!("study_goal.{document_id}.target_reviews")
+}
+
+fn study_goal_recurrence_setting_key(document_id: Uuid) -> String {
+    format!("study_goal.{document_id}.recurrence")
+}
+
+fn is_valid_study_goal_recurrence(recurrence: &str) -> bool {
+    matches!(recurrence, "all" | "daily" | "weekly")
 }
 
 #[cfg(test)]

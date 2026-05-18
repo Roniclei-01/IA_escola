@@ -101,7 +101,11 @@ interface AppProps {
   startStudySession?: (documentId: string) => Promise<StudySession>;
   listStudySessionSummaries?: (documentId: string) => Promise<StudySessionSummary[]>;
   loadStudyGoal?: (documentId: string) => Promise<StudyGoal | null>;
-  saveStudyGoal?: (documentId: string, targetReviews: number) => Promise<StudyGoal>;
+  saveStudyGoal?: (
+    documentId: string,
+    targetReviews: number,
+    recurrence: StudyGoalRecurrence
+  ) => Promise<StudyGoal>;
   selectStudyFile?: () => Promise<string | null>;
   testOllamaConnection?: (request: {
     model: string;
@@ -127,6 +131,7 @@ type SourceTypeFilter = "all" | "txt" | "pdf";
 type ReviewStatusFilter = "all" | "reviewed" | "pending";
 type LibrarySortMode = "oldest" | "newest" | "type" | "status";
 type MetricPeriodFilter = "all" | "last7" | "last30";
+type StudyGoalRecurrence = StudyGoal["recurrence"];
 
 interface DocumentProgressSummary {
   documentId: string;
@@ -359,15 +364,34 @@ function totalReviewsFromSummaries(summaries: StudySessionSummary[]): number {
   );
 }
 
+function filterSummariesByStudyGoalRecurrence(
+  summaries: StudySessionSummary[],
+  recurrence: StudyGoalRecurrence
+): StudySessionSummary[] {
+  if (recurrence === "all") {
+    return summaries;
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const daySeconds = 24 * 60 * 60;
+  const minimumStartedAt =
+    recurrence === "daily" ? nowSeconds - daySeconds : nowSeconds - 7 * daySeconds;
+
+  return summaries.filter((summary) => summary.started_at >= minimumStartedAt);
+}
+
 function buildStudyGoalProgress(
   summaries: StudySessionSummary[],
-  targetReviews: number | undefined
+  targetReviews: number | undefined,
+  recurrence: StudyGoalRecurrence
 ): StudyGoalProgress | null {
   if (!targetReviews || targetReviews <= 0) {
     return null;
   }
 
-  const completedReviews = totalReviewsFromSummaries(summaries);
+  const completedReviews = totalReviewsFromSummaries(
+    filterSummariesByStudyGoalRecurrence(summaries, recurrence)
+  );
 
   return {
     completedReviews,
@@ -807,6 +831,8 @@ export function App({
   const [studyReviewGoalInputsByDocumentId, setStudyReviewGoalInputsByDocumentId] = useState<
     Record<string, string>
   >({});
+  const [studyReviewGoalRecurrencesByDocumentId, setStudyReviewGoalRecurrencesByDocumentId] =
+    useState<Record<string, StudyGoalRecurrence>>({});
   const [cardReviewSchedules, setCardReviewSchedules] = useState<
     Record<string, { priority: number; nextReviewAt: number }>
   >({});
@@ -848,9 +874,13 @@ export function App({
       activeStudyReviewGoal?.toString() ??
       ""
     : "";
+  const activeStudyReviewGoalRecurrence = document
+    ? studyReviewGoalRecurrencesByDocumentId[document.document_id] ?? "all"
+    : "all";
   const activeStudyGoalProgress = buildStudyGoalProgress(
     studySessionSummaries,
-    activeStudyReviewGoal
+    activeStudyReviewGoal,
+    activeStudyReviewGoalRecurrence
   );
   const reviewCounts = Object.values(cardReviews).reduce(
     (counts, review) => ({
@@ -1172,6 +1202,10 @@ export function App({
         setStudyReviewGoalInputsByDocumentId((currentInputs) => ({
           ...currentInputs,
           [selectedDocument.document_id]: persistedStudyGoal.target_reviews.toString()
+        }));
+        setStudyReviewGoalRecurrencesByDocumentId((currentRecurrences) => ({
+          ...currentRecurrences,
+          [selectedDocument.document_id]: persistedStudyGoal.recurrence
         }));
       }
 
@@ -1496,6 +1530,17 @@ export function App({
     }));
   }
 
+  function handleStudyGoalRecurrenceChange(recurrence: StudyGoalRecurrence) {
+    if (!document) {
+      return;
+    }
+
+    setStudyReviewGoalRecurrencesByDocumentId((currentRecurrences) => ({
+      ...currentRecurrences,
+      [document.document_id]: recurrence
+    }));
+  }
+
   async function handleSaveStudyReviewGoal() {
     if (!document) {
       return;
@@ -1508,7 +1553,11 @@ export function App({
     }
 
     try {
-      const savedGoal = await saveStudyGoal(document.document_id, targetReviews);
+      const savedGoal = await saveStudyGoal(
+        document.document_id,
+        targetReviews,
+        activeStudyReviewGoalRecurrence
+      );
 
       setStudyReviewGoalsByDocumentId((currentGoals) => ({
         ...currentGoals,
@@ -1517,6 +1566,10 @@ export function App({
       setStudyReviewGoalInputsByDocumentId((currentInputs) => ({
         ...currentInputs,
         [document.document_id]: savedGoal.target_reviews.toString()
+      }));
+      setStudyReviewGoalRecurrencesByDocumentId((currentRecurrences) => ({
+        ...currentRecurrences,
+        [document.document_id]: savedGoal.recurrence
       }));
     } catch (unknownError) {
       setError(unknownError instanceof Error ? unknownError.message : t("study.goalSaveError"));
@@ -1934,6 +1987,20 @@ export function App({
                   value={activeStudyReviewGoalInput}
                   onChange={(event) => handleStudyGoalInputChange(event.target.value)}
                 />
+                <label htmlFor="study-review-goal-recurrence">
+                  {t("study.goalRecurrenceLabel")}
+                </label>
+                <select
+                  id="study-review-goal-recurrence"
+                  value={activeStudyReviewGoalRecurrence}
+                  onChange={(event) =>
+                    handleStudyGoalRecurrenceChange(event.target.value as StudyGoalRecurrence)
+                  }
+                >
+                  <option value="all">{t("study.goalRecurrenceAll")}</option>
+                  <option value="daily">{t("study.goalRecurrenceDaily")}</option>
+                  <option value="weekly">{t("study.goalRecurrenceWeekly")}</option>
+                </select>
                 <button
                   type="button"
                   onClick={() => {

@@ -11,10 +11,13 @@ const listNoStudyCards = vi.fn().mockResolvedValue([]);
 const listNoStudyReviews = vi.fn().mockResolvedValue([]);
 const listNoStudySessionSummaries = vi.fn().mockResolvedValue([]);
 const loadNoStudyGoal = vi.fn().mockResolvedValue(null);
-const saveStudyGoal = vi.fn().mockImplementation(async (documentId: string, targetReviews: number) => ({
-  document_id: documentId,
-  target_reviews: targetReviews
-}));
+const saveStudyGoal = vi
+  .fn()
+  .mockImplementation(async (documentId: string, targetReviews: number, recurrence: string) => ({
+    document_id: documentId,
+    target_reviews: targetReviews,
+    recurrence
+  }));
 const saveStudyReview = vi.fn().mockResolvedValue({
   id: "review-1",
   card_id: "card-1",
@@ -1498,11 +1501,13 @@ describe("App", () => {
     ]);
     const loadStudyGoal = vi.fn().mockResolvedValue({
       document_id: "document-persisted-goal",
-      target_reviews: 6
+      target_reviews: 6,
+      recurrence: "all"
     });
     const saveStudyGoal = vi.fn().mockResolvedValue({
       document_id: "document-persisted-goal",
-      target_reviews: 4
+      target_reviews: 4,
+      recurrence: "all"
     });
 
     renderApp({
@@ -1524,9 +1529,80 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar meta" }));
 
     await waitFor(() => {
-      expect(saveStudyGoal).toHaveBeenCalledWith("document-persisted-goal", 4);
+      expect(saveStudyGoal).toHaveBeenCalledWith("document-persisted-goal", 4, "all");
     });
     expect(await screen.findByText("3 de 4 revisoes")).toBeInTheDocument();
+  });
+
+  it("tracks a weekly review goal using only recent study sessions", async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-weekly-goal",
+          book_id: "book-weekly-goal",
+          content: "Matematica aplicada.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/matematica.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-weekly-goal",
+        bookId: "book-weekly-goal",
+        chunkId: "chunk-weekly-goal",
+        front: "O que e uma funcao?",
+        back: "Relacao entre conjuntos.",
+        tags: ["matematica"]
+      }
+    ]);
+    const listStudySessionSummaries = vi.fn().mockResolvedValue([
+      {
+        session_id: "session-weekly-goal-recent",
+        document_id: "document-weekly-goal",
+        started_at: nowSeconds - 60,
+        again_count: 1,
+        hard_count: 0,
+        easy_count: 2
+      },
+      {
+        session_id: "session-weekly-goal-old",
+        document_id: "document-weekly-goal",
+        started_at: nowSeconds - 10 * 24 * 60 * 60,
+        again_count: 0,
+        hard_count: 1,
+        easy_count: 4
+      }
+    ]);
+    const saveStudyGoal = vi.fn().mockResolvedValue({
+      document_id: "document-weekly-goal",
+      target_reviews: 6,
+      recurrence: "weekly"
+    });
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listStudySessionSummaries,
+      saveStudyGoal
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Matematica aplicada/ }));
+    fireEvent.change(await screen.findByLabelText("Meta de revisoes"), {
+      target: { value: "6" }
+    });
+    fireEvent.change(screen.getByLabelText("Periodo da meta"), {
+      target: { value: "weekly" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar meta" }));
+
+    await waitFor(() => {
+      expect(saveStudyGoal).toHaveBeenCalledWith("document-weekly-goal", 6, "weekly");
+    });
+    expect(await screen.findByText("3 de 6 revisoes")).toBeInTheDocument();
+    expect(screen.getByText("50% concluido")).toBeInTheDocument();
   });
 
   it("exports study cards as an Anki TSV deck", async () => {

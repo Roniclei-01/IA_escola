@@ -194,7 +194,7 @@ docs/
 
 1. Evoluir exportacao para formatos avancados de Anki.
 2. Melhorar a paginacao e identidade visual do relatorio PDF.
-3. Adicionar metas recorrentes por semana ou por dia.
+3. Adicionar alertas locais para metas diarias ou semanais nao cumpridas.
 
 ## Comandos de desenvolvimento
 

@@ -112,6 +112,9 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.goalTitle")).toBe(
       "Meta do documento"
     );
+    expect(i18n.getResource("pt", "translation", "study.goalRecurrenceLabel")).toBe(
+      "Periodo da meta"
+    );
     expect(i18n.getResource("pt", "translation", "study.sessionTrendTitle")).toBe(
       "Tendencia por sessao"
     );

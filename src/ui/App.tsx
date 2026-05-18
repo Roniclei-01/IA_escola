@@ -1059,6 +1059,7 @@ export function App({
     documentReviewCounts
   );
   const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
+  const isWorkspaceBusy = isImporting || operationStatus !== null;
   const isCardGenerationBusy =
     operationStatus === "chunkingDocument" ||
     operationStatus === "generatingCardsWithOllama" ||
@@ -2133,6 +2134,7 @@ export function App({
         <SavedDocumentsList
           documents={filteredSavedDocuments}
           isLoading={isLoadingSavedDocuments}
+          isInteractionDisabled={isWorkspaceBusy}
           filters={{
             sourceType: sourceTypeFilter,
             reviewStatus: reviewStatusFilter,
@@ -2176,6 +2178,7 @@ export function App({
         <ArchivedDocumentsList
           documents={archivedDocuments}
           isLoading={isLoadingArchivedDocuments}
+          isInteractionDisabled={isWorkspaceBusy}
           labels={{
             title: t("library.archivedDocuments"),
             loading: t("library.loadingArchivedDocuments"),

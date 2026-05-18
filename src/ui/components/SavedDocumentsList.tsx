@@ -3,6 +3,7 @@ import type { ImportTextBookResponse } from "../../infrastructure/tauri/import-t
 interface SavedDocumentsListProps {
   documents: ImportTextBookResponse[];
   isLoading: boolean;
+  isInteractionDisabled?: boolean;
   filters: {
     sourceType: "all" | "txt" | "pdf";
     reviewStatus: "all" | "reviewed" | "pending";
@@ -42,6 +43,7 @@ interface SavedDocumentsListProps {
 export function SavedDocumentsList({
   documents,
   isLoading,
+  isInteractionDisabled = false,
   filters,
   labels,
   onSearchQueryChange,
@@ -119,6 +121,7 @@ export function SavedDocumentsList({
               <button
                 type="button"
                 className="saved-document-select"
+                disabled={isInteractionDisabled}
                 onClick={() => onSelectDocument(document)}
               >
                 <span>
@@ -129,6 +132,7 @@ export function SavedDocumentsList({
               <button
                 type="button"
                 className="saved-document-archive"
+                disabled={isInteractionDisabled}
                 onClick={() => onArchiveDocument(document)}
               >
                 {labels.archive}

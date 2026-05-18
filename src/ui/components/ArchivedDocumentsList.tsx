@@ -3,6 +3,7 @@ import type { ImportTextBookResponse } from "../../infrastructure/tauri/import-t
 interface ArchivedDocumentsListProps {
   documents: ImportTextBookResponse[];
   isLoading: boolean;
+  isInteractionDisabled?: boolean;
   labels: {
     title: string;
     loading: string;
@@ -19,6 +20,7 @@ interface ArchivedDocumentsListProps {
 export function ArchivedDocumentsList({
   documents,
   isLoading,
+  isInteractionDisabled = false,
   labels,
   onRestoreDocument,
   onDeleteDocument
@@ -38,12 +40,17 @@ export function ArchivedDocumentsList({
                 </span>
                 <strong>{document.content.slice(0, 80)}</strong>
               </div>
-              <button type="button" onClick={() => onRestoreDocument(document)}>
+              <button
+                type="button"
+                disabled={isInteractionDisabled}
+                onClick={() => onRestoreDocument(document)}
+              >
                 {labels.restore}
               </button>
               <button
                 type="button"
                 className="archived-document-delete"
+                disabled={isInteractionDisabled}
                 onClick={() => onDeleteDocument(document)}
               >
                 {labels.deleteForever}

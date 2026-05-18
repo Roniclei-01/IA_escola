@@ -537,6 +537,48 @@ describe("App", () => {
     expect(selectStudyFile).toHaveBeenCalled();
   });
 
+  it("disables document library actions while an import is running", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-busy",
+          book_id: "book-busy",
+          content: "Documento ja salvo.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/salvo.txt"
+        }
+      ]
+    });
+    const importTextBook = vi.fn(
+      () =>
+        new Promise<never>(() => {
+          // Keep import pending so library actions stay disabled.
+        })
+    );
+    const listDocumentChunks = vi.fn();
+
+    renderApp({
+      listImportedDocuments,
+      importTextBook,
+      listDocumentChunks
+    });
+
+    await screen.findByRole("button", { name: /Documento 1/ });
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/novo.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    const savedDocumentButton = await screen.findByRole("button", { name: /Documento 1/ });
+    expect(await screen.findByRole("status")).toHaveTextContent("Importando documento.");
+    expect(savedDocumentButton).toBeDisabled();
+
+    fireEvent.click(savedDocumentButton);
+
+    expect(listDocumentChunks).not.toHaveBeenCalled();
+  });
+
   it("shows an error when the native file picker fails", async () => {
     const selectStudyFile = vi.fn().mockRejectedValue(new Error("dialog failed"));
 

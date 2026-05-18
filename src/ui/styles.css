@@ -175,6 +175,7 @@ h1 {
 
 .document-preview,
 .empty-state,
+.progress-comparison,
 .saved-documents,
 .archived-documents,
 .ocr-dependencies,
@@ -185,11 +186,69 @@ h1 {
 }
 
 .settings-panel h2,
+.progress-comparison h2,
 .saved-documents h2,
 .archived-documents h2,
 .ocr-dependencies h2 {
   margin: 0;
   font-size: 1.1rem;
+}
+
+.progress-comparison ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  padding: 0;
+  margin: 14px 0 0;
+  list-style: none;
+}
+
+.progress-comparison li {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #d8ddd4;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.progress-comparison span {
+  color: #526256;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.progress-comparison strong {
+  display: block;
+  margin-top: 4px;
+  color: #18201c;
+  font-size: 0.95rem;
+}
+
+.progress-comparison dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.progress-comparison dl div {
+  min-width: 0;
+}
+
+.progress-comparison dt {
+  color: #607166;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.progress-comparison dd {
+  margin: 4px 0 0;
+  color: #24352b;
+  font-size: 0.9rem;
+  font-weight: 800;
 }
 
 .ocr-dependencies ul {

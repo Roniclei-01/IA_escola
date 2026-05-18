@@ -72,6 +72,19 @@ export const resources = {
         emptyState: "Nenhum documento importado nesta sessao.",
         emptyStateLabel: "Estado vazio da biblioteca"
       },
+      progress: {
+        title: "Progresso por documento",
+        document: "Documento",
+        topReviewed: "Mais estudado",
+        sessionsLabel: "Sessoes",
+        reviewsLabel: "Revisoes",
+        accuracyLabel: "Acertos",
+        sessions_one: "{{count}} sessao",
+        sessions_other: "{{count}} sessoes",
+        reviews_one: "{{count}} revisao",
+        reviews_other: "{{count}} revisoes",
+        accuracy: "{{percent}}% acertos"
+      },
       study: {
         title: "Estudo",
         progress: "Card {{current}} de {{total}}",
@@ -194,6 +207,19 @@ export const resources = {
         emptyState: "No document imported in this session.",
         emptyStateLabel: "Empty library state"
       },
+      progress: {
+        title: "Progress by document",
+        document: "Document",
+        topReviewed: "Most studied",
+        sessionsLabel: "Sessions",
+        reviewsLabel: "Reviews",
+        accuracyLabel: "Accuracy",
+        sessions_one: "{{count}} session",
+        sessions_other: "{{count}} sessions",
+        reviews_one: "{{count}} review",
+        reviews_other: "{{count}} reviews",
+        accuracy: "{{percent}}% correct"
+      },
       study: {
         title: "Study",
         progress: "Card {{current}} of {{total}}",
@@ -315,6 +341,19 @@ export const resources = {
         cardCount_other: "{{count}} cards generados",
         emptyState: "Ningun documento importado en esta sesion.",
         emptyStateLabel: "Estado vacio de la biblioteca"
+      },
+      progress: {
+        title: "Progreso por documento",
+        document: "Documento",
+        topReviewed: "Mas estudiado",
+        sessionsLabel: "Sesiones",
+        reviewsLabel: "Revisiones",
+        accuracyLabel: "Aciertos",
+        sessions_one: "{{count}} sesion",
+        sessions_other: "{{count}} sesiones",
+        reviews_one: "{{count}} revision",
+        reviews_other: "{{count}} revisiones",
+        accuracy: "{{percent}}% aciertos"
       },
       study: {
         title: "Estudio",

@@ -80,6 +80,73 @@ describe("App", () => {
     expect(screen.getByText("Documento salvo anteriormente.")).toBeInTheDocument();
   });
 
+  it("shows comparative progress for saved documents", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-biology",
+          book_id: "book-biology",
+          content: "Biologia celular.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/biologia.txt"
+        },
+        {
+          document_id: "document-history",
+          book_id: "book-history",
+          content: "Historia do Brasil.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/historia.pdf"
+        }
+      ]
+    });
+    const listStudySessionSummaries = vi.fn().mockImplementation(async (documentId: string) => {
+      if (documentId === "document-biology") {
+        return [
+          {
+            session_id: "session-biology-1",
+            document_id: "document-biology",
+            started_at: 1700000000,
+            again_count: 1,
+            hard_count: 1,
+            easy_count: 3
+          },
+          {
+            session_id: "session-biology-2",
+            document_id: "document-biology",
+            started_at: 1700001000,
+            again_count: 0,
+            hard_count: 0,
+            easy_count: 2
+          }
+        ];
+      }
+
+      return [
+        {
+          session_id: "session-history-1",
+          document_id: "document-history",
+          started_at: 1700002000,
+          again_count: 2,
+          hard_count: 0,
+          easy_count: 0
+        }
+      ];
+    });
+
+    renderApp({ listImportedDocuments, listStudySessionSummaries });
+
+    expect(await screen.findByText("Progresso por documento")).toBeInTheDocument();
+    expect(screen.getAllByText("Biologia celular.")).toHaveLength(2);
+    expect(screen.getByText("2 sessoes")).toBeInTheDocument();
+    expect(screen.getByText("7 revisoes")).toBeInTheDocument();
+    expect(screen.getByText("71% acertos")).toBeInTheDocument();
+    expect(screen.getByText("Mais estudado")).toBeInTheDocument();
+    expect(listStudySessionSummaries).toHaveBeenCalledWith("document-biology");
+    expect(listStudySessionSummaries).toHaveBeenCalledWith("document-history");
+  });
+
   it("filters saved documents by source type and review status", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [

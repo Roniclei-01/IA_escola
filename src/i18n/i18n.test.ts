@@ -98,6 +98,9 @@ describe("i18n", () => {
       "Exportar relatorio"
     );
     expect(i18n.getResource("pt", "translation", "study.exportAnki")).toBe("Exportar Anki");
+    expect(i18n.getResource("pt", "translation", "progress.title")).toBe(
+      "Progresso por documento"
+    );
   });
 
   it("has saved document labels in every supported language", () => {

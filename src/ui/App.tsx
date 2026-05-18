@@ -119,6 +119,15 @@ type SourceTypeFilter = "all" | "txt" | "pdf";
 type ReviewStatusFilter = "all" | "reviewed" | "pending";
 type LibrarySortMode = "oldest" | "newest" | "type" | "status";
 
+interface DocumentProgressSummary {
+  documentId: string;
+  title: string;
+  sessionCount: number;
+  reviewCount: number;
+  accuracyPercent: number;
+  isTopReviewed: boolean;
+}
+
 function toCardReviewMap(
   reviews: Array<{ card_id: string; rating: StudyReviewRating }>
 ): Record<string, CardReview> {
@@ -180,6 +189,66 @@ function averagePriority(reviews: StudyReview[]): number {
 
   const totalPriority = reviews.reduce((total, review) => total + review.priority, 0);
   return Math.round(totalPriority / reviews.length);
+}
+
+function getDocumentTitle(document: ImportTextBookResponse): string {
+  return document.content.split("\n")[0]?.trim() || document.source_path || document.document_id;
+}
+
+function buildDocumentProgressSummaries(
+  documents: ImportTextBookResponse[],
+  summariesByDocument: Record<string, StudySessionSummary[]>
+): DocumentProgressSummary[] {
+  const summaries = documents.map((document) => {
+    const sessionSummaries = summariesByDocument[document.document_id] ?? [];
+    const easyCount = sessionSummaries.reduce((total, summary) => total + summary.easy_count, 0);
+    const reviewCount = sessionSummaries.reduce(
+      (total, summary) => total + summary.easy_count + summary.hard_count + summary.again_count,
+      0
+    );
+
+    return {
+      documentId: document.document_id,
+      title: getDocumentTitle(document),
+      sessionCount: sessionSummaries.length,
+      reviewCount,
+      accuracyPercent: reviewCount > 0 ? Math.round((easyCount / reviewCount) * 100) : 0,
+      isTopReviewed: false
+    };
+  });
+
+  const visibleSummaries = summaries.filter(
+    (summary) => summary.sessionCount > 0 || summary.reviewCount > 0
+  );
+
+  const sortedSummaries = visibleSummaries.sort((firstSummary, secondSummary) => {
+    if (secondSummary.reviewCount !== firstSummary.reviewCount) {
+      return secondSummary.reviewCount - firstSummary.reviewCount;
+    }
+
+    if (secondSummary.sessionCount !== firstSummary.sessionCount) {
+      return secondSummary.sessionCount - firstSummary.sessionCount;
+    }
+
+    return firstSummary.title.localeCompare(secondSummary.title);
+  });
+
+  return sortedSummaries.map((summary, index) => ({
+    ...summary,
+    isTopReviewed: index === 0 && summary.reviewCount > 0
+  }));
+}
+
+function incrementSessionSummaryReview(
+  summary: StudySessionSummary,
+  review: CardReview
+): StudySessionSummary {
+  return {
+    ...summary,
+    again_count: summary.again_count + (review === "again" ? 1 : 0),
+    hard_count: summary.hard_count + (review === "hard" ? 1 : 0),
+    easy_count: summary.easy_count + (review === "easy" ? 1 : 0)
+  };
 }
 
 function defaultDownloadTextFile(fileName: string, content: string) {
@@ -384,6 +453,12 @@ export function App({
   const [savedDocuments, setSavedDocuments] = useState<ImportTextBookResponse[]>([]);
   const [archivedDocuments, setArchivedDocuments] = useState<ImportTextBookResponse[]>([]);
   const [documentReviewCounts, setDocumentReviewCounts] = useState<Record<string, number>>({});
+  const [documentSessionSummariesById, setDocumentSessionSummariesById] = useState<
+    Record<string, StudySessionSummary[]>
+  >({});
+  const [documentProgressSummaries, setDocumentProgressSummaries] = useState<
+    DocumentProgressSummary[]
+  >([]);
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
   const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatusFilter>("all");
   const [librarySearchQuery, setLibrarySearchQuery] = useState("");
@@ -465,6 +540,33 @@ export function App({
         easy_count: 0
       }
     ]);
+    setDocumentSessionSummariesById((currentSummariesByDocument) => ({
+      ...currentSummariesByDocument,
+      [documentId]: [
+        ...(currentSummariesByDocument[documentId] ?? []),
+        {
+          session_id: session.id,
+          document_id: session.document_id,
+          started_at: session.started_at,
+          again_count: 0,
+          hard_count: 0,
+          easy_count: 0
+        }
+      ]
+    }));
+    setDocumentProgressSummaries((currentSummaries) =>
+      currentSummaries
+        .map((summary) =>
+          summary.documentId === documentId
+            ? { ...summary, sessionCount: summary.sessionCount + 1 }
+            : summary
+        )
+        .sort((firstSummary, secondSummary) => secondSummary.reviewCount - firstSummary.reviewCount)
+        .map((summary, index) => ({
+          ...summary,
+          isTopReviewed: index === 0 && summary.reviewCount > 0
+        }))
+    );
   }
 
   useEffect(() => {
@@ -485,10 +587,25 @@ export function App({
             }
           })
         );
+        const sessionSummaryEntries = await Promise.all(
+          response.documents.map(async (savedDocument) => {
+            try {
+              const summaries = await listStudySessionSummaries(savedDocument.document_id);
+              return [savedDocument.document_id, summaries] as const;
+            } catch {
+              return [savedDocument.document_id, []] as const;
+            }
+          })
+        );
+        const summariesByDocument = Object.fromEntries(sessionSummaryEntries);
 
         if (isCurrent) {
           setSavedDocuments(response.documents);
           setDocumentReviewCounts(Object.fromEntries(reviewCountEntries));
+          setDocumentSessionSummariesById(summariesByDocument);
+          setDocumentProgressSummaries(
+            buildDocumentProgressSummaries(response.documents, summariesByDocument)
+          );
         }
       } catch {
         if (isCurrent) {
@@ -506,7 +623,7 @@ export function App({
     return () => {
       isCurrent = false;
     };
-  }, [listImportedDocuments, listStudyReviews, t]);
+  }, [listImportedDocuments, listStudyReviews, listStudySessionSummaries, t]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -635,6 +752,16 @@ export function App({
         ...currentCounts,
         [importedDocument.document_id]: 0
       }));
+      setDocumentSessionSummariesById((currentSummariesByDocument) => ({
+        ...currentSummariesByDocument,
+        [importedDocument.document_id]: []
+      }));
+      setDocumentProgressSummaries(
+        buildDocumentProgressSummaries([...savedDocuments, importedDocument], {
+          ...documentSessionSummariesById,
+          [importedDocument.document_id]: []
+        })
+      );
       setChunkCount(chunkResponse.chunks.length);
       setCards(persistedCards);
       setActiveCardIndex(0);
@@ -798,6 +925,14 @@ export function App({
         delete nextCounts[documentToArchive.document_id];
         return nextCounts;
       });
+      setDocumentProgressSummaries((currentSummaries) =>
+        currentSummaries.filter((summary) => summary.documentId !== documentToArchive.document_id)
+      );
+      setDocumentSessionSummariesById((currentSummariesByDocument) => {
+        const nextSummariesByDocument = { ...currentSummariesByDocument };
+        delete nextSummariesByDocument[documentToArchive.document_id];
+        return nextSummariesByDocument;
+      });
 
       if (document?.document_id === documentToArchive.document_id) {
         setDocument(null);
@@ -832,10 +967,21 @@ export function App({
 
       try {
         const reviews = await listStudyReviews(documentToRestore.document_id);
+        const summaries = await listStudySessionSummaries(documentToRestore.document_id);
         setDocumentReviewCounts((currentCounts) => ({
           ...currentCounts,
           [documentToRestore.document_id]: reviews.length
         }));
+        setDocumentSessionSummariesById((currentSummariesByDocument) => ({
+          ...currentSummariesByDocument,
+          [documentToRestore.document_id]: summaries
+        }));
+        setDocumentProgressSummaries(
+          buildDocumentProgressSummaries([...savedDocuments, documentToRestore], {
+            ...documentSessionSummariesById,
+            [documentToRestore.document_id]: summaries
+          })
+        );
       } catch {
         setDocumentReviewCounts((currentCounts) => ({
           ...currentCounts,
@@ -887,7 +1033,11 @@ export function App({
     }
 
     try {
-      const savedReview = await saveStudyReview(reviewedCard.id, review, activeStudySession?.id ?? null);
+      const savedReview = await saveStudyReview(
+        reviewedCard.id,
+        review,
+        activeStudySession?.id ?? null
+      );
       setReviewHistory((currentReviews) => [...currentReviews, savedReview]);
       setStudySessionReviewCount((currentCount) => currentCount + 1);
       if (activeStudySession) {
@@ -897,14 +1047,19 @@ export function App({
               return summary;
             }
 
-            return {
-              ...summary,
-              again_count: summary.again_count + (review === "again" ? 1 : 0),
-              hard_count: summary.hard_count + (review === "hard" ? 1 : 0),
-              easy_count: summary.easy_count + (review === "easy" ? 1 : 0)
-            };
+            return incrementSessionSummaryReview(summary, review);
           })
         );
+        setDocumentSessionSummariesById((currentSummariesByDocument) => ({
+          ...currentSummariesByDocument,
+          [activeStudySession.document_id]: (
+            currentSummariesByDocument[activeStudySession.document_id] ?? []
+          ).map((summary) =>
+            summary.session_id === activeStudySession.id
+              ? incrementSessionSummaryReview(summary, review)
+              : summary
+          )
+        }));
       }
       if (document) {
         setDocumentReviewCounts((currentCounts) => ({
@@ -919,6 +1074,35 @@ export function App({
           nextReviewAt: savedReview.next_review_at
         }
       }));
+      if (document) {
+        setDocumentProgressSummaries((currentSummaries) =>
+          currentSummaries
+            .map((summary) => {
+              if (summary.documentId !== document.document_id) {
+                return summary;
+              }
+
+              const nextReviewCount = summary.reviewCount + 1;
+              const currentEasyCount = Math.round(
+                (summary.reviewCount * summary.accuracyPercent) / 100
+              );
+              const nextEasyCount = currentEasyCount + (review === "easy" ? 1 : 0);
+
+              return {
+                ...summary,
+                reviewCount: nextReviewCount,
+                accuracyPercent: Math.round((nextEasyCount / nextReviewCount) * 100)
+              };
+            })
+            .sort(
+              (firstSummary, secondSummary) => secondSummary.reviewCount - firstSummary.reviewCount
+            )
+            .map((summary, index) => ({
+              ...summary,
+              isTopReviewed: index === 0 && summary.reviewCount > 0
+            }))
+        );
+      }
     } catch {
       setError(t("study.reviewSaveError"));
     }
@@ -1032,6 +1216,36 @@ export function App({
             tesseractMissing: t("settings.tesseractMissing")
           }}
         />
+
+        {documentProgressSummaries.length > 0 ? (
+          <section className="progress-comparison" aria-labelledby="progress-comparison-title">
+            <h2 id="progress-comparison-title">{t("progress.title")}</h2>
+            <ul>
+              {documentProgressSummaries.map((summary) => (
+                <li key={summary.documentId}>
+                  <div>
+                    <span>{summary.isTopReviewed ? t("progress.topReviewed") : t("progress.document")}</span>
+                    <strong>{summary.title}</strong>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>{t("progress.sessionsLabel")}</dt>
+                      <dd>{t("progress.sessions", { count: summary.sessionCount })}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("progress.reviewsLabel")}</dt>
+                      <dd>{t("progress.reviews", { count: summary.reviewCount })}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("progress.accuracyLabel")}</dt>
+                      <dd>{t("progress.accuracy", { percent: summary.accuracyPercent })}</dd>
+                    </div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <SavedDocumentsList
           documents={filteredSavedDocuments}

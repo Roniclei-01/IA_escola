@@ -101,6 +101,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - ordenacao da biblioteca por data, tipo e status;
 - sessoes de estudo vinculando novas revisoes a uma rodada ativa;
 - resumo historico de desempenho por sessao;
+- comparativo de progresso por documento com sessoes, revisoes e percentual de acertos;
 - exportacao local de relatorio Markdown das sessoes do documento;
 - exportacao local de cards para Anki em TSV;
 - arquivamento de documentos da biblioteca ativa sem exclusao fisica imediata;
@@ -185,8 +186,8 @@ docs/
 ## Proximos passos
 
 1. Evoluir exportacao para PDF e formatos avancados de Anki.
-2. Adicionar relatorios comparativos de progresso por documento.
-3. Melhorar configuracao do idioma OCR por documento.
+2. Melhorar configuracao do idioma OCR por documento.
+3. Evoluir metricas de retencao com tendencia temporal e cards mais dificeis.
 
 ## Comandos de desenvolvimento
 

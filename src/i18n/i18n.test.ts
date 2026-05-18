@@ -109,6 +109,9 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.sessionTrendTitle")).toBe(
       "Tendencia por sessao"
     );
+    expect(i18n.getResource("pt", "translation", "study.hardCardTrendTitle")).toBe(
+      "Cards dificeis por periodo"
+    );
   });
 
   it("has saved document labels in every supported language", () => {

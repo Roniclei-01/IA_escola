@@ -564,6 +564,7 @@ h1 {
 .due-study-queue,
 .retention-metrics,
 .session-trend,
+.hard-card-trend,
 .session-history {
   margin-top: 20px;
   padding: 16px;
@@ -576,6 +577,7 @@ h1 {
 .due-study-queue h3,
 .retention-metrics h3,
 .session-trend h3,
+.hard-card-trend h3,
 .session-history h3 {
   margin: 0;
   font-size: 1rem;
@@ -637,6 +639,36 @@ h1 {
   background: #fff5f4;
 }
 
+.hard-card-trend-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.hard-card-trend .hard-card-trend-status strong {
+  width: fit-content;
+  padding: 6px 10px;
+  border: 1px solid #c6d8e8;
+  border-radius: 6px;
+  color: #24425c;
+  background: #e6f0f8;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.hard-card-trend .hard-card-trend-status.reduction strong {
+  color: #1f4e35;
+  border-color: #b7d8c0;
+  background: #e6f4eb;
+}
+
+.hard-card-trend .hard-card-trend-status.increase strong {
+  color: #6b1f1a;
+  border-color: #e4c4bf;
+  background: #fff5f4;
+}
+
 .session-history-header {
   display: flex;
   align-items: center;
@@ -671,6 +703,7 @@ h1 {
 .due-study-queue p,
 .retention-metrics p,
 .session-trend p,
+.hard-card-trend p,
 .session-history p {
   margin: 10px 0 0;
 }
@@ -679,6 +712,7 @@ h1 {
 .due-study-queue ul,
 .retention-metrics ul,
 .session-trend ul,
+.hard-card-trend ul,
 .session-history ul {
   display: grid;
   gap: 8px;
@@ -690,6 +724,7 @@ h1 {
 .review-history li,
 .retention-metrics li,
 .session-trend li,
+.hard-card-trend li,
 .session-history li {
   display: grid;
   gap: 4px;
@@ -720,6 +755,7 @@ h1 {
 .due-study-queue span,
 .retention-metrics span,
 .session-trend span,
+.hard-card-trend span,
 .session-history span {
   color: #526256;
   font-size: 0.8rem;
@@ -731,6 +767,7 @@ h1 {
 .due-study-queue strong,
 .retention-metrics strong,
 .session-trend strong,
+.hard-card-trend strong,
 .session-history strong {
   color: #24352b;
   font-size: 0.9rem;

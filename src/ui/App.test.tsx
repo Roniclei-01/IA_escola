@@ -1284,6 +1284,64 @@ describe("App", () => {
     expect(screen.getByText("33% para 75%")).toBeInTheDocument();
   });
 
+  it("shows difficult card evolution by period", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-hard-trend",
+          book_id: "book-hard-trend",
+          content: "Fisica mecanica.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/fisica.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-hard-trend",
+        bookId: "book-hard-trend",
+        chunkId: "chunk-hard-trend",
+        front: "O que e forca?",
+        back: "Interacao que altera movimento.",
+        tags: ["fisica"]
+      }
+    ]);
+    const listStudySessionSummaries = vi.fn().mockResolvedValue([
+      {
+        session_id: "session-hard-old",
+        document_id: "document-hard-trend",
+        started_at: 1700000000,
+        again_count: 2,
+        hard_count: 1,
+        easy_count: 1
+      },
+      {
+        session_id: "session-hard-latest",
+        document_id: "document-hard-trend",
+        started_at: 1700604800,
+        again_count: 0,
+        hard_count: 1,
+        easy_count: 4
+      }
+    ]);
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listStudySessionSummaries
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Fisica mecanica/ }));
+
+    expect(await screen.findByText("Cards dificeis por periodo")).toBeInTheDocument();
+    expect(screen.getByText("Reducao")).toBeInTheDocument();
+    expect(screen.getByText("Periodo 1")).toBeInTheDocument();
+    expect(screen.getByText("3 cards dificeis")).toBeInTheDocument();
+    expect(screen.getByText("Periodo 2")).toBeInTheDocument();
+    expect(screen.getByText("1 card dificil")).toBeInTheDocument();
+  });
+
   it("exports study cards as an Anki TSV deck", async () => {
     const downloadTextFile = vi.fn();
     const listImportedDocuments = vi.fn().mockResolvedValue({

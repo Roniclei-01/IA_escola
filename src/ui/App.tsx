@@ -146,6 +146,14 @@ interface SessionTrend {
   status: "improving" | "stable" | "declining";
 }
 
+interface HardCardPeriodTrend {
+  status: "reduction" | "stable" | "increase";
+  periods: Array<{
+    label: string;
+    difficultCount: number;
+  }>;
+}
+
 function toCardReviewMap(
   reviews: Array<{ card_id: string; rating: StudyReviewRating }>
 ): Record<string, CardReview> {
@@ -271,6 +279,53 @@ function buildSessionTrend(summaries: StudySessionSummary[]): SessionTrend | nul
     firstRetentionPercent,
     latestRetentionPercent,
     status
+  };
+}
+
+function difficultCountFromSummary(summary: StudySessionSummary): number {
+  return summary.again_count + summary.hard_count;
+}
+
+function buildHardCardPeriodTrend(summaries: StudySessionSummary[]): HardCardPeriodTrend | null {
+  const weekSeconds = 7 * 24 * 60 * 60;
+  const completedSummaries = summaries.filter(
+    (summary) => summary.easy_count + summary.hard_count + summary.again_count > 0
+  );
+  const difficultCountsByWeek = completedSummaries.reduce<Record<number, number>>(
+    (countsByWeek, summary) => {
+      const weekKey = Math.floor(summary.started_at / weekSeconds);
+      countsByWeek[weekKey] = (countsByWeek[weekKey] ?? 0) + difficultCountFromSummary(summary);
+      return countsByWeek;
+    },
+    {}
+  );
+  const weekEntries = Object.entries(difficultCountsByWeek)
+    .map(([weekKey, difficultCount]) => ({
+      weekKey: Number(weekKey),
+      difficultCount
+    }))
+    .sort((firstPeriod, secondPeriod) => firstPeriod.weekKey - secondPeriod.weekKey);
+
+  if (weekEntries.length < 2) {
+    return null;
+  }
+
+  const firstDifficultCount = weekEntries[0].difficultCount;
+  const latestDifficultCount = weekEntries[weekEntries.length - 1].difficultCount;
+  let status: HardCardPeriodTrend["status"] = "stable";
+
+  if (latestDifficultCount < firstDifficultCount) {
+    status = "reduction";
+  } else if (latestDifficultCount > firstDifficultCount) {
+    status = "increase";
+  }
+
+  return {
+    status,
+    periods: weekEntries.map((period, index) => ({
+      label: `Periodo ${index + 1}`,
+      difficultCount: period.difficultCount
+    }))
   };
 }
 
@@ -682,6 +737,7 @@ export function App({
   );
   const retentionMetrics = buildRetentionMetrics(cards, reviewHistory);
   const sessionTrend = buildSessionTrend(studySessionSummaries);
+  const hardCardPeriodTrend = buildHardCardPeriodTrend(studySessionSummaries);
   const reviewCounts = Object.values(cardReviews).reduce(
     (counts, review) => ({
       ...counts,
@@ -1666,6 +1722,28 @@ export function App({
                     })}
                   </span>
                 </div>
+              </section>
+            ) : null}
+            {hardCardPeriodTrend ? (
+              <section className="hard-card-trend" aria-labelledby="hard-card-trend-title">
+                <h3 id="hard-card-trend-title">{t("study.hardCardTrendTitle")}</h3>
+                <div className={`hard-card-trend-status ${hardCardPeriodTrend.status}`}>
+                  <strong>
+                    {hardCardPeriodTrend.status === "reduction"
+                      ? t("study.hardCardTrendReduction")
+                      : hardCardPeriodTrend.status === "increase"
+                        ? t("study.hardCardTrendIncrease")
+                        : t("study.hardCardTrendStable")}
+                  </strong>
+                </div>
+                <ul>
+                  {hardCardPeriodTrend.periods.map((period) => (
+                    <li key={period.label}>
+                      <span>{period.label}</span>
+                      <strong>{t("study.hardCardTrendCount", { count: period.difficultCount })}</strong>
+                    </li>
+                  ))}
+                </ul>
               </section>
             ) : null}
             <StudySessionHistory

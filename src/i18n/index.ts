@@ -13,6 +13,7 @@ export const resources = {
         status: "Importacao TXT/PDF",
         filePathLabel: "Caminho do arquivo .txt ou .pdf",
         filePathPlaceholder: "/home/usuario/livro.txt",
+        chooseFile: "Selecionar",
         import: "Importar",
         importing: "Importando",
         importingDocument: "Importando documento.",
@@ -23,6 +24,7 @@ export const resources = {
         mockGenerationFallback:
           "Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento.",
         emptyPath: "Informe o caminho do arquivo .txt ou .pdf.",
+        fileDialogError: "Nao foi possivel abrir o seletor de arquivos.",
         unknownError: "Nao foi possivel importar o arquivo.",
         savedDocuments: "Documentos salvos",
         loadingSavedDocuments: "Carregando documentos salvos",
@@ -72,6 +74,7 @@ export const resources = {
         status: "TXT/PDF import",
         filePathLabel: "Study file path",
         filePathPlaceholder: "/home/user/book.txt",
+        chooseFile: "Choose",
         import: "Import",
         importing: "Importing",
         importingDocument: "Importing document.",
@@ -82,6 +85,7 @@ export const resources = {
         mockGenerationFallback:
           "Ollama failed. Mock cards were generated for development only.",
         emptyPath: "Enter a .txt or .pdf file path.",
+        fileDialogError: "Could not open the file picker.",
         unknownError: "Could not import the file.",
         savedDocuments: "Saved documents",
         loadingSavedDocuments: "Loading saved documents",
@@ -131,6 +135,7 @@ export const resources = {
         status: "Importacion TXT/PDF",
         filePathLabel: "Ruta del archivo .txt o .pdf",
         filePathPlaceholder: "/home/usuario/libro.txt",
+        chooseFile: "Seleccionar",
         import: "Importar",
         importing: "Importando",
         importingDocument: "Importando documento.",
@@ -141,6 +146,7 @@ export const resources = {
         mockGenerationFallback:
           "Ollama fallo. Se generaron cards mockados solo para desarrollo.",
         emptyPath: "Informe la ruta del archivo .txt o .pdf.",
+        fileDialogError: "No fue posible abrir el selector de archivos.",
         unknownError: "No fue posible importar el archivo.",
         savedDocuments: "Documentos guardados",
         loadingSavedDocuments: "Cargando documentos guardados",

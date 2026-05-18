@@ -57,6 +57,7 @@ Fluxos minimos do MVP:
 
 - abrir app;
 - selecionar idioma;
+- selecionar arquivo pelo dialog nativo;
 - importar arquivo `.txt` ou `.pdf`;
 - ver livro na biblioteca;
 - gerar flashcards;

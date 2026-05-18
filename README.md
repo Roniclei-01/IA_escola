@@ -56,7 +56,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - parser de `.txt` e `.pdf` no backend Tauri;
 - comando Tauri `import_text_book`;
 - ponte TypeScript `importTextBook`;
-- UI minima para informar o caminho de um arquivo de estudo, importar e exibir previa;
+- UI minima para selecionar ou informar o caminho de um arquivo de estudo, importar e exibir previa;
 - comando Tauri `chunk_text_document`;
 - ponte TypeScript `chunkTextDocument`;
 - exibicao da quantidade de chunks gerados apos importacao;
@@ -90,6 +90,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - feedback visual para importacao, chunking, geracao com Ollama, salvamento e carregamento de cards;
 - fallback de desenvolvimento para gerar cards mockados quando o Ollama falhar;
 - revisao com marcacao de acerto, erro e dificuldade;
+- dialog nativo do Tauri para selecionar arquivos `.txt` e `.pdf`;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -164,9 +165,9 @@ docs/
 
 ## Proximos passos
 
-1. Melhorar a selecao de arquivos com dialog nativo do Tauri.
-2. Adicionar metadados de origem para diferenciar livros TXT e PDF.
-3. Evoluir revisao espacada com agenda e prioridade dos cards.
+1. Adicionar metadados de origem para diferenciar livros TXT e PDF.
+2. Evoluir revisao espacada com agenda e prioridade dos cards.
+3. Criar historico visual de revisoes por documento.
 
 ## Comandos de desenvolvimento
 

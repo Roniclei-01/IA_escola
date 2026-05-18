@@ -13,6 +13,7 @@ const saveStudyReview = vi.fn().mockResolvedValue({
   card_id: "card-1",
   rating: "easy"
 });
+const selectNoFile = vi.fn().mockResolvedValue(null);
 const saveCards = vi.fn().mockImplementation(async (cards: unknown[]) => cards);
 const loadDefaultOllamaSettings = vi.fn().mockResolvedValue({
   base_url: "http://127.0.0.1:11434",
@@ -26,6 +27,7 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       listImportedDocuments={listNoDocuments}
       listStudyReviews={listNoStudyReviews}
       saveStudyReview={saveStudyReview}
+      selectStudyFile={selectNoFile}
       loadOllamaSettings={loadDefaultOllamaSettings}
       saveOllamaSettings={saveOllamaSettings}
       {...props}
@@ -100,6 +102,29 @@ describe("App", () => {
 
     expect(await screen.findByDisplayValue("http://127.0.0.1:11435")).toBeInTheDocument();
     expect(screen.getByDisplayValue("mistral")).toBeInTheDocument();
+  });
+
+  it("fills the file path from the native file picker", async () => {
+    const selectStudyFile = vi.fn().mockResolvedValue("/tmp/book.pdf");
+
+    renderApp({ selectStudyFile });
+
+    fireEvent.click(screen.getByRole("button", { name: "Selecionar" }));
+
+    expect(await screen.findByDisplayValue("/tmp/book.pdf")).toBeInTheDocument();
+    expect(selectStudyFile).toHaveBeenCalled();
+  });
+
+  it("shows an error when the native file picker fails", async () => {
+    const selectStudyFile = vi.fn().mockRejectedValue(new Error("dialog failed"));
+
+    renderApp({ selectStudyFile });
+
+    fireEvent.click(screen.getByRole("button", { name: "Selecionar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Nao foi possivel abrir o seletor de arquivos."
+    );
   });
 
   it("shows an error when the Ollama connection test fails", async () => {

@@ -94,7 +94,7 @@ h1 {
 
 .import-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 12px;
 }
 
@@ -122,6 +122,12 @@ h1 {
 .import-row button:disabled {
   cursor: wait;
   opacity: 0.7;
+}
+
+.import-row .secondary-button {
+  color: #23352b;
+  background: #ffffff;
+  border: 1px solid #c9d6cd;
 }
 
 .message {

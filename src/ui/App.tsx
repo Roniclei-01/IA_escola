@@ -31,6 +31,7 @@ import {
   saveStudyReview as defaultSaveStudyReview,
   type StudyReviewRating
 } from "../infrastructure/tauri/study-reviews";
+import { selectStudyFile as defaultSelectStudyFile } from "../infrastructure/tauri/file-dialog";
 import {
   testOllamaConnection as defaultTestOllamaConnection,
   type TestOllamaConnectionResponse
@@ -60,6 +61,7 @@ interface AppProps {
   listStudyReviews?: (
     documentId: string
   ) => Promise<Array<{ card_id: string; rating: StudyReviewRating }>>;
+  selectStudyFile?: () => Promise<string | null>;
   testOllamaConnection?: (request: {
     model: string;
     base_url?: string;
@@ -95,6 +97,7 @@ export function App({
   listStudyCards = defaultListStudyCards,
   saveStudyReview = defaultSaveStudyReview,
   listStudyReviews = defaultListStudyReviews,
+  selectStudyFile = defaultSelectStudyFile,
   testOllamaConnection = defaultTestOllamaConnection,
   loadOllamaSettings = defaultLoadOllamaSettings,
   saveOllamaSettings = defaultSaveOllamaSettings,
@@ -330,6 +333,21 @@ export function App({
     }
   }
 
+  async function handleChooseFile() {
+    setError(null);
+    setWarning(null);
+
+    try {
+      const selectedPath = await selectStudyFile();
+
+      if (selectedPath) {
+        setFilePath(selectedPath);
+      }
+    } catch {
+      setError(t("library.fileDialogError"));
+    }
+  }
+
   async function handleReviewCard(review: CardReview) {
     if (!activeCard) {
       return;
@@ -371,10 +389,14 @@ export function App({
           labels={{
             filePathLabel: t("library.filePathLabel"),
             filePathPlaceholder: t("library.filePathPlaceholder"),
+            chooseFile: t("library.chooseFile"),
             import: t("library.import"),
             importing: t("library.importing")
           }}
           onFilePathChange={setFilePath}
+          onChooseFile={() => {
+            void handleChooseFile();
+          }}
           onSubmit={handleSubmit}
         />
 

@@ -28,6 +28,10 @@ describe("i18n", () => {
     expect(i18n.getResource("es", "translation", "library.filePathLabel")).toBe(
       "Ruta del archivo .txt o .pdf"
     );
+    expect(i18n.getResource("pt", "translation", "library.chooseFile")).toBe("Selecionar");
+    expect(i18n.getResource("pt", "translation", "library.fileDialogError")).toBe(
+      "Nao foi possivel abrir o seletor de arquivos."
+    );
   });
 
   it("has chunk count labels in every supported language", () => {

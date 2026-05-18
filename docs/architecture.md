@@ -24,7 +24,7 @@ O projeto deve ser um aplicativo desktop local-first, seguro e extensivel, capaz
 
 ### Apresentacao
 
-Responsavel por telas, navegacao, estado visual, selecao de idioma e interacao do usuario. A UI nao deve acessar banco, arquivos locais ou comandos de sistema diretamente. Todas as operacoes sensiveis passam por uma API interna exposta pelo Tauri.
+Responsavel por telas, navegacao, estado visual, selecao de idioma e interacao do usuario. A UI nao deve acessar banco, arquivos locais ou comandos de sistema diretamente. Todas as operacoes sensiveis passam por uma API interna exposta pelo Tauri ou por plugins oficiais com permissoes explicitas.
 
 Telas iniciais:
 
@@ -92,7 +92,7 @@ O app deve manter separacao rigorosa entre frontend e operacoes privilegiadas.
 
 Regras:
 
-- arquivos locais so podem ser acessados por comandos Tauri autorizados;
+- arquivos locais so podem ser acessados por comandos Tauri autorizados ou pelo dialog nativo com permissao explicita;
 - paths devem ser validados antes de leitura;
 - conteudo de livros nao deve ser enviado para nuvem sem consentimento explicito;
 - logs nao devem armazenar trechos de livros por padrao;

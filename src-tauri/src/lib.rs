@@ -12,6 +12,7 @@ fn health_check() -> &'static str {
 #[cfg(feature = "tauri-app")]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             health_check,
             commands::import_text_book::import_text_book,

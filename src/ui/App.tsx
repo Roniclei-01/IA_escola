@@ -786,12 +786,23 @@ function toAnkiTag(value: string): string {
   return value.trim().replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "");
 }
 
+function toAnkiGuid(card: StudyCard): string {
+  return toAnkiTag(`estudo_ia_local_${card.id}`);
+}
+
 function buildAnkiTsv(cards: StudyCard[], document: ImportTextBookResponse): string {
   const documentTag = toAnkiTag(`document_${document.document_id}`);
   const sourceTypeTag = toAnkiTag(`source_${document.source_type ?? "txt"}`);
-  const headers = ["#separator:tab", "#html:false", "#notetype:Basic", "#columns:Front Back Tags"];
+  const headers = [
+    "#separator:tab",
+    "#html:false",
+    "#notetype:Basic",
+    "#guid column:1",
+    "#columns:GUID Front Back Tags"
+  ];
   const rows = cards.map((card) =>
     [
+      toAnkiGuid(card),
       toAnkiField(card.front),
       toAnkiField(card.back),
       toAnkiTags(["estudo_ia_local", documentTag, sourceTypeTag, ...card.tags])

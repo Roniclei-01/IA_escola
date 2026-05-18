@@ -112,7 +112,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - comparativo de progresso por documento com sessoes, revisoes e percentual de acertos;
 - exportacao local de relatorio Markdown das sessoes do documento;
 - previa e exportacao imprimivel em PDF do relatorio de estudo com paginacao, layout de impressao, grafico de desempenho e tendencia por sessao;
-- exportacao local de cards para Anki em TSV com diretivas de importacao e tags de origem;
+- exportacao local de cards para Anki em TSV com diretivas de importacao, GUID estavel e tags de origem;
 - arquivamento de documentos da biblioteca ativa sem exclusao fisica imediata;
 - listagem de documentos arquivados com restauracao para a biblioteca ativa;
 - exclusao definitiva de documentos arquivados com confirmacao e limpeza dos dados de estudo relacionados;

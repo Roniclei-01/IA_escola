@@ -1761,9 +1761,10 @@ describe("App", () => {
         "#separator:tab",
         "#html:false",
         "#notetype:Basic",
-        "#columns:Front Back Tags",
-        "O que e celula? Explique.\tUnidade basica da vida.\testudo_ia_local document_document-anki source_txt biologia celula_animal",
-        "Funcao da mitocondria?\tProduzir energia.\testudo_ia_local document_document-anki source_txt biologia"
+        "#guid column:1",
+        "#columns:GUID Front Back Tags",
+        "estudo_ia_local_card-1\tO que e celula? Explique.\tUnidade basica da vida.\testudo_ia_local document_document-anki source_txt biologia celula_animal",
+        "estudo_ia_local_card-2\tFuncao da mitocondria?\tProduzir energia.\testudo_ia_local document_document-anki source_txt biologia"
       ].join("\n")
     );
   });

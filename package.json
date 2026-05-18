@@ -16,7 +16,8 @@
     "check:mvp": "npm run check && npm run build && npm run test:e2e",
     "check:mvp:env": "bash scripts/check-mvp-environment.sh",
     "check:mvp:appimage": "bash scripts/smoke-test-appimage.sh",
-    "create:mvp-samples": "bash scripts/create-mvp-samples.sh"
+    "create:mvp-samples": "bash scripts/create-mvp-samples.sh",
+    "open:mvp:appimage": "bash scripts/open-appimage.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

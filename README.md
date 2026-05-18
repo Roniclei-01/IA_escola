@@ -230,6 +230,7 @@ npm run check:mvp
 npm run check:mvp:env
 npm run check:mvp:appimage
 npm run create:mvp-samples
+npm run open:mvp:appimage
 npm run build
 ```
 

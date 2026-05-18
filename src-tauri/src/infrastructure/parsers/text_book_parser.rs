@@ -30,6 +30,7 @@ pub enum TextBookParserError {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TextBookParserOptions {
     pub ocr_enabled: bool,
+    pub ocr_fallback_enabled: bool,
     pub ocr_engine: OcrEngineOptions,
 }
 
@@ -44,6 +45,7 @@ impl Default for TextBookParserOptions {
     fn default() -> Self {
         Self {
             ocr_enabled: false,
+            ocr_fallback_enabled: false,
             ocr_engine: OcrEngineOptions::default(),
         }
     }
@@ -112,15 +114,25 @@ fn extract_pdf_text(
     path: &Path,
     options: &TextBookParserOptions,
 ) -> Result<String, TextBookParserError> {
-    let document = PdfDocument::load(path).map_err(|_| TextBookParserError::PdfReadFailed)?;
+    let document = match PdfDocument::load(path) {
+        Ok(document) => document,
+        Err(_) if should_attempt_ocr(options) => {
+            return extract_pdf_text_with_ocr(path, &options.ocr_engine);
+        }
+        Err(_) => return Err(TextBookParserError::PdfNeedsOcr),
+    };
     let page_numbers = document.get_pages().keys().copied().collect::<Vec<_>>();
 
-    let extracted_text = document
-        .extract_text(&page_numbers)
-        .map_err(|_| TextBookParserError::PdfReadFailed)?;
+    let extracted_text = match document.extract_text(&page_numbers) {
+        Ok(text) => text,
+        Err(_) if should_attempt_ocr(options) => {
+            return extract_pdf_text_with_ocr(path, &options.ocr_engine);
+        }
+        Err(_) => return Err(TextBookParserError::PdfNeedsOcr),
+    };
 
     if extracted_text.trim().is_empty() {
-        if options.ocr_enabled {
+        if should_attempt_ocr(options) {
             return extract_pdf_text_with_ocr(path, &options.ocr_engine);
         }
 
@@ -128,6 +140,10 @@ fn extract_pdf_text(
     }
 
     Ok(extracted_text)
+}
+
+fn should_attempt_ocr(options: &TextBookParserOptions) -> bool {
+    options.ocr_enabled || options.ocr_fallback_enabled
 }
 
 fn extract_pdf_text_with_ocr(
@@ -286,13 +302,13 @@ mod tests {
     }
 
     #[test]
-    fn rejects_pdf_without_extractable_text() {
+    fn asks_for_ocr_when_pdf_text_extraction_fails_without_ocr() {
         let dir = TempDir::new().unwrap();
         let path = write_temp_file(&dir, "empty.pdf", "%PDF-1.4");
 
         let result = parse_text_book(Uuid::new_v4(), path, Language::Pt);
 
-        assert_eq!(result.unwrap_err(), TextBookParserError::PdfReadFailed);
+        assert_eq!(result.unwrap_err(), TextBookParserError::PdfNeedsOcr);
     }
 
     #[test]
@@ -318,6 +334,7 @@ mod tests {
             Language::Pt,
             TextBookParserOptions {
                 ocr_enabled: true,
+                ocr_fallback_enabled: false,
                 ocr_engine: super::OcrEngineOptions {
                     pdftoppm_path: dir.path().join("missing-pdftoppm"),
                     tesseract_path: dir.path().join("missing-tesseract"),
@@ -352,6 +369,7 @@ mod tests {
             Language::Pt,
             TextBookParserOptions {
                 ocr_enabled: true,
+                ocr_fallback_enabled: false,
                 ocr_engine: super::OcrEngineOptions {
                     pdftoppm_path,
                     tesseract_path,
@@ -362,6 +380,78 @@ mod tests {
         .unwrap();
 
         assert_eq!(document.content, "Texto reconhecido por OCR.");
+        assert_eq!(document.source_type, DocumentSourceType::Pdf);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn falls_back_to_ocr_when_pdf_text_extraction_fails() {
+        let dir = TempDir::new().unwrap();
+        let path = write_temp_file(&dir, "broken-but-rasterizable.pdf", "%PDF-1.4");
+        let pdftoppm_path = dir.path().join("pdftoppm");
+        let tesseract_path = dir.path().join("tesseract");
+        write_executable(
+            &pdftoppm_path,
+            "#!/bin/sh\nprefix=\"$5\"\ntouch \"${prefix}-1.png\"\n",
+        );
+        write_executable(
+            &tesseract_path,
+            "#!/bin/sh\nprintf 'Texto recuperado pelo OCR.'\n",
+        );
+
+        let document = parse_text_book_with_options(
+            Uuid::new_v4(),
+            &path,
+            Language::Pt,
+            TextBookParserOptions {
+                ocr_enabled: true,
+                ocr_fallback_enabled: false,
+                ocr_engine: super::OcrEngineOptions {
+                    pdftoppm_path,
+                    tesseract_path,
+                    language: "por".to_owned(),
+                },
+            },
+        )
+        .unwrap();
+
+        assert_eq!(document.content, "Texto recuperado pelo OCR.");
+        assert_eq!(document.source_type, DocumentSourceType::Pdf);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn uses_ocr_fallback_when_pdf_text_extraction_fails_without_forced_ocr() {
+        let dir = TempDir::new().unwrap();
+        let path = write_temp_file(&dir, "broken-but-rasterizable.pdf", "%PDF-1.4");
+        let pdftoppm_path = dir.path().join("pdftoppm");
+        let tesseract_path = dir.path().join("tesseract");
+        write_executable(
+            &pdftoppm_path,
+            "#!/bin/sh\nprefix=\"$5\"\ntouch \"${prefix}-1.png\"\n",
+        );
+        write_executable(
+            &tesseract_path,
+            "#!/bin/sh\nprintf 'Texto importado pelo fallback OCR.'\n",
+        );
+
+        let document = parse_text_book_with_options(
+            Uuid::new_v4(),
+            &path,
+            Language::Pt,
+            TextBookParserOptions {
+                ocr_enabled: false,
+                ocr_fallback_enabled: true,
+                ocr_engine: super::OcrEngineOptions {
+                    pdftoppm_path,
+                    tesseract_path,
+                    language: "por".to_owned(),
+                },
+            },
+        )
+        .unwrap();
+
+        assert_eq!(document.content, "Texto importado pelo fallback OCR.");
         assert_eq!(document.source_type, DocumentSourceType::Pdf);
     }
 

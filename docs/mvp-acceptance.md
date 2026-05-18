@@ -12,10 +12,12 @@ npm run check:mvp
 
 Resultado esperado:
 
-- [ ] Vitest passa.
-- [ ] Testes Rust passam.
-- [ ] Build web passa.
-- [ ] Playwright E2E passa.
+- [x] Vitest passa.
+- [x] Testes Rust passam.
+- [x] Build web passa.
+- [x] Playwright E2E passa.
+
+Validado em 2026-05-18 com `npm run check:mvp`.
 
 ## 2. App empacotado
 
@@ -27,12 +29,14 @@ npm run check:mvp:env
 
 Resultado esperado:
 
-- [ ] Ollama instalado.
-- [ ] Modelo `llama3.2:1b` instalado.
-- [ ] `pdftoppm` instalado.
-- [ ] `tesseract` instalado.
-- [ ] `GStreamer appsink` disponivel.
-- [ ] Pacotes `.deb`, `.rpm` e AppImage encontrados.
+- [x] Ollama instalado.
+- [x] Modelo `llama3.2:1b` instalado.
+- [x] `pdftoppm` instalado.
+- [x] `tesseract` instalado.
+- [x] `GStreamer appsink` disponivel.
+- [x] Pacotes `.deb`, `.rpm` e AppImage encontrados.
+
+Validado em 2026-05-18 com `npm run check:mvp:env`.
 
 Gere os pacotes:
 
@@ -42,9 +46,9 @@ npm run tauri build
 
 Artefatos esperados:
 
-- [ ] `src-tauri/target/release/bundle/deb/Estudo IA Local_0.1.0_amd64.deb`
-- [ ] `src-tauri/target/release/bundle/rpm/Estudo IA Local-0.1.0-1.x86_64.rpm`
-- [ ] `src-tauri/target/release/bundle/appimage/Estudo IA Local_0.1.0_amd64.AppImage`
+- [x] `src-tauri/target/release/bundle/deb/Estudo IA Local_0.1.0_amd64.deb`
+- [x] `src-tauri/target/release/bundle/rpm/Estudo IA Local-0.1.0-1.x86_64.rpm`
+- [x] `src-tauri/target/release/bundle/appimage/Estudo IA Local_0.1.0_amd64.AppImage`
 
 Smoke test recomendado com AppImage:
 
@@ -60,11 +64,19 @@ APPIMAGE_EXTRACT_AND_RUN=1 "src-tauri/target/release/bundle/appimage/Estudo IA L
 
 Resultado esperado:
 
-- [ ] O app abre fora do `tauri dev`.
-- [ ] O smoke test finaliza com `[ok]`.
+- [x] O app abre fora do `tauri dev`.
+- [x] O smoke test finaliza com `[ok]`.
 - [ ] A biblioteca carrega sem erro.
 - [ ] A secao Ollama testa o modelo `llama3.2:1b`.
 - [ ] A secao OCR mostra `pdftoppm` e `tesseract` quando instalados.
+
+Validado em 2026-05-18 com `npm run check:mvp:appimage`. No ambiente atual, o AppImage direto falhou por FUSE e o smoke test abriu corretamente com `APPIMAGE_EXTRACT_AND_RUN=1`.
+
+Para executar o aceite manual no AppImage:
+
+```bash
+npm run open:mvp:appimage
+```
 
 ## 3. Fluxo com TXT
 

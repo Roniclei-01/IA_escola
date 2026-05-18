@@ -61,6 +61,7 @@ pub fn import_text_book_with_storage(
         Language::Pt,
         TextBookParserOptions {
             ocr_enabled,
+            ocr_fallback_enabled: true,
             ocr_engine: crate::infrastructure::parsers::OcrEngineOptions {
                 language: ocr_language,
                 ..Default::default()
@@ -109,7 +110,8 @@ fn format_parser_error(error: TextBookParserError) -> String {
             "Este PDF parece digitalizado. Ative OCR para tentar importar.".to_owned()
         }
         TextBookParserError::OcrUnavailable => {
-            "OCR ainda nao esta disponivel neste ambiente.".to_owned()
+            "OCR falhou. Verifique se pdftoppm, tesseract e o idioma OCR estao instalados."
+                .to_owned()
         }
         TextBookParserError::InvalidDocument(_) => "O arquivo de estudo esta vazio.".to_owned(),
     }
@@ -161,7 +163,7 @@ mod tests {
         );
         assert_eq!(
             format_parser_error(TextBookParserError::OcrUnavailable),
-            "OCR ainda nao esta disponivel neste ambiente."
+            "OCR falhou. Verifique se pdftoppm, tesseract e o idioma OCR estao instalados."
         );
         assert_eq!(
             format_parser_error(TextBookParserError::InvalidDocument(

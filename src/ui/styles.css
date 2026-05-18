@@ -759,6 +759,17 @@ h1 {
   cursor: pointer;
 }
 
+.study-goal-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin-top: 10px;
+  color: #526256;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .study-goal-progress {
   display: flex;
   flex-wrap: wrap;

@@ -11,6 +11,7 @@ pub mod list_imported_documents;
 pub mod list_study_cards;
 pub mod list_study_reviews;
 pub mod list_study_session_summaries;
+pub mod notification_settings;
 pub mod ollama_settings;
 pub mod restore_imported_document;
 pub mod save_study_cards;
@@ -42,6 +43,8 @@ pub use list_study_cards::list_study_cards;
 pub use list_study_reviews::list_study_reviews;
 #[cfg(feature = "tauri-app")]
 pub use list_study_session_summaries::list_study_session_summaries;
+#[cfg(feature = "tauri-app")]
+pub use notification_settings::{load_notification_settings, save_notification_settings};
 #[cfg(feature = "tauri-app")]
 pub use ollama_settings::{load_ollama_settings, save_ollama_settings};
 #[cfg(feature = "tauri-app")]
@@ -87,6 +90,10 @@ pub use list_study_cards::{list_study_cards_from_storage, ListStudyCardsResponse
 pub use list_study_reviews::{list_study_reviews_from_storage, ListStudyReviewsResponse};
 pub use list_study_session_summaries::{
     list_study_session_summaries_from_storage, ListStudySessionSummariesResponse,
+};
+pub use notification_settings::{
+    default_notification_settings, load_notification_settings_from_storage,
+    save_notification_settings_with_storage, NotificationSettings,
 };
 pub use ollama_settings::{
     default_ollama_settings, load_ollama_settings_from_storage, save_ollama_settings_with_storage,

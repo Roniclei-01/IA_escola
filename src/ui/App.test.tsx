@@ -38,6 +38,10 @@ const loadDefaultOllamaSettings = vi.fn().mockResolvedValue({
   model: "llama3.2"
 });
 const saveOllamaSettings = vi.fn().mockImplementation(async (settings: unknown) => settings);
+const loadDefaultNotificationSettings = vi.fn().mockResolvedValue({
+  study_goal_reminders_enabled: true
+});
+const saveNotificationSettings = vi.fn().mockImplementation(async (settings: unknown) => settings);
 const testOcrDependencies = vi.fn().mockResolvedValue({
   pdftoppm_available: true,
   tesseract_available: true
@@ -57,6 +61,8 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       selectStudyFile={selectNoFile}
       loadOllamaSettings={loadDefaultOllamaSettings}
       saveOllamaSettings={saveOllamaSettings}
+      loadNotificationSettings={loadDefaultNotificationSettings}
+      saveNotificationSettings={saveNotificationSettings}
       testOcrDependencies={testOcrDependencies}
       {...props}
     />
@@ -1641,6 +1647,68 @@ describe("App", () => {
     expect(
       screen.getByText("Faltam 3 revisoes para cumprir a meta de 7 dias.")
     ).toBeInTheDocument();
+  });
+
+  it("disables persisted study goal reminders from the goal panel", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-disabled-reminder",
+          book_id: "book-disabled-reminder",
+          content: "Fisica basica.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/fisica.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-disabled-reminder",
+        bookId: "book-disabled-reminder",
+        chunkId: "chunk-disabled-reminder",
+        front: "O que e energia?",
+        back: "Capacidade de realizar trabalho.",
+        tags: ["fisica"]
+      }
+    ]);
+    const saveNotificationSettings = vi.fn().mockResolvedValue({
+      study_goal_reminders_enabled: false
+    });
+    const saveStudyGoal = vi.fn().mockResolvedValue({
+      document_id: "document-disabled-reminder",
+      target_reviews: 4,
+      recurrence: "weekly"
+    });
+    const notifyStudyGoalReminder = vi.fn();
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      saveNotificationSettings,
+      saveStudyGoal,
+      notifyStudyGoalReminder
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Fisica basica/ }));
+    fireEvent.click(await screen.findByLabelText("Ativar lembretes de meta"));
+    fireEvent.change(await screen.findByLabelText("Meta de revisoes"), {
+      target: { value: "4" }
+    });
+    fireEvent.change(screen.getByLabelText("Periodo da meta"), {
+      target: { value: "weekly" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar meta" }));
+
+    await waitFor(() => {
+      expect(saveNotificationSettings).toHaveBeenCalledWith({
+        study_goal_reminders_enabled: false
+      });
+    });
+    await waitFor(() => {
+      expect(saveStudyGoal).toHaveBeenCalledWith("document-disabled-reminder", 4, "weekly");
+    });
+    expect(notifyStudyGoalReminder).not.toHaveBeenCalled();
   });
 
   it("exports study cards as an Anki TSV deck", async () => {

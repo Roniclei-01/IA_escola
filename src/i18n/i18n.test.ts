@@ -124,6 +124,9 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.goalNotificationTitle")).toBe(
       "Meta de estudo pendente"
     );
+    expect(i18n.getResource("pt", "translation", "study.goalNotificationToggle")).toBe(
+      "Ativar lembretes de meta"
+    );
     expect(i18n.getResource("pt", "translation", "study.sessionTrendTitle")).toBe(
       "Tendencia por sessao"
     );

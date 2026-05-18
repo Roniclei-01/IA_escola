@@ -61,6 +61,11 @@ import {
   type OllamaSettings
 } from "../infrastructure/tauri/ollama-settings";
 import {
+  loadNotificationSettings as defaultLoadNotificationSettings,
+  saveNotificationSettings as defaultSaveNotificationSettings,
+  type NotificationSettings
+} from "../infrastructure/tauri/notification-settings";
+import {
   testOcrDependencies as defaultTestOcrDependencies,
   type OcrDependencies
 } from "../infrastructure/tauri/ocr-dependencies";
@@ -113,6 +118,8 @@ interface AppProps {
   }) => Promise<TestOllamaConnectionResponse>;
   loadOllamaSettings?: () => Promise<OllamaSettings>;
   saveOllamaSettings?: (settings: OllamaSettings) => Promise<OllamaSettings>;
+  loadNotificationSettings?: () => Promise<NotificationSettings>;
+  saveNotificationSettings?: (settings: NotificationSettings) => Promise<NotificationSettings>;
   testOcrDependencies?: () => Promise<OcrDependencies>;
   downloadTextFile?: (fileName: string, content: string) => void;
   printStudySessionReport?: (fileName: string, html: string) => void;
@@ -904,6 +911,8 @@ export function App({
   testOllamaConnection = defaultTestOllamaConnection,
   loadOllamaSettings = defaultLoadOllamaSettings,
   saveOllamaSettings = defaultSaveOllamaSettings,
+  loadNotificationSettings = defaultLoadNotificationSettings,
+  saveNotificationSettings = defaultSaveNotificationSettings,
   testOcrDependencies = defaultTestOcrDependencies,
   downloadTextFile = defaultDownloadTextFile,
   printStudySessionReport = defaultPrintStudySessionReport,
@@ -959,6 +968,7 @@ export function App({
   >({});
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://127.0.0.1:11434");
   const [ollamaModel, setOllamaModel] = useState("llama3.2");
+  const [isStudyGoalNotificationEnabled, setIsStudyGoalNotificationEnabled] = useState(true);
   const [isTestingOllama, setIsTestingOllama] = useState(false);
   const [ollamaStatus, setOllamaStatus] = useState<string | null>(null);
   const [ocrDependencies, setOcrDependencies] = useState<OcrDependencies | null>(null);
@@ -1189,6 +1199,30 @@ export function App({
       isCurrent = false;
     };
   }, [loadOllamaSettings, t]);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadSettings() {
+      try {
+        const settings = await loadNotificationSettings();
+
+        if (isCurrent) {
+          setIsStudyGoalNotificationEnabled(settings.study_goal_reminders_enabled);
+        }
+      } catch {
+        if (isCurrent) {
+          setError(t("settings.notificationSettingsLoadError"));
+        }
+      }
+    }
+
+    void loadSettings();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [loadNotificationSettings, t]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -1667,6 +1701,23 @@ export function App({
     }));
   }
 
+  async function handleStudyGoalNotificationChange(enabled: boolean) {
+    setIsStudyGoalNotificationEnabled(enabled);
+
+    try {
+      const settings = await saveNotificationSettings({
+        study_goal_reminders_enabled: enabled
+      });
+      setIsStudyGoalNotificationEnabled(settings.study_goal_reminders_enabled);
+    } catch (unknownError) {
+      setError(
+        unknownError instanceof Error
+          ? unknownError.message
+          : t("settings.notificationSettingsSaveError")
+      );
+    }
+  }
+
   async function handleSaveStudyReviewGoal() {
     if (!document) {
       return;
@@ -1708,7 +1759,7 @@ export function App({
           ? studyGoalAlertKey(savedGoal.recurrence)
           : null;
 
-      if (savedGoalProgress && savedGoalAlertKey) {
+      if (isStudyGoalNotificationEnabled && savedGoalProgress && savedGoalAlertKey) {
         await notifyStudyGoalReminder({
           title: t("study.goalNotificationTitle"),
           body: t(savedGoalAlertKey, {
@@ -2163,6 +2214,16 @@ export function App({
                   {t("study.saveGoal")}
                 </button>
               </div>
+              <label className="study-goal-toggle">
+                <input
+                  type="checkbox"
+                  checked={isStudyGoalNotificationEnabled}
+                  onChange={(event) => {
+                    void handleStudyGoalNotificationChange(event.target.checked);
+                  }}
+                />
+                {t("study.goalNotificationToggle")}
+              </label>
               {activeStudyGoalProgress ? (
                 <div className="study-goal-progress">
                   <strong>

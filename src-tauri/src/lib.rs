@@ -32,6 +32,8 @@ pub fn run() {
             commands::test_ollama_connection::test_ollama_connection,
             commands::ollama_settings::load_ollama_settings,
             commands::ollama_settings::save_ollama_settings,
+            commands::notification_settings::load_notification_settings,
+            commands::notification_settings::save_notification_settings,
             commands::study_goals::load_study_goal,
             commands::study_goals::save_study_goal,
             commands::restore_imported_document::restore_imported_document,

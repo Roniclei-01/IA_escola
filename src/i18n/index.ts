@@ -9,6 +9,11 @@ export const resources = {
         title: "Estudo IA Local",
         summary: "Base inicial do aplicativo local-first para importar materiais, gerar flashcards e estudar com IA local."
       },
+      layout: {
+        importAndAi: "Importacao e IA",
+        library: "Biblioteca",
+        activeStudy: "Estudo ativo"
+      },
       library: {
         status: "Importacao TXT/PDF",
         filePathLabel: "Caminho do arquivo .txt ou .pdf",
@@ -213,6 +218,11 @@ export const resources = {
         title: "Local AI Study",
         summary: "Initial local-first app foundation to import materials, generate flashcards and study with local AI."
       },
+      layout: {
+        importAndAi: "Import and AI",
+        library: "Library",
+        activeStudy: "Active study"
+      },
       library: {
         status: "TXT/PDF import",
         filePathLabel: "Study file path",
@@ -416,6 +426,11 @@ export const resources = {
         stage: "MVP 0.1",
         title: "Estudio IA Local",
         summary: "Base inicial de la aplicacion local-first para importar materiales, generar tarjetas y estudiar con IA local."
+      },
+      layout: {
+        importAndAi: "Importacion e IA",
+        library: "Biblioteca",
+        activeStudy: "Estudio activo"
       },
       library: {
         status: "Importacion TXT/PDF",

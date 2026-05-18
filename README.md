@@ -108,6 +108,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - notificacao local para metas recorrentes salvas com revisoes pendentes;
 - preferencia persistida para ativar ou desativar lembretes de meta;
 - agendamento nativo de lembretes diarios ou semanais com horario configuravel;
+- cancelamento explicito do lembrete agendado ao desativar notificacoes de meta;
 - filtros da biblioteca por tipo de arquivo e status de revisao;
 - busca textual na biblioteca por conteudo e caminho de origem;
 - ordenacao da biblioteca por data, tipo e status;
@@ -125,6 +126,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - verificacao visual das dependencias OCR com instrucao de instalacao quando faltar componente local;
 - dialog nativo do Tauri para selecionar arquivos `.txt` e `.pdf`;
 - exibicao do tipo e caminho de origem na biblioteca e na previa do documento;
+- tela principal organizada em areas de `Importacao e IA`, `Biblioteca` e `Estudo ativo`;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -215,7 +217,6 @@ docs/
 2. Testar o app empacotado fora de `tauri dev`.
 3. Evoluir a geracao de cards para fila em background com progresso por chunk.
 4. Evoluir exportacao Anki para pacote `.apkg`.
-5. Adicionar cancelamento explicito de lembretes recorrentes ao desativar notificacoes.
 
 ## Comandos de desenvolvimento
 

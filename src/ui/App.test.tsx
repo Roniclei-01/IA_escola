@@ -76,6 +76,9 @@ describe("App", () => {
     renderApp();
 
     expect(screen.getByRole("heading", { name: "Estudo IA Local" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Importacao e IA" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Biblioteca" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Estudo ativo" })).toBeInTheDocument();
     expect(await screen.findByText("Nenhum documento salvo ainda.")).toBeInTheDocument();
   });
 
@@ -2624,13 +2627,15 @@ describe("App", () => {
       recurrence: "weekly"
     });
     const notifyStudyGoalReminder = vi.fn();
+    const cancelStudyGoalReminder = vi.fn();
 
     renderApp({
       listImportedDocuments,
       listStudyCards,
       saveNotificationSettings,
       saveStudyGoal,
-      notifyStudyGoalReminder
+      notifyStudyGoalReminder,
+      cancelStudyGoalReminder
     });
 
     fireEvent.click(await screen.findByRole("button", { name: /Fisica basica/ }));
@@ -2653,6 +2658,7 @@ describe("App", () => {
       expect(saveStudyGoal).toHaveBeenCalledWith("document-disabled-reminder", 4, "weekly");
     });
     expect(notifyStudyGoalReminder).not.toHaveBeenCalled();
+    expect(cancelStudyGoalReminder).toHaveBeenCalled();
   });
 
   it("persists the study goal reminder time", async () => {

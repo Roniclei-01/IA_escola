@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import {
+  cancel,
   isPermissionGranted,
   requestPermission,
   Schedule,
@@ -137,6 +138,7 @@ interface AppProps {
   downloadTextFile?: (fileName: string, content: string) => void;
   printStudySessionReport?: (fileName: string, html: string) => void;
   notifyStudyGoalReminder?: (notification: StudyGoalReminderNotification) => Promise<void> | void;
+  cancelStudyGoalReminder?: () => Promise<void> | void;
   confirmDelete?: (message: string) => boolean;
   enableDevelopmentFallback?: boolean;
 }
@@ -154,6 +156,7 @@ type LibrarySortMode = "oldest" | "newest" | "type" | "status";
 type MetricPeriodFilter = "all" | "last7" | "last30";
 type StudyGoalRecurrence = StudyGoal["recurrence"];
 const INITIAL_CARD_GENERATION_CHUNK_LIMIT = 3;
+const STUDY_GOAL_REMINDER_NOTIFICATION_ID = 1001;
 
 interface StudyGoalReminderNotification {
   title: string;
@@ -224,11 +227,16 @@ async function defaultNotifyStudyGoalReminder(
     );
 
     sendNotification({
+      id: STUDY_GOAL_REMINDER_NOTIFICATION_ID,
       title: notification.title,
       body: notification.body,
       ...(schedule ? { schedule } : {})
     });
   }
+}
+
+async function defaultCancelStudyGoalReminder(): Promise<void> {
+  await cancel([STUDY_GOAL_REMINDER_NOTIFICATION_ID]);
 }
 
 interface DocumentProgressSummary {
@@ -1014,6 +1022,7 @@ export function App({
   downloadTextFile = defaultDownloadTextFile,
   printStudySessionReport = defaultPrintStudySessionReport,
   notifyStudyGoalReminder = defaultNotifyStudyGoalReminder,
+  cancelStudyGoalReminder = defaultCancelStudyGoalReminder,
   confirmDelete = (message: string) => window.confirm(message),
   enableDevelopmentFallback = shouldEnableMockAiFallback()
 }: AppProps) {
@@ -2188,6 +2197,10 @@ export function App({
       });
       setIsStudyGoalNotificationEnabled(settings.study_goal_reminders_enabled);
       setStudyGoalReminderTime(settings.study_goal_reminder_time);
+
+      if (!settings.study_goal_reminders_enabled) {
+        await cancelStudyGoalReminder();
+      }
     } catch (unknownError) {
       setError(getErrorMessage(unknownError, t("settings.notificationSettingsSaveError")));
     }
@@ -2313,190 +2326,199 @@ export function App({
           <span className="status-pill">{t("library.status")}</span>
         </header>
 
-        <ImportPanel
-          filePath={filePath}
-          isOcrEnabled={isOcrEnabled}
-          ocrLanguage={ocrLanguage}
-          isImporting={isImporting}
-          labels={{
-            filePathLabel: t("library.filePathLabel"),
-            filePathPlaceholder: t("library.filePathPlaceholder"),
-            ocrLabel: t("library.ocrLabel"),
-            ocrLanguageLabel: t("library.ocrLanguageLabel"),
-            ocrPortuguese: t("library.ocrPortuguese"),
-            ocrEnglish: t("library.ocrEnglish"),
-            ocrSpanish: t("library.ocrSpanish"),
-            chooseFile: t("library.chooseFile"),
-            import: t("library.import"),
-            importing: t("library.importing")
-          }}
-          onFilePathChange={setFilePath}
-          onOcrEnabledChange={setIsOcrEnabled}
-          onOcrLanguageChange={setOcrLanguage}
-          onChooseFile={() => {
-            void handleChooseFile();
-          }}
-          onSubmit={handleSubmit}
-        />
+        <div className="workspace-grid">
+          <section className="workspace-panel import-settings-panel" aria-labelledby="import-settings-title">
+            <h2 id="import-settings-title">{t("layout.importAndAi")}</h2>
+            <ImportPanel
+              filePath={filePath}
+              isOcrEnabled={isOcrEnabled}
+              ocrLanguage={ocrLanguage}
+              isImporting={isImporting}
+              labels={{
+                filePathLabel: t("library.filePathLabel"),
+                filePathPlaceholder: t("library.filePathPlaceholder"),
+                ocrLabel: t("library.ocrLabel"),
+                ocrLanguageLabel: t("library.ocrLanguageLabel"),
+                ocrPortuguese: t("library.ocrPortuguese"),
+                ocrEnglish: t("library.ocrEnglish"),
+                ocrSpanish: t("library.ocrSpanish"),
+                chooseFile: t("library.chooseFile"),
+                import: t("library.import"),
+                importing: t("library.importing")
+              }}
+              onFilePathChange={setFilePath}
+              onOcrEnabledChange={setIsOcrEnabled}
+              onOcrLanguageChange={setOcrLanguage}
+              onChooseFile={() => {
+                void handleChooseFile();
+              }}
+              onSubmit={handleSubmit}
+            />
 
-        {error ? (
-          <p className="message error" role="alert">
-            {error}
-          </p>
-        ) : null}
+            {error ? (
+              <p className="message error" role="alert">
+                {error}
+              </p>
+            ) : null}
 
-        {warning ? (
-          <p className="message warning" role="alert">
-            {warning}
-          </p>
-        ) : null}
+            {warning ? (
+              <p className="message warning" role="alert">
+                {warning}
+              </p>
+            ) : null}
 
-        {operationStatus ? (
-          <div className="operation-status">
-            <p className="message info" role="status">
-              {t(`library.${operationStatus}`)}
-              {operationStatus === "generatingCardsWithOllama" && cardGenerationProgress
-                ? ` ${t("library.cardGenerationProgress", {
-                    current: cardGenerationProgress.current,
-                    total: cardGenerationProgress.total
-                  })}`
-                : null}
-            </p>
-            <button type="button" onClick={handleCancelOperation}>
-              {t("library.cancelOperation")}
-            </button>
-          </div>
-        ) : null}
+            {operationStatus ? (
+              <div className="operation-status">
+                <p className="message info" role="status">
+                  {t(`library.${operationStatus}`)}
+                  {operationStatus === "generatingCardsWithOllama" && cardGenerationProgress
+                    ? ` ${t("library.cardGenerationProgress", {
+                        current: cardGenerationProgress.current,
+                        total: cardGenerationProgress.total
+                      })}`
+                    : null}
+                </p>
+                <button type="button" onClick={handleCancelOperation}>
+                  {t("library.cancelOperation")}
+                </button>
+              </div>
+            ) : null}
 
-        <OllamaSettingsPanel
-          baseUrl={ollamaBaseUrl}
-          model={ollamaModel}
-          isTesting={isTestingOllama}
-          status={ollamaStatus}
-          labels={{
-            title: t("settings.ollamaTitle"),
-            baseUrlLabel: t("settings.ollamaBaseUrlLabel"),
-            modelLabel: t("settings.ollamaModelLabel"),
-            test: t("settings.testOllama"),
-            testing: t("settings.testingOllama")
-          }}
-          onBaseUrlChange={setOllamaBaseUrl}
-          onModelChange={setOllamaModel}
-          onSubmit={handleTestOllama}
-        />
+            <OllamaSettingsPanel
+              baseUrl={ollamaBaseUrl}
+              model={ollamaModel}
+              isTesting={isTestingOllama}
+              status={ollamaStatus}
+              labels={{
+                title: t("settings.ollamaTitle"),
+                baseUrlLabel: t("settings.ollamaBaseUrlLabel"),
+                modelLabel: t("settings.ollamaModelLabel"),
+                test: t("settings.testOllama"),
+                testing: t("settings.testingOllama")
+              }}
+              onBaseUrlChange={setOllamaBaseUrl}
+              onModelChange={setOllamaModel}
+              onSubmit={handleTestOllama}
+            />
 
-        <OcrDependenciesPanel
-          dependencies={ocrDependencies}
-          isLoading={isLoadingOcrDependencies}
-          labels={{
-            title: t("settings.ocrTitle"),
-            loading: t("settings.loadingOcrDependencies"),
-            ready: t("settings.ocrReady"),
-            missing: t("settings.ocrMissing"),
-            install: t("settings.ocrInstallCommand"),
-            pdftoppmAvailable: t("settings.pdftoppmAvailable"),
-            pdftoppmMissing: t("settings.pdftoppmMissing"),
-            tesseractAvailable: t("settings.tesseractAvailable"),
-            tesseractMissing: t("settings.tesseractMissing")
-          }}
-        />
-
-        {documentProgressSummaries.length > 0 ? (
-          <section className="progress-comparison" aria-labelledby="progress-comparison-title">
-            <h2 id="progress-comparison-title">{t("progress.title")}</h2>
-            <ul>
-              {documentProgressSummaries.map((summary) => (
-                <li key={summary.documentId}>
-                  <div>
-                    <span>{summary.isTopReviewed ? t("progress.topReviewed") : t("progress.document")}</span>
-                    <strong>{summary.title}</strong>
-                  </div>
-                  <dl>
-                    <div>
-                      <dt>{t("progress.sessionsLabel")}</dt>
-                      <dd>{t("progress.sessions", { count: summary.sessionCount })}</dd>
-                    </div>
-                    <div>
-                      <dt>{t("progress.reviewsLabel")}</dt>
-                      <dd>{t("progress.reviews", { count: summary.reviewCount })}</dd>
-                    </div>
-                    <div>
-                      <dt>{t("progress.accuracyLabel")}</dt>
-                      <dd>{t("progress.accuracy", { percent: summary.accuracyPercent })}</dd>
-                    </div>
-                  </dl>
-                </li>
-              ))}
-            </ul>
+            <OcrDependenciesPanel
+              dependencies={ocrDependencies}
+              isLoading={isLoadingOcrDependencies}
+              labels={{
+                title: t("settings.ocrTitle"),
+                loading: t("settings.loadingOcrDependencies"),
+                ready: t("settings.ocrReady"),
+                missing: t("settings.ocrMissing"),
+                install: t("settings.ocrInstallCommand"),
+                pdftoppmAvailable: t("settings.pdftoppmAvailable"),
+                pdftoppmMissing: t("settings.pdftoppmMissing"),
+                tesseractAvailable: t("settings.tesseractAvailable"),
+                tesseractMissing: t("settings.tesseractMissing")
+              }}
+            />
           </section>
-        ) : null}
 
-        <SavedDocumentsList
-          documents={filteredSavedDocuments}
-          isLoading={isLoadingSavedDocuments}
-          isInteractionDisabled={isWorkspaceBusy}
-          filters={{
-            sourceType: sourceTypeFilter,
-            reviewStatus: reviewStatusFilter,
-            searchQuery: librarySearchQuery,
-            sortMode: librarySortMode
-          }}
-          labels={{
-            title: t("library.savedDocuments"),
-            loading: t("library.loadingSavedDocuments"),
-            empty: t("library.noSavedDocuments"),
-            noFilterResults: t("library.noFilteredDocuments"),
-            searchLabel: t("library.searchLabel"),
-            searchPlaceholder: t("library.searchPlaceholder"),
-            sourceFilterLabel: t("library.sourceFilterLabel"),
-            allSourceTypes: t("library.allSourceTypes"),
-            reviewStatusFilterLabel: t("library.reviewStatusFilterLabel"),
-            allReviewStatuses: t("library.allReviewStatuses"),
-            reviewed: t("library.reviewed"),
-            pendingReview: t("library.pendingReview"),
-            sortLabel: t("library.sortLabel"),
-            oldestFirst: t("library.oldestFirst"),
-            newestFirst: t("library.newestFirst"),
-            sortByType: t("library.sortByType"),
-            sortByStatus: t("library.sortByStatus"),
-            archive: t("library.archiveDocument"),
-            itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 }),
-            sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
-          }}
-          onSearchQueryChange={setLibrarySearchQuery}
-          onSourceTypeFilterChange={setSourceTypeFilter}
-          onReviewStatusFilterChange={setReviewStatusFilter}
-          onSortModeChange={setLibrarySortMode}
-          onSelectDocument={(selectedDocument) => {
-            void handleSelectSavedDocument(selectedDocument);
-          }}
-          onArchiveDocument={(selectedDocument) => {
-            void handleArchiveDocument(selectedDocument);
-          }}
-        />
+          <section className="workspace-panel library-panel" aria-labelledby="library-panel-title">
+            <h2 id="library-panel-title">{t("layout.library")}</h2>
+            {documentProgressSummaries.length > 0 ? (
+              <section className="progress-comparison" aria-labelledby="progress-comparison-title">
+                <h2 id="progress-comparison-title">{t("progress.title")}</h2>
+                <ul>
+                  {documentProgressSummaries.map((summary) => (
+                    <li key={summary.documentId}>
+                      <div>
+                        <span>{summary.isTopReviewed ? t("progress.topReviewed") : t("progress.document")}</span>
+                        <strong>{summary.title}</strong>
+                      </div>
+                      <dl>
+                        <div>
+                          <dt>{t("progress.sessionsLabel")}</dt>
+                          <dd>{t("progress.sessions", { count: summary.sessionCount })}</dd>
+                        </div>
+                        <div>
+                          <dt>{t("progress.reviewsLabel")}</dt>
+                          <dd>{t("progress.reviews", { count: summary.reviewCount })}</dd>
+                        </div>
+                        <div>
+                          <dt>{t("progress.accuracyLabel")}</dt>
+                          <dd>{t("progress.accuracy", { percent: summary.accuracyPercent })}</dd>
+                        </div>
+                      </dl>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
 
-        <ArchivedDocumentsList
-          documents={archivedDocuments}
-          isLoading={isLoadingArchivedDocuments}
-          isInteractionDisabled={isWorkspaceBusy}
-          labels={{
-            title: t("library.archivedDocuments"),
-            loading: t("library.loadingArchivedDocuments"),
-            empty: t("library.noArchivedDocuments"),
-            restore: t("library.restoreDocument"),
-            deleteForever: t("library.deleteDocumentForever"),
-            itemLabel: (index) => t("library.archivedDocumentItem", { number: index + 1 }),
-            sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
-          }}
-          onRestoreDocument={(selectedDocument) => {
-            void handleRestoreDocument(selectedDocument);
-          }}
-          onDeleteDocument={(selectedDocument) => {
-            void handleDeleteArchivedDocument(selectedDocument);
-          }}
-        />
+            <SavedDocumentsList
+              documents={filteredSavedDocuments}
+              isLoading={isLoadingSavedDocuments}
+              isInteractionDisabled={isWorkspaceBusy}
+              filters={{
+                sourceType: sourceTypeFilter,
+                reviewStatus: reviewStatusFilter,
+                searchQuery: librarySearchQuery,
+                sortMode: librarySortMode
+              }}
+              labels={{
+                title: t("library.savedDocuments"),
+                loading: t("library.loadingSavedDocuments"),
+                empty: t("library.noSavedDocuments"),
+                noFilterResults: t("library.noFilteredDocuments"),
+                searchLabel: t("library.searchLabel"),
+                searchPlaceholder: t("library.searchPlaceholder"),
+                sourceFilterLabel: t("library.sourceFilterLabel"),
+                allSourceTypes: t("library.allSourceTypes"),
+                reviewStatusFilterLabel: t("library.reviewStatusFilterLabel"),
+                allReviewStatuses: t("library.allReviewStatuses"),
+                reviewed: t("library.reviewed"),
+                pendingReview: t("library.pendingReview"),
+                sortLabel: t("library.sortLabel"),
+                oldestFirst: t("library.oldestFirst"),
+                newestFirst: t("library.newestFirst"),
+                sortByType: t("library.sortByType"),
+                sortByStatus: t("library.sortByStatus"),
+                archive: t("library.archiveDocument"),
+                itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 }),
+                sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
+              }}
+              onSearchQueryChange={setLibrarySearchQuery}
+              onSourceTypeFilterChange={setSourceTypeFilter}
+              onReviewStatusFilterChange={setReviewStatusFilter}
+              onSortModeChange={setLibrarySortMode}
+              onSelectDocument={(selectedDocument) => {
+                void handleSelectSavedDocument(selectedDocument);
+              }}
+              onArchiveDocument={(selectedDocument) => {
+                void handleArchiveDocument(selectedDocument);
+              }}
+            />
 
-        {document ? (
+            <ArchivedDocumentsList
+              documents={archivedDocuments}
+              isLoading={isLoadingArchivedDocuments}
+              isInteractionDisabled={isWorkspaceBusy}
+              labels={{
+                title: t("library.archivedDocuments"),
+                loading: t("library.loadingArchivedDocuments"),
+                empty: t("library.noArchivedDocuments"),
+                restore: t("library.restoreDocument"),
+                deleteForever: t("library.deleteDocumentForever"),
+                itemLabel: (index) => t("library.archivedDocumentItem", { number: index + 1 }),
+                sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
+              }}
+              onRestoreDocument={(selectedDocument) => {
+                void handleRestoreDocument(selectedDocument);
+              }}
+              onDeleteDocument={(selectedDocument) => {
+                void handleDeleteArchivedDocument(selectedDocument);
+              }}
+            />
+          </section>
+
+          <section className="workspace-panel study-panel" aria-labelledby="active-study-title">
+            <h2 id="active-study-title">{t("layout.activeStudy")}</h2>
+            {document ? (
           <DocumentSummary
             document={document}
             chunkCount={chunkCount}
@@ -2864,6 +2886,8 @@ export function App({
             <p>{t("library.emptyState")}</p>
           </section>
         )}
+          </section>
+        </div>
       </section>
     </main>
   );

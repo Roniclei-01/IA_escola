@@ -15,7 +15,8 @@
     "check": "npm run test && cargo test --manifest-path src-tauri/Cargo.toml --no-default-features",
     "check:mvp": "npm run check && npm run build && npm run test:e2e",
     "check:mvp:env": "bash scripts/check-mvp-environment.sh",
-    "check:mvp:appimage": "bash scripts/smoke-test-appimage.sh"
+    "check:mvp:appimage": "bash scripts/smoke-test-appimage.sh",
+    "create:mvp-samples": "bash scripts/create-mvp-samples.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

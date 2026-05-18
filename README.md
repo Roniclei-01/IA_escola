@@ -229,6 +229,7 @@ npm run test:e2e
 npm run check:mvp
 npm run check:mvp:env
 npm run check:mvp:appimage
+npm run create:mvp-samples
 npm run build
 ```
 

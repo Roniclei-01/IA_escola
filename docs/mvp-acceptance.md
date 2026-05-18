@@ -68,7 +68,19 @@ Resultado esperado:
 
 ## 3. Fluxo com TXT
 
-- [ ] Importar um `.txt` pequeno.
+Crie arquivos de amostra para o aceite:
+
+```bash
+npm run create:mvp-samples
+```
+
+Arquivos gerados:
+
+- `/tmp/estudo-ia-local-mvp-samples/mvp-small.txt`
+- `/tmp/estudo-ia-local-mvp-samples/mvp-large.txt`
+- `/tmp/estudo-ia-local-mvp-samples/mvp-pdf-text.pdf`
+
+- [ ] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-small.txt`.
 - [ ] Ver previa do conteudo.
 - [ ] Ver quantidade de chunks.
 - [ ] Gerar pelo menos 1 card.
@@ -80,9 +92,10 @@ Resultado esperado:
 
 ## 4. Fluxo com PDF
 
-- [ ] Importar PDF com texto extraivel.
+- [ ] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-pdf-text.pdf`.
 - [ ] Confirmar origem `PDF`.
-- [ ] Confirmar limite inicial de geracao em PDF grande.
+- [ ] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-large.txt` para validar geracao incremental com arquivo maior.
+- [ ] Confirmar limite inicial de geracao em documento grande.
 - [ ] Usar `Gerar mais cards`.
 - [ ] Confirmar que novos cards sao adicionados sem remover os anteriores.
 

@@ -37,6 +37,9 @@ Telas futuras:
 - `Tutor`: conversa baseada no material.
 - `Review`: revisao espacada e calendario.
 - `Metrics`: desempenho e retencao.
+- `Reader`: leitura do documento original e da versao no idioma escolhido em janelas ou paineis paralelos.
+- `Meditation`: registro do resumo pessoal do leitor sobre o que entendeu do documento.
+- `Categories`: manutencao de categorias e subcategorias de estudo.
 
 ### Aplicacao
 
@@ -64,6 +67,13 @@ Entidades iniciais:
 - `UserSettings`.
 - `StudySession`.
 
+Entidades previstas para expansao:
+
+- `StudyCategory`, com suporte a hierarquia por `parentId` para representar categorias e subcategorias.
+- `DocumentStudyMetadata`, com descricao do documento dentro da categoria/subcategoria escolhida.
+- `DocumentTranslation`, contendo idioma de destino, texto traduzido e vinculo com o documento original.
+- `MeditationNote`, contendo resumo pessoal do leitor, data de criacao e documento relacionado.
+
 Regras iniciais:
 
 - validar livro importado;
@@ -82,6 +92,8 @@ Componentes:
 - `TextBookParser` para `.txt` e `.pdf`, com OCR opt-in para PDFs digitalizados via `pdftoppm` e `tesseract`, idioma OCR configuravel por importacao e verificacao visual dessas dependencias na UI.
 - `EpubBookParser` em fase posterior.
 - `OllamaModelAdapter`.
+- `TranslationAdapter` em fase posterior, preferencialmente local-first, para gerar uma versao traduzida do PDF no idioma escolhido.
+- `ReaderWindowService` em fase posterior, para abrir ou organizar duas janelas/paineis: texto original e texto traduzido.
 - `VectorIndex` em fase posterior.
 - `LicenseService` em fase comercial.
 
@@ -145,6 +157,10 @@ Tabelas futuras:
 
 - `books`.
 - `model_profiles`.
+- `study_categories`.
+- `document_study_metadata`.
+- `document_translations`.
+- `meditation_notes`.
 - `exercises`.
 - `review_events`.
 - `semantic_index`.
@@ -188,6 +204,9 @@ Detalhes estao em `docs/testing-strategy.md`.
 
 - Melhorar suporte a PDFs com metadados, paginacao e PDFs digitalizados.
 - Adicionar EPUB.
+- Adicionar leitura lado a lado do PDF original e da traducao no idioma escolhido.
+- Adicionar campo `Meditacao` para o resumo pessoal do leitor.
+- Adicionar categorias e subcategorias de estudo para organizar documentos.
 - Criar resumos e exercicios.
 - Melhorar prompts e validacao de saida da IA.
 

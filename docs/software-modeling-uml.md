@@ -25,8 +25,11 @@ Entidades de dominio:
 - `Book`
 - `Document`
 - `DocumentChunk`
+- `DocumentTranslation`
 - `StudyCard`
 - `Category`
+- `DocumentStudyMetadata`
+- `MeditationNote`
 - `ModelProfile`
 - `UserSettings`
 - `StudySession`
@@ -36,6 +39,9 @@ Casos de uso:
 - `ImportTextBook`
 - `ChunkDocument`
 - `GenerateFlashcards`
+- `TranslateDocument`
+- `SaveMeditationNote`
+- `AssignStudyCategory`
 - `StartStudySession`
 - `UpdateUserSettings`
 

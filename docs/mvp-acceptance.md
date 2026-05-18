@@ -134,6 +134,23 @@ Arquivos gerados:
 - [ ] Exportar deck Anki TSV.
 - [ ] Confirmar que os arquivos exportados pertencem ao documento ativo.
 
+## 8. Biblioteca
+
+- [ ] Digitar no campo `Buscar na biblioteca`.
+- [ ] Pressionar Enter e confirmar filtragem.
+- [ ] Clicar em `Pesquisar` e confirmar filtragem.
+- [ ] Confirmar busca por conteudo.
+- [ ] Confirmar busca por caminho de origem.
+
+## 9. Funcionalidades futuras registradas
+
+Esses itens estao documentados para as proximas fatias e nao bloqueiam o aceite do MVP 0.1:
+
+- [ ] Leitura de PDF em idioma original e idioma escolhido, em janelas ou paineis paralelos.
+- [ ] Campo `Meditacao` para resumo pessoal do leitor.
+- [ ] Categorias e subcategorias de estudo por documento, com descricao da classificacao.
+- [ ] Exportacao Anki em `.apkg`.
+
 ## Resultado final
 
 Status:

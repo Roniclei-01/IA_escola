@@ -28,11 +28,34 @@ package "Dominio" {
     +tokenEstimate: Int
   }
 
+  class DocumentTranslation {
+    +id: UUID
+    +documentId: UUID
+    +targetLanguage: Language
+    +content: String
+    +createdAt: DateTime
+  }
+
   class Category {
     +id: UUID
     +name: String
     +parentId: UUID?
     +description: String?
+  }
+
+  class DocumentStudyMetadata {
+    +id: UUID
+    +documentId: UUID
+    +categoryId: UUID
+    +description: String
+  }
+
+  class MeditationNote {
+    +id: UUID
+    +documentId: UUID
+    +summary: String
+    +createdAt: DateTime
+    +updatedAt: DateTime
   }
 
   class StudyCard {
@@ -82,6 +105,18 @@ package "Aplicacao" {
     +execute(bookId: UUID, config: FlashcardConfig): List<StudyCard>
   }
 
+  class TranslateDocument {
+    +execute(documentId: UUID, targetLanguage: Language): DocumentTranslation
+  }
+
+  class SaveMeditationNote {
+    +execute(documentId: UUID, summary: String): MeditationNote
+  }
+
+  class AssignStudyCategory {
+    +execute(documentId: UUID, categoryId: UUID, description: String): DocumentStudyMetadata
+  }
+
   class StartStudySession {
     +execute(bookId: UUID): StudySession
   }
@@ -111,6 +146,10 @@ package "Portas" {
   interface BookParser {
     +parse(filePath: String): Document
   }
+
+  interface TranslationAdapter {
+    +translate(text: String, targetLanguage: Language): String
+  }
 }
 
 package "Infraestrutura" {
@@ -131,6 +170,10 @@ package "Infraestrutura" {
 
   class PdfBookParser {
     +parse(filePath: String): Document
+  }
+
+  class ReaderWindowService {
+    +openOriginalAndTranslated(documentId: UUID, targetLanguage: Language): void
   }
 
   class OllamaModelAdapter {
@@ -174,6 +217,10 @@ LicenseStatus ..|> String
 Book --> Category
 Document --> Book
 DocumentChunk --> Document
+DocumentTranslation --> Document
+DocumentStudyMetadata --> Document
+DocumentStudyMetadata --> Category
+MeditationNote --> Document
 StudyCard --> DocumentChunk
 StudyCard --> Book
 StudySession --> Book
@@ -184,6 +231,10 @@ ImportTextBook --> StorageRepository
 ChunkDocument --> Document
 GenerateFlashcards --> ModelAdapter
 GenerateFlashcards --> StorageRepository
+TranslateDocument --> TranslationAdapter
+TranslateDocument --> StorageRepository
+SaveMeditationNote --> StorageRepository
+AssignStudyCategory --> StorageRepository
 StartStudySession --> StorageRepository
 UpdateUserSettings --> StorageRepository
 
@@ -191,6 +242,7 @@ SQLiteStorage ..|> StorageRepository
 TextBookParser ..|> BookParser
 PdfBookParser ..|> BookParser
 OllamaModelAdapter ..|> ModelAdapter
+OllamaModelAdapter ..|> TranslationAdapter
 MockModelAdapter ..|> ModelAdapter
 
 TauriCommandGateway --> ImportTextBook

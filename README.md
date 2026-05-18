@@ -20,7 +20,7 @@ Essa stack foi escolhida por favorecer manutencao, seguranca, instaladores menor
 
 ## Visao do produto
 
-O usuario deve conseguir estudar a partir de livros e materiais proprios, mantendo controle local sobre seus arquivos e dados. A aplicacao deve extrair texto, segmentar conteudo, gerar flashcards e exercicios, permitir revisao e, em fases posteriores, oferecer traducao, tutor conversacional e exportacoes.
+O usuario deve conseguir estudar a partir de livros e materiais proprios, mantendo controle local sobre seus arquivos e dados. A aplicacao deve extrair texto, segmentar conteudo, gerar flashcards e exercicios, permitir revisao e, em fases posteriores, oferecer leitura traduzida em paralelo ao texto original, meditacoes do leitor, categorizacao do material, traducao, tutor conversacional e exportacoes.
 
 ## Principios de arquitetura
 
@@ -126,6 +126,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - selecao de idioma OCR por importacao, com suporte inicial a portugues, ingles e espanhol;
 - verificacao visual das dependencias OCR com instrucao de instalacao quando faltar componente local;
 - dialog nativo do Tauri para selecionar arquivos `.txt` e `.pdf`;
+- busca na biblioteca com filtro instantaneo, tecla Enter e botao `Pesquisar` como gatilhos explicitos;
 - exibicao do tipo e caminho de origem na biblioteca e na previa do documento;
 - tela principal organizada em areas de `Importacao e IA`, `Biblioteca` e `Estudo ativo`;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
@@ -159,6 +160,10 @@ Durante operacoes longas, botoes de geracao e acoes da biblioteca ficam bloquead
 ### Fase de expansao
 
 - Importacao de EPUB e melhorias para PDFs digitalizados.
+- Leitura de PDF em duas janelas/painéis: uma com o idioma original e outra com o idioma escolhido pelo usuario.
+- Traducao local ou opt-in do conteudo do PDF para o idioma escolhido, preservando a referencia ao texto original.
+- Campo `Meditacao` por documento, onde o leitor registra um breve resumo pessoal sobre o que entendeu.
+- Cadastro de categorias de estudo e subcategorias, com descricao do documento dentro dessa classificacao.
 - Exercicios de multipla escolha e perguntas abertas.
 - Resumo por capitulo.
 - Revisao espacada.
@@ -221,6 +226,10 @@ docs/
 3. Testar o app empacotado fora de `tauri dev`.
 4. Evoluir a geracao de cards para fila em background com progresso por chunk.
 5. Evoluir exportacao Anki para pacote `.apkg`.
+6. Implementar seletor de idioma da interface.
+7. Implementar leitura traduzida de PDFs com visualizacao lado a lado.
+8. Implementar `Meditacao` do leitor por documento.
+9. Implementar categorias e subcategorias de estudo por documento.
 
 ## Comandos de desenvolvimento
 

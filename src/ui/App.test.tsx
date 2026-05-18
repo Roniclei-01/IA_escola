@@ -262,6 +262,9 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Buscar na biblioteca"), {
       target: { value: "historia" }
     });
+    fireEvent.keyDown(screen.getByLabelText("Buscar na biblioteca"), {
+      key: "Enter"
+    });
 
     expect(screen.queryByText("Apostila de algebra linear.")).not.toBeInTheDocument();
     expect(screen.getByText("Resumo de historia do Brasil.")).toBeInTheDocument();
@@ -269,6 +272,7 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Buscar na biblioteca"), {
       target: { value: "ALGEBRA.PDF" }
     });
+    fireEvent.click(screen.getByRole("button", { name: "Pesquisar" }));
 
     expect(screen.getByText("Apostila de algebra linear.")).toBeInTheDocument();
     expect(screen.queryByText("Resumo de historia do Brasil.")).not.toBeInTheDocument();

@@ -2539,6 +2539,7 @@ export function App({
                 noFilterResults: t("library.noFilteredDocuments"),
                 searchLabel: t("library.searchLabel"),
                 searchPlaceholder: t("library.searchPlaceholder"),
+                searchAction: t("library.searchAction"),
                 sourceFilterLabel: t("library.sourceFilterLabel"),
                 allSourceTypes: t("library.allSourceTypes"),
                 reviewStatusFilterLabel: t("library.reviewStatusFilterLabel"),

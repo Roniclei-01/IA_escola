@@ -164,6 +164,7 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.searchLabel")).toBe(
       "Buscar na biblioteca"
     );
+    expect(i18n.getResource("pt", "translation", "library.searchAction")).toBe("Pesquisar");
     expect(i18n.getResource("pt", "translation", "library.sortLabel")).toBe(
       "Ordenar biblioteca"
     );

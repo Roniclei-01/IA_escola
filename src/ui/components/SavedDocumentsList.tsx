@@ -17,6 +17,7 @@ interface SavedDocumentsListProps {
     noFilterResults: string;
     searchLabel: string;
     searchPlaceholder: string;
+    searchAction: string;
     sourceFilterLabel: string;
     allSourceTypes: string;
     reviewStatusFilterLabel: string;
@@ -63,14 +64,29 @@ export function SavedDocumentsList({
       <h2 id="saved-documents-title">{labels.title}</h2>
       <div className="library-filters">
         <label htmlFor="library-search">{labels.searchLabel}</label>
-        <input
-          id="library-search"
-          type="search"
-          value={filters.searchQuery}
-          placeholder={labels.searchPlaceholder}
-          disabled={isInteractionDisabled}
-          onChange={(event) => onSearchQueryChange(event.target.value)}
-        />
+        <div className="library-search-row">
+          <input
+            id="library-search"
+            type="search"
+            value={filters.searchQuery}
+            placeholder={labels.searchPlaceholder}
+            disabled={isInteractionDisabled}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onSearchQueryChange(event.currentTarget.value);
+              }
+            }}
+          />
+          <button
+            type="button"
+            disabled={isInteractionDisabled}
+            onClick={() => onSearchQueryChange(filters.searchQuery)}
+          >
+            {labels.searchAction}
+          </button>
+        </div>
 
         <label htmlFor="source-type-filter">{labels.sourceFilterLabel}</label>
         <select

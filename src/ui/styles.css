@@ -366,6 +366,24 @@ h1 {
   margin-top: 12px;
 }
 
+.document-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.document-actions button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #c9d6cd;
+  border-radius: 6px;
+  color: #23352b;
+  background: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .document-metadata span {
   max-width: 100%;
   padding: 6px 10px;

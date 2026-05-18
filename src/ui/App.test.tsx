@@ -1087,6 +1087,59 @@ describe("App", () => {
     expect(downloadTextFile.mock.calls[0][1]).toContain("## Sessao 1");
   });
 
+  it("exports study cards as an Anki TSV deck", async () => {
+    const downloadTextFile = vi.fn();
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-anki",
+          book_id: "book-anki",
+          content: "Biologia celular.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/biologia.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-1",
+        bookId: "book-anki",
+        chunkId: "chunk-1",
+        front: "O que e celula?\nExplique.",
+        back: "Unidade basica da vida.",
+        tags: ["biologia", "celula animal"]
+      },
+      {
+        id: "card-2",
+        bookId: "book-anki",
+        chunkId: "chunk-1",
+        front: "Funcao da mitocondria?",
+        back: "Produzir energia.",
+        tags: ["biologia"]
+      }
+    ]);
+
+    renderApp({
+      downloadTextFile,
+      listImportedDocuments,
+      listStudyCards
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Biologia celular/ }));
+    expect(await screen.findByText(/O que e celula/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Exportar Anki" }));
+
+    expect(downloadTextFile).toHaveBeenCalledWith(
+      "anki-document-anki.tsv",
+      [
+        "O que e celula? Explique.\tUnidade basica da vida.\tbiologia celula_animal",
+        "Funcao da mitocondria?\tProduzir energia.\tbiologia"
+      ].join("\n")
+    );
+  });
+
   it("shows an error when import fails", async () => {
     const importTextBook = vi.fn().mockRejectedValue(new Error("Arquivo de texto nao encontrado."));
 

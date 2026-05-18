@@ -102,6 +102,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - sessoes de estudo vinculando novas revisoes a uma rodada ativa;
 - resumo historico de desempenho por sessao;
 - exportacao local de relatorio Markdown das sessoes do documento;
+- exportacao local de cards para Anki em TSV;
 - arquivamento de documentos da biblioteca ativa sem exclusao fisica imediata;
 - listagem de documentos arquivados com restauracao para a biblioteca ativa;
 - exclusao definitiva de documentos arquivados com confirmacao e limpeza dos dados de estudo relacionados;
@@ -130,7 +131,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - Resumo por capitulo.
 - Revisao espacada.
 - Busca semantica com embeddings locais.
-- Exportacao para Anki ou PDF.
+- Exportacao para PDF e formatos avancados de Anki.
 
 ### Fase de produto comercial
 
@@ -183,7 +184,7 @@ docs/
 
 ## Proximos passos
 
-1. Evoluir exportacao para PDF/Anki quando o formato de estudo estabilizar.
+1. Evoluir exportacao para PDF e formatos avancados de Anki.
 2. Adicionar relatorios comparativos de progresso por documento.
 3. Melhorar configuracao do idioma OCR por documento.
 

@@ -97,6 +97,7 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.exportSessionReport")).toBe(
       "Exportar relatorio"
     );
+    expect(i18n.getResource("pt", "translation", "study.exportAnki")).toBe("Exportar Anki");
   });
 
   it("has saved document labels in every supported language", () => {

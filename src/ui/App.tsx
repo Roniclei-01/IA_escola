@@ -241,6 +241,23 @@ function buildStudySessionReport(
   ].join("\n");
 }
 
+function toAnkiField(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function toAnkiTags(tags: string[]): string {
+  return tags
+    .map((tag) => tag.trim().replace(/\s+/g, "_"))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function buildAnkiTsv(cards: StudyCard[]): string {
+  return cards
+    .map((card) => [toAnkiField(card.front), toAnkiField(card.back), toAnkiTags(card.tags)].join("\t"))
+    .join("\n");
+}
+
 function buildDueStudyQueue(
   cards: StudyCard[],
   schedules: Record<string, { priority: number; nextReviewAt: number }>,
@@ -925,6 +942,15 @@ export function App({
     downloadTextFile(fileName, buildStudySessionReport(document, studySessionSummaries));
   }
 
+  function handleExportAnkiDeck() {
+    if (!document || cards.length === 0) {
+      return;
+    }
+
+    const fileName = `anki-${sanitizeReportFileName(document.document_id)}.tsv`;
+    downloadTextFile(fileName, buildAnkiTsv(cards));
+  }
+
   return (
     <main className="app-shell">
       <section className="workspace" aria-labelledby="app-title">
@@ -1088,6 +1114,11 @@ export function App({
               cardCount: t("library.cardCount", { count: cards.length })
             }}
           >
+            <div className="document-actions">
+              <button type="button" onClick={handleExportAnkiDeck}>
+                {t("study.exportAnki")}
+              </button>
+            </div>
             {activeCard ? (
               <StudyCardViewer
                 card={activeCard}

@@ -43,6 +43,17 @@ O primeiro MVP deve validar o fluxo mais importante do produto:
 
 PDF, EPUB, tutor, traducao completa, exportacao e calendario entram depois que esse fluxo estiver estavel.
 
+## Estado atual da implementacao
+
+Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes automatizados. A primeira fatia do pipeline tambem foi iniciada com desenvolvimento test-first:
+
+- entidade `Document`;
+- servico de aplicacao `chunk_document`;
+- contrato `ModelAdapter`;
+- caso de uso `generate_flashcards`;
+- `MockModelAdapter` no frontend para testes previsiveis;
+- testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
+
 ## Funcionalidades por fase
 
 ### Fase inicial

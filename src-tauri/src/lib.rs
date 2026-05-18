@@ -1,3 +1,4 @@
+pub mod app;
 pub mod domain;
 
 #[cfg(feature = "tauri-app")]

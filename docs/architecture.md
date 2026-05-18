@@ -13,7 +13,7 @@ O projeto deve ser um aplicativo desktop local-first, seguro e extensivel, capaz
 | Estilo/UI | Tailwind CSS + shadcn/ui | Consistencia visual e velocidade de desenvolvimento |
 | Backend local | Rust via Tauri commands | Acesso seguro a filesystem, banco e processos |
 | Banco local | SQLite | Persistencia simples, offline e distribuivel |
-| Query layer | SQLx no Rust | Tipagem, controle SQL e boa integracao com SQLite |
+| Query layer inicial | rusqlite no Rust | Camada sincrona, simples e suficiente para comandos Tauri locais |
 | IA local | Ollama | Primeiro runtime local, acessado via adaptador |
 | i18n | i18next | Suporte a Portugues, Ingles e Espanhol |
 | Testes frontend | Vitest + Testing Library | Testes unitarios de UI e logica |
@@ -123,7 +123,9 @@ Adaptadores previstos:
 
 ## 6. Persistencia local
 
-SQLite sera o banco inicial. Ele deve armazenar metadados, chunks, cards, configuracoes e sessoes de estudo.
+SQLite sera o banco inicial. A primeira implementacao usa `rusqlite`, por ser simples, local e suficiente para comandos Tauri sincronizados. Se a persistencia crescer para fluxos concorrentes ou sincronizacao remota, a camada `storage` permite migrar para SQLx sem alterar o dominio.
+
+Ele deve armazenar metadados, chunks, cards, configuracoes e sessoes de estudo.
 
 Tabelas iniciais:
 

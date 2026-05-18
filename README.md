@@ -10,6 +10,7 @@ O projeto sera construido com:
 - **React + TypeScript + Vite** para interface.
 - **Rust** no backend local do Tauri.
 - **SQLite** para persistencia local.
+- **rusqlite** como primeira camada de acesso SQLite no backend Rust.
 - **Ollama** como primeiro runtime de IA local.
 - **ModelAdapter** como camada de abstracao para suportar outros provedores no futuro.
 - **i18next** para interface em Portugues, Ingles e Espanhol.
@@ -63,6 +64,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - exibicao da quantidade de cards gerados e previa do primeiro card;
 - area de estudo para revelar resposta e avancar entre cards;
 - UI separada em componentes `ImportPanel`, `DocumentSummary` e `StudyCardViewer`;
+- persistencia SQLite inicial para documentos importados;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase

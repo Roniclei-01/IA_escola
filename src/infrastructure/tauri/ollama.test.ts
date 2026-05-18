@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testOllamaConnection } from "./ollama";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -11,6 +11,10 @@ const invokeMock = vi.mocked(invoke);
 describe("testOllamaConnection", () => {
   beforeEach(() => {
     invokeMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("invokes the Tauri test_ollama_connection command", async () => {
@@ -32,5 +36,25 @@ describe("testOllamaConnection", () => {
       }
     });
     expect(result.ok).toBe(true);
+  });
+
+  it("rejects when the Ollama connection test times out", async () => {
+    vi.useFakeTimers();
+    invokeMock.mockImplementation(() => new Promise(() => {}));
+
+    const result = testOllamaConnection(
+      {
+        model: "llama3.2:1b",
+        base_url: "http://127.0.0.1:11434"
+      },
+      { timeoutMs: 1000 }
+    );
+
+    const expectation = expect(result).rejects.toThrow(
+      "O teste do Ollama demorou demais. Tente um modelo menor ou verifique se o Ollama esta ativo."
+    );
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await expectation;
   });
 });

@@ -86,6 +86,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - cliente HTTP local para `/api/generate` do Ollama;
 - comando `test_ollama_connection` para validar conexao e modelo;
 - ponte TypeScript `testOllamaConnection`;
+- timeout no teste do Ollama para evitar espera indefinida quando o modelo local demora a carregar;
 - painel de configuracao na UI para URL/modelo Ollama e teste de conexao;
 - persistencia SQLite das configuracoes do Ollama em `app_settings`;
 - comandos `load_ollama_settings` e `save_ollama_settings`;

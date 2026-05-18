@@ -98,6 +98,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - fila visual de cards vencidos ordenada por prioridade;
 - filtros da biblioteca por tipo de arquivo e status de revisao;
 - busca textual na biblioteca por conteudo e caminho de origem;
+- ordenacao da biblioteca por data, tipo e status;
 - sessoes de estudo vinculando novas revisoes a uma rodada ativa;
 - resumo historico de desempenho por sessao;
 - dialog nativo do Tauri para selecionar arquivos `.txt` e `.pdf`;
@@ -178,7 +179,7 @@ docs/
 
 1. Melhorar suporte a PDFs digitalizados com OCR opcional.
 2. Adicionar exportacao de relatorio de sessoes.
-3. Criar ordenacao da biblioteca por data, tipo e status.
+3. Criar limpeza/arquivamento de documentos da biblioteca.
 
 ## Comandos de desenvolvimento
 

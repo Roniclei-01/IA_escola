@@ -27,7 +27,8 @@ describe("importTextBook", () => {
 
     expect(invokeMock).toHaveBeenCalledWith("import_text_book", {
       filePath: "/tmp/book.txt",
-      ocrEnabled: false
+      ocrEnabled: false,
+      ocrLanguage: "por"
     });
     expect(result.content).toBe("conteudo");
     expect(result.source_type).toBe("txt");
@@ -43,11 +44,12 @@ describe("importTextBook", () => {
       source_path: "/tmp/book.pdf"
     });
 
-    await importTextBook("/tmp/book.pdf", { ocrEnabled: true });
+    await importTextBook("/tmp/book.pdf", { ocrEnabled: true, ocrLanguage: "eng" });
 
     expect(invokeMock).toHaveBeenCalledWith("import_text_book", {
       filePath: "/tmp/book.pdf",
-      ocrEnabled: true
+      ocrEnabled: true,
+      ocrLanguage: "eng"
     });
   });
 });

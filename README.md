@@ -108,6 +108,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - listagem de documentos arquivados com restauracao para a biblioteca ativa;
 - exclusao definitiva de documentos arquivados com confirmacao e limpeza dos dados de estudo relacionados;
 - OCR opt-in para PDFs digitalizados usando `pdftoppm` e `tesseract` quando disponiveis no sistema;
+- selecao de idioma OCR por importacao, com suporte inicial a portugues, ingles e espanhol;
 - verificacao visual das dependencias OCR com instrucao de instalacao quando faltar componente local;
 - dialog nativo do Tauri para selecionar arquivos `.txt` e `.pdf`;
 - exibicao do tipo e caminho de origem na biblioteca e na previa do documento;
@@ -186,8 +187,8 @@ docs/
 ## Proximos passos
 
 1. Evoluir exportacao para PDF e formatos avancados de Anki.
-2. Melhorar configuracao do idioma OCR por documento.
-3. Evoluir metricas de retencao com tendencia temporal e cards mais dificeis.
+2. Evoluir metricas de retencao com tendencia temporal e cards mais dificeis.
+3. Melhorar exportacao PDF do relatorio de estudo.
 
 ## Comandos de desenvolvimento
 

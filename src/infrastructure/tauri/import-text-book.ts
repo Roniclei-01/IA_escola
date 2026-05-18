@@ -11,6 +11,7 @@ export interface ImportTextBookResponse {
 
 export interface ImportTextBookOptions {
   ocrEnabled?: boolean;
+  ocrLanguage?: "por" | "eng" | "spa";
 }
 
 export async function importTextBook(
@@ -19,6 +20,7 @@ export async function importTextBook(
 ): Promise<ImportTextBookResponse> {
   return invoke<ImportTextBookResponse>("import_text_book", {
     filePath,
-    ocrEnabled: options.ocrEnabled ?? false
+    ocrEnabled: options.ocrEnabled ?? false,
+    ocrLanguage: options.ocrLanguage ?? "por"
   });
 }

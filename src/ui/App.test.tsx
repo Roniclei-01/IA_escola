@@ -756,7 +756,8 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(importTextBook).toHaveBeenCalledWith("/tmp/book.txt", {
-        ocrEnabled: false
+        ocrEnabled: false,
+        ocrLanguage: "por"
       });
     });
     expect(chunkTextDocument).toHaveBeenCalledWith({
@@ -776,7 +777,7 @@ describe("App", () => {
     expect(screen.getAllByText("Conteudo importado para estudo.").length).toBeGreaterThan(0);
   });
 
-  it("imports with OCR enabled when the OCR option is selected", async () => {
+  it("imports with selected OCR language when OCR is enabled", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-ocr",
       book_id: "book-ocr",
@@ -797,11 +798,15 @@ describe("App", () => {
       target: { value: "/tmp/scanned.pdf" }
     });
     fireEvent.click(screen.getByLabelText("Ativar OCR para PDF digitalizado"));
+    fireEvent.change(screen.getByLabelText("Idioma OCR"), {
+      target: { value: "eng" }
+    });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     await waitFor(() => {
       expect(importTextBook).toHaveBeenCalledWith("/tmp/scanned.pdf", {
-        ocrEnabled: true
+        ocrEnabled: true,
+        ocrLanguage: "eng"
       });
     });
   });

@@ -79,7 +79,7 @@ Implementa detalhes externos ao dominio.
 Componentes:
 
 - `SQLiteStorage`.
-- `TextBookParser` para `.txt` e `.pdf`, com OCR opt-in para PDFs digitalizados via `pdftoppm` e `tesseract`, mais verificacao visual dessas dependencias na UI.
+- `TextBookParser` para `.txt` e `.pdf`, com OCR opt-in para PDFs digitalizados via `pdftoppm` e `tesseract`, idioma OCR configuravel por importacao e verificacao visual dessas dependencias na UI.
 - `EpubBookParser` em fase posterior.
 - `OllamaModelAdapter`.
 - `VectorIndex` em fase posterior.

@@ -73,7 +73,7 @@ import { OcrDependenciesPanel } from "./components/OcrDependenciesPanel";
 interface AppProps {
   importTextBook?: (
     filePath: string,
-    options?: { ocrEnabled?: boolean }
+    options?: { ocrEnabled?: boolean; ocrLanguage?: "por" | "eng" | "spa" }
   ) => Promise<ImportTextBookResponse>;
   archiveImportedDocument?: (documentId: string) => Promise<{ document_id: string }>;
   listArchivedDocuments?: () => Promise<ListArchivedDocumentsResponse>;
@@ -443,6 +443,7 @@ export function App({
   const { t } = useTranslation();
   const [filePath, setFilePath] = useState("");
   const [isOcrEnabled, setIsOcrEnabled] = useState(false);
+  const [ocrLanguage, setOcrLanguage] = useState<"por" | "eng" | "spa">("por");
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
@@ -737,7 +738,8 @@ export function App({
 
     try {
       const importedDocument = await importTextBook(trimmedPath, {
-        ocrEnabled: isOcrEnabled
+        ocrEnabled: isOcrEnabled,
+        ocrLanguage
       });
       setOperationStatus("chunkingDocument");
       const chunkResponse = await chunkTextDocument(toChunkRequest(importedDocument, 180));
@@ -1149,17 +1151,23 @@ export function App({
         <ImportPanel
           filePath={filePath}
           isOcrEnabled={isOcrEnabled}
+          ocrLanguage={ocrLanguage}
           isImporting={isImporting}
           labels={{
             filePathLabel: t("library.filePathLabel"),
             filePathPlaceholder: t("library.filePathPlaceholder"),
             ocrLabel: t("library.ocrLabel"),
+            ocrLanguageLabel: t("library.ocrLanguageLabel"),
+            ocrPortuguese: t("library.ocrPortuguese"),
+            ocrEnglish: t("library.ocrEnglish"),
+            ocrSpanish: t("library.ocrSpanish"),
             chooseFile: t("library.chooseFile"),
             import: t("library.import"),
             importing: t("library.importing")
           }}
           onFilePathChange={setFilePath}
           onOcrEnabledChange={setIsOcrEnabled}
+          onOcrLanguageChange={setOcrLanguage}
           onChooseFile={() => {
             void handleChooseFile();
           }}

@@ -9,6 +9,8 @@ use crate::{
     infrastructure::storage::{SQLiteStorage, StorageError},
 };
 
+const DEFAULT_OCR_LANGUAGE: &str = "por";
+
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct ImportTextBookResponse {
     pub document_id: Uuid,
@@ -48,15 +50,21 @@ pub fn import_text_book_from_path(file_path: String) -> Result<ImportTextBookRes
 pub fn import_text_book_with_storage(
     file_path: String,
     ocr_enabled: bool,
+    ocr_language: Option<String>,
     storage: &SQLiteStorage,
 ) -> Result<ImportTextBookResponse, String> {
     let book_id = Uuid::new_v4();
+    let ocr_language = normalize_ocr_language(ocr_language);
     let document = parse_text_book_with_options(
         book_id,
         file_path,
         Language::Pt,
         TextBookParserOptions {
             ocr_enabled,
+            ocr_engine: crate::infrastructure::parsers::OcrEngineOptions {
+                language: ocr_language,
+                ..Default::default()
+            },
             ..TextBookParserOptions::default()
         },
     )
@@ -74,10 +82,19 @@ pub fn import_text_book(
     app_handle: tauri::AppHandle,
     file_path: String,
     ocr_enabled: Option<bool>,
+    ocr_language: Option<String>,
 ) -> Result<ImportTextBookResponse, String> {
     let storage = crate::commands::app_storage::open_app_storage(&app_handle)?;
 
-    import_text_book_with_storage(file_path, ocr_enabled.unwrap_or(false), &storage)
+    import_text_book_with_storage(file_path, ocr_enabled.unwrap_or(false), ocr_language, &storage)
+}
+
+fn normalize_ocr_language(ocr_language: Option<String>) -> String {
+    match ocr_language.as_deref() {
+        Some("eng") => "eng".to_owned(),
+        Some("spa") => "spa".to_owned(),
+        Some("por") | _ => DEFAULT_OCR_LANGUAGE.to_owned(),
+    }
 }
 
 fn format_parser_error(error: TextBookParserError) -> String {
@@ -108,7 +125,7 @@ mod tests {
 
     use tempfile::TempDir;
 
-    use super::{format_parser_error, import_text_book_with_storage};
+    use super::{format_parser_error, import_text_book_with_storage, normalize_ocr_language};
     use crate::{
         domain::DocumentError, infrastructure::parsers::TextBookParserError,
         infrastructure::storage::SQLiteStorage,
@@ -161,7 +178,7 @@ mod tests {
         let storage = SQLiteStorage::open_in_memory().unwrap();
 
         let response =
-            import_text_book_with_storage(path.to_string_lossy().to_string(), false, &storage)
+            import_text_book_with_storage(path.to_string_lossy().to_string(), false, None, &storage)
                 .unwrap();
         let documents = storage.list_documents().unwrap();
 
@@ -170,5 +187,13 @@ mod tests {
         assert_eq!(documents[0].content, "Conteudo persistido no SQLite.");
         assert_eq!(response.source_type, crate::domain::DocumentSourceType::Txt);
         assert_eq!(response.source_path, path.to_string_lossy());
+    }
+
+    #[test]
+    fn normalizes_ocr_language_for_tesseract() {
+        assert_eq!(normalize_ocr_language(Some("eng".to_owned())), "eng");
+        assert_eq!(normalize_ocr_language(Some("spa".to_owned())), "spa");
+        assert_eq!(normalize_ocr_language(Some("invalid".to_owned())), "por");
+        assert_eq!(normalize_ocr_language(None), "por");
     }
 }

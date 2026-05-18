@@ -136,7 +136,7 @@ Tabelas ja iniciadas:
 - `study_sessions`.
 - `app_settings`.
 
-`documents` guarda tambem `source_type`, `source_path` e `archived_at`, permitindo diferenciar TXT/PDF, mostrar origem na UI e retirar documentos da biblioteca ativa sem apagar dados imediatamente.
+`documents` guarda tambem `source_type`, `source_path` e `archived_at`, permitindo diferenciar TXT/PDF, mostrar origem na UI, retirar documentos da biblioteca ativa sem apagar dados imediatamente e restaurar itens arquivados.
 `study_reviews` guarda `rating`, `priority`, `next_review_at` e `session_id`, formando a base para revisao espacada, filas de estudo por prioridade e agrupamento de rodadas.
 `study_sessions` registra o documento estudado e o inicio da rodada.
 A UI usa esses dados para exibir historico visual por documento, uma fila de cards vencidos, filtros, busca textual e ordenacao da biblioteca, alem de resumo de desempenho por sessao e exportacao local de relatorio Markdown.

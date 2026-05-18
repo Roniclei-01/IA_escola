@@ -6,6 +6,7 @@ import { App } from "./App";
 import "../i18n";
 
 const listNoDocuments = vi.fn().mockResolvedValue({ documents: [] });
+const listNoArchivedDocuments = vi.fn().mockResolvedValue({ documents: [] });
 const listNoStudyCards = vi.fn().mockResolvedValue([]);
 const listNoStudyReviews = vi.fn().mockResolvedValue([]);
 const listNoStudySessionSummaries = vi.fn().mockResolvedValue([]);
@@ -34,6 +35,7 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
   return render(
     <App
       listImportedDocuments={listNoDocuments}
+      listArchivedDocuments={listNoArchivedDocuments}
       listStudyReviews={listNoStudyReviews}
       listStudySessionSummaries={listNoStudySessionSummaries}
       saveStudyReview={saveStudyReview}
@@ -272,8 +274,40 @@ describe("App", () => {
     await waitFor(() => {
       expect(archiveImportedDocument).toHaveBeenCalledWith("document-archived");
     });
-    expect(screen.queryByText("Documento que sera arquivado.")).not.toBeInTheDocument();
     expect(screen.getByText("Nenhum documento salvo ainda.")).toBeInTheDocument();
+    expect(screen.getByText("Documento que sera arquivado.")).toBeInTheDocument();
+  });
+
+  it("loads and restores archived documents", async () => {
+    const restoreImportedDocument = vi.fn().mockResolvedValue({
+      document_id: "document-restored"
+    });
+    const listArchivedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-restored",
+          book_id: "book-restored",
+          content: "Documento arquivado para restaurar.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/restaurar.pdf"
+        }
+      ]
+    });
+
+    renderApp({ listArchivedDocuments, restoreImportedDocument });
+
+    expect(await screen.findByText("Documentos arquivados")).toBeInTheDocument();
+    expect(screen.getByText("Documento arquivado para restaurar.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Restaurar" }));
+
+    await waitFor(() => {
+      expect(restoreImportedDocument).toHaveBeenCalledWith("document-restored");
+    });
+    expect(screen.queryByText("Nenhum documento salvo ainda.")).not.toBeInTheDocument();
+    expect(screen.getByText("Documento arquivado para restaurar.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum documento arquivado.")).toBeInTheDocument();
   });
 
   it("tests the Ollama connection from settings", async () => {

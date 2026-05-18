@@ -17,6 +17,7 @@ pub fn run() {
             health_check,
             commands::archive_imported_document::archive_imported_document,
             commands::import_text_book::import_text_book,
+            commands::list_archived_documents::list_archived_documents,
             commands::chunk_text_document::chunk_text_document,
             commands::list_imported_documents::list_imported_documents,
             commands::list_document_chunks::list_document_chunks,
@@ -29,6 +30,7 @@ pub fn run() {
             commands::test_ollama_connection::test_ollama_connection,
             commands::ollama_settings::load_ollama_settings,
             commands::ollama_settings::save_ollama_settings,
+            commands::restore_imported_document::restore_imported_document,
             commands::generate_study_cards::generate_study_cards
         ])
         .run(tauri::generate_context!())

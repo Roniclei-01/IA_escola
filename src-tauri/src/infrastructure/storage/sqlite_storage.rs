@@ -19,8 +19,12 @@ pub enum StorageError {
     SaveDocumentFailed(#[source] rusqlite::Error),
     #[error("failed to list documents")]
     ListDocumentsFailed(#[source] rusqlite::Error),
+    #[error("failed to list archived documents")]
+    ListArchivedDocumentsFailed(#[source] rusqlite::Error),
     #[error("failed to archive document")]
     ArchiveDocumentFailed(#[source] rusqlite::Error),
+    #[error("failed to restore document")]
+    RestoreDocumentFailed(#[source] rusqlite::Error),
     #[error("failed to save document chunks")]
     SaveChunksFailed(#[source] rusqlite::Error),
     #[error("failed to list document chunks")]
@@ -156,6 +160,40 @@ impl SQLiteStorage {
         Ok(documents)
     }
 
+    pub fn list_archived_documents(&self) -> Result<Vec<Document>, StorageError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT id, book_id, content, language, source_type, source_path
+                 FROM documents
+                 WHERE archived_at IS NOT NULL
+                 ORDER BY archived_at DESC",
+            )
+            .map_err(StorageError::ListArchivedDocumentsFailed)?;
+
+        let rows = statement
+            .query_map([], |row| {
+                Ok(RawDocument {
+                    id: row.get(0)?,
+                    book_id: row.get(1)?,
+                    content: row.get(2)?,
+                    language: row.get(3)?,
+                    source_type: row.get(4)?,
+                    source_path: row.get(5)?,
+                })
+            })
+            .map_err(StorageError::ListArchivedDocumentsFailed)?;
+
+        let mut documents = Vec::new();
+
+        for row in rows {
+            let raw_document = row.map_err(StorageError::ListArchivedDocumentsFailed)?;
+            documents.push(raw_document.try_into()?);
+        }
+
+        Ok(documents)
+    }
+
     pub fn archive_document(&self, document_id: Uuid) -> Result<(), StorageError> {
         self.connection
             .execute(
@@ -165,6 +203,19 @@ impl SQLiteStorage {
                 [document_id.to_string()],
             )
             .map_err(StorageError::ArchiveDocumentFailed)?;
+
+        Ok(())
+    }
+
+    pub fn restore_document(&self, document_id: Uuid) -> Result<(), StorageError> {
+        self.connection
+            .execute(
+                "UPDATE documents
+                 SET archived_at = NULL
+                 WHERE id = ?1",
+                [document_id.to_string()],
+            )
+            .map_err(StorageError::RestoreDocumentFailed)?;
 
         Ok(())
     }
@@ -1023,6 +1074,27 @@ mod tests {
         storage.archive_document(document.id).unwrap();
 
         assert_eq!(storage.list_documents().unwrap(), Vec::<Document>::new());
+        assert_eq!(storage.list_archived_documents().unwrap(), vec![document]);
+    }
+
+    #[test]
+    fn restores_archived_document_to_active_list() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let document = Document::new(
+            Uuid::new_v4(),
+            "Conteudo restaurado",
+            Language::Pt,
+            DocumentSourceType::Pdf,
+            "/tmp/restaurado.pdf",
+        )
+        .unwrap();
+
+        storage.save_document(&document).unwrap();
+        storage.archive_document(document.id).unwrap();
+        storage.restore_document(document.id).unwrap();
+
+        assert_eq!(storage.list_documents().unwrap(), vec![document]);
+        assert_eq!(storage.list_archived_documents().unwrap(), Vec::<Document>::new());
     }
 
     #[test]

@@ -119,6 +119,7 @@ describe("i18n", () => {
       "Ordenar biblioteca"
     );
     expect(i18n.getResource("pt", "translation", "library.archiveDocument")).toBe("Arquivar");
+    expect(i18n.getResource("pt", "translation", "library.restoreDocument")).toBe("Restaurar");
   });
 
   it("has Ollama settings labels in every supported language", () => {

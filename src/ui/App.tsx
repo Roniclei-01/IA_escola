@@ -6,6 +6,11 @@ import {
 } from "../infrastructure/tauri/import-text-book";
 import { archiveImportedDocument as defaultArchiveImportedDocument } from "../infrastructure/tauri/archive-imported-document";
 import {
+  listArchivedDocuments as defaultListArchivedDocuments,
+  restoreImportedDocument as defaultRestoreImportedDocument,
+  type ListArchivedDocumentsResponse
+} from "../infrastructure/tauri/archived-documents";
+import {
   listImportedDocuments as defaultListImportedDocuments,
   type ListImportedDocumentsResponse
 } from "../infrastructure/tauri/list-imported-documents";
@@ -57,10 +62,13 @@ import { OllamaSettingsPanel } from "./components/OllamaSettingsPanel";
 import { StudyReviewHistory } from "./components/StudyReviewHistory";
 import { DueStudyQueue, type DueStudyQueueItem } from "./components/DueStudyQueue";
 import { StudySessionHistory } from "./components/StudySessionHistory";
+import { ArchivedDocumentsList } from "./components/ArchivedDocumentsList";
 
 interface AppProps {
   importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
   archiveImportedDocument?: (documentId: string) => Promise<{ document_id: string }>;
+  listArchivedDocuments?: () => Promise<ListArchivedDocumentsResponse>;
+  restoreImportedDocument?: (documentId: string) => Promise<{ document_id: string }>;
   listImportedDocuments?: () => Promise<ListImportedDocumentsResponse>;
   listDocumentChunks?: (documentId: string) => Promise<ListDocumentChunksResponse>;
   chunkTextDocument?: (
@@ -312,6 +320,8 @@ function filterSavedDocuments(
 export function App({
   importTextBook = defaultImportTextBook,
   archiveImportedDocument = defaultArchiveImportedDocument,
+  listArchivedDocuments = defaultListArchivedDocuments,
+  restoreImportedDocument = defaultRestoreImportedDocument,
   listImportedDocuments = defaultListImportedDocuments,
   listDocumentChunks = defaultListDocumentChunks,
   chunkTextDocument = defaultChunkTextDocument,
@@ -339,12 +349,14 @@ export function App({
   const [chunkCount, setChunkCount] = useState<number | null>(null);
   const [cards, setCards] = useState<StudyCard[]>([]);
   const [savedDocuments, setSavedDocuments] = useState<ImportTextBookResponse[]>([]);
+  const [archivedDocuments, setArchivedDocuments] = useState<ImportTextBookResponse[]>([]);
   const [documentReviewCounts, setDocumentReviewCounts] = useState<Record<string, number>>({});
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
   const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatusFilter>("all");
   const [librarySearchQuery, setLibrarySearchQuery] = useState("");
   const [librarySortMode, setLibrarySortMode] = useState<LibrarySortMode>("oldest");
   const [isLoadingSavedDocuments, setIsLoadingSavedDocuments] = useState(true);
+  const [isLoadingArchivedDocuments, setIsLoadingArchivedDocuments] = useState(true);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
   const [cardReviews, setCardReviews] = useState<Record<string, CardReview>>({});
@@ -460,6 +472,36 @@ export function App({
       isCurrent = false;
     };
   }, [listImportedDocuments, listStudyReviews, t]);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadArchivedDocuments() {
+      setIsLoadingArchivedDocuments(true);
+
+      try {
+        const response = await listArchivedDocuments();
+
+        if (isCurrent) {
+          setArchivedDocuments(response.documents);
+        }
+      } catch {
+        if (isCurrent) {
+          setError(t("library.archivedDocumentsError"));
+        }
+      } finally {
+        if (isCurrent) {
+          setIsLoadingArchivedDocuments(false);
+        }
+      }
+    }
+
+    void loadArchivedDocuments();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [listArchivedDocuments, t]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -683,6 +725,7 @@ export function App({
           (savedDocument) => savedDocument.document_id !== documentToArchive.document_id
         )
       );
+      setArchivedDocuments((currentDocuments) => [documentToArchive, ...currentDocuments]);
       setDocumentReviewCounts((currentCounts) => {
         const nextCounts = { ...currentCounts };
         delete nextCounts[documentToArchive.document_id];
@@ -704,6 +747,36 @@ export function App({
       }
     } catch (unknownError) {
       setError(unknownError instanceof Error ? unknownError.message : t("library.archiveError"));
+    }
+  }
+
+  async function handleRestoreDocument(documentToRestore: ImportTextBookResponse) {
+    setError(null);
+    setWarning(null);
+
+    try {
+      await restoreImportedDocument(documentToRestore.document_id);
+      setArchivedDocuments((currentDocuments) =>
+        currentDocuments.filter(
+          (archivedDocument) => archivedDocument.document_id !== documentToRestore.document_id
+        )
+      );
+      setSavedDocuments((currentDocuments) => [...currentDocuments, documentToRestore]);
+
+      try {
+        const reviews = await listStudyReviews(documentToRestore.document_id);
+        setDocumentReviewCounts((currentCounts) => ({
+          ...currentCounts,
+          [documentToRestore.document_id]: reviews.length
+        }));
+      } catch {
+        setDocumentReviewCounts((currentCounts) => ({
+          ...currentCounts,
+          [documentToRestore.document_id]: 0
+        }));
+      }
+    } catch (unknownError) {
+      setError(unknownError instanceof Error ? unknownError.message : t("library.restoreError"));
     }
   }
 
@@ -883,6 +956,22 @@ export function App({
           }}
           onArchiveDocument={(selectedDocument) => {
             void handleArchiveDocument(selectedDocument);
+          }}
+        />
+
+        <ArchivedDocumentsList
+          documents={archivedDocuments}
+          isLoading={isLoadingArchivedDocuments}
+          labels={{
+            title: t("library.archivedDocuments"),
+            loading: t("library.loadingArchivedDocuments"),
+            empty: t("library.noArchivedDocuments"),
+            restore: t("library.restoreDocument"),
+            itemLabel: (index) => t("library.archivedDocumentItem", { number: index + 1 }),
+            sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
+          }}
+          onRestoreDocument={(selectedDocument) => {
+            void handleRestoreDocument(selectedDocument);
           }}
         />
 

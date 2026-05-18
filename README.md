@@ -102,6 +102,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - filtro de periodo para metricas de estudo com resumo de sessoes, revisoes, acertos e dificuldades;
 - meta persistida de revisoes por documento com progresso percentual;
 - alerta visual para metas diarias ou semanais ainda nao cumpridas;
+- notificacao local para metas recorrentes salvas com revisoes pendentes;
 - filtros da biblioteca por tipo de arquivo e status de revisao;
 - busca textual na biblioteca por conteudo e caminho de origem;
 - ordenacao da biblioteca por data, tipo e status;
@@ -194,7 +195,7 @@ docs/
 ## Proximos passos
 
 1. Evoluir exportacao Anki para pacote `.apkg`.
-2. Adicionar notificacoes do sistema para metas recorrentes nao cumpridas.
+2. Evoluir notificacoes locais para plugin nativo do Tauri.
 
 ## Comandos de desenvolvimento
 

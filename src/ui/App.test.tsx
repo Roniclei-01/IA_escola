@@ -1610,12 +1610,14 @@ describe("App", () => {
       target_reviews: 6,
       recurrence: "weekly"
     });
+    const notifyStudyGoalReminder = vi.fn();
 
     renderApp({
       listImportedDocuments,
       listStudyCards,
       listStudySessionSummaries,
-      saveStudyGoal
+      saveStudyGoal,
+      notifyStudyGoalReminder
     });
 
     fireEvent.click(await screen.findByRole("button", { name: /Matematica aplicada/ }));
@@ -1629,6 +1631,10 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(saveStudyGoal).toHaveBeenCalledWith("document-weekly-goal", 6, "weekly");
+    });
+    expect(notifyStudyGoalReminder).toHaveBeenCalledWith({
+      title: "Meta de estudo pendente",
+      body: "Faltam 3 revisoes para cumprir a meta de 7 dias."
     });
     expect(await screen.findByText("3 de 6 revisoes")).toBeInTheDocument();
     expect(screen.getByText("50% concluido")).toBeInTheDocument();

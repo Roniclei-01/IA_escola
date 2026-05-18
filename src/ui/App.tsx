@@ -116,6 +116,7 @@ interface AppProps {
   testOcrDependencies?: () => Promise<OcrDependencies>;
   downloadTextFile?: (fileName: string, content: string) => void;
   printStudySessionReport?: (fileName: string, html: string) => void;
+  notifyStudyGoalReminder?: (notification: { title: string; body: string }) => Promise<void> | void;
   confirmDelete?: (message: string) => boolean;
   enableDevelopmentFallback?: boolean;
 }
@@ -132,6 +133,26 @@ type ReviewStatusFilter = "all" | "reviewed" | "pending";
 type LibrarySortMode = "oldest" | "newest" | "type" | "status";
 type MetricPeriodFilter = "all" | "last7" | "last30";
 type StudyGoalRecurrence = StudyGoal["recurrence"];
+
+async function defaultNotifyStudyGoalReminder(notification: {
+  title: string;
+  body: string;
+}): Promise<void> {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    return;
+  }
+
+  const notificationApi = window.Notification;
+  let permission = notificationApi.permission;
+
+  if (permission === "default") {
+    permission = await notificationApi.requestPermission();
+  }
+
+  if (permission === "granted") {
+    new notificationApi(notification.title, { body: notification.body });
+  }
+}
 
 interface DocumentProgressSummary {
   documentId: string;
@@ -886,6 +907,7 @@ export function App({
   testOcrDependencies = defaultTestOcrDependencies,
   downloadTextFile = defaultDownloadTextFile,
   printStudySessionReport = defaultPrintStudySessionReport,
+  notifyStudyGoalReminder = defaultNotifyStudyGoalReminder,
   confirmDelete = (message: string) => window.confirm(message),
   enableDevelopmentFallback = import.meta.env.DEV
 }: AppProps) {
@@ -1675,6 +1697,25 @@ export function App({
         ...currentRecurrences,
         [document.document_id]: savedGoal.recurrence
       }));
+
+      const savedGoalProgress = buildStudyGoalProgress(
+        studySessionSummaries,
+        savedGoal.target_reviews,
+        savedGoal.recurrence
+      );
+      const savedGoalAlertKey =
+        savedGoalProgress && savedGoalProgress.remainingReviews > 0
+          ? studyGoalAlertKey(savedGoal.recurrence)
+          : null;
+
+      if (savedGoalProgress && savedGoalAlertKey) {
+        await notifyStudyGoalReminder({
+          title: t("study.goalNotificationTitle"),
+          body: t(savedGoalAlertKey, {
+            count: savedGoalProgress.remainingReviews
+          })
+        });
+      }
     } catch (unknownError) {
       setError(unknownError instanceof Error ? unknownError.message : t("study.goalSaveError"));
     }

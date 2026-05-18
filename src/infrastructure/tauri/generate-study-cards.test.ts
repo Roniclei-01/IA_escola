@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateStudyCardsWithOllama } from "./generate-study-cards";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -11,6 +11,10 @@ const invokeMock = vi.mocked(invoke);
 describe("generateStudyCardsWithOllama", () => {
   beforeEach(() => {
     invokeMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("returns no cards for empty chunks without invoking Tauri", async () => {
@@ -61,5 +65,26 @@ describe("generateStudyCardsWithOllama", () => {
         tags: ["ollama"]
       }
     ]);
+  });
+
+  it("rejects when card generation times out", async () => {
+    vi.useFakeTimers();
+    const chunk = {
+      id: "chunk-timeout",
+      book_id: "book-timeout",
+      document_id: "document-timeout",
+      position: 1,
+      content: "conteudo longo",
+      token_estimate: 2
+    };
+    invokeMock.mockImplementation(() => new Promise(() => {}));
+
+    const result = generateStudyCardsWithOllama([chunk], { timeoutMs: 1000 });
+    const expectation = expect(result).rejects.toThrow(
+      "A geracao de cards demorou demais. Tente gerar menos cards ou usar um modelo menor."
+    );
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await expectation;
   });
 });

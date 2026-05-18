@@ -77,7 +77,10 @@ mod tests {
 
         let result = parse_text_book(Uuid::new_v4(), path, Language::Pt);
 
-        assert_eq!(result.unwrap_err(), TextBookParserError::UnsupportedExtension);
+        assert_eq!(
+            result.unwrap_err(),
+            TextBookParserError::UnsupportedExtension
+        );
     }
 
     #[test]

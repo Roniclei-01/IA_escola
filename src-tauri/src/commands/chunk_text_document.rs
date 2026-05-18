@@ -4,6 +4,7 @@ use uuid::Uuid;
 use crate::{
     app::{chunk_document, ChunkDocumentConfig, ChunkDocumentError},
     domain::{Document, DocumentChunk, Language},
+    infrastructure::storage::{SQLiteStorage, StorageError},
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
@@ -21,6 +22,24 @@ pub struct ChunkTextDocumentResponse {
 }
 
 pub fn chunk_text_document_from_request(
+    request: ChunkTextDocumentRequest,
+) -> Result<ChunkTextDocumentResponse, String> {
+    chunk_text_document_response(request)
+}
+
+pub fn chunk_text_document_with_storage(
+    request: ChunkTextDocumentRequest,
+    storage: &mut SQLiteStorage,
+) -> Result<ChunkTextDocumentResponse, String> {
+    let response = chunk_text_document_response(request)?;
+    storage
+        .save_chunks(&response.chunks)
+        .map_err(format_storage_error)?;
+
+    Ok(response)
+}
+
+fn chunk_text_document_response(
     request: ChunkTextDocumentRequest,
 ) -> Result<ChunkTextDocumentResponse, String> {
     let document = Document {
@@ -43,22 +62,52 @@ pub fn chunk_text_document_from_request(
 #[cfg(feature = "tauri-app")]
 #[tauri::command]
 pub fn chunk_text_document(
+    app_handle: tauri::AppHandle,
     request: ChunkTextDocumentRequest,
 ) -> Result<ChunkTextDocumentResponse, String> {
-    chunk_text_document_from_request(request)
+    let mut storage = crate::commands::app_storage::open_app_storage(&app_handle)?;
+
+    chunk_text_document_with_storage(request, &mut storage)
 }
 
 fn format_chunk_error(error: ChunkDocumentError) -> String {
     match error {
-        ChunkDocumentError::InvalidChunkSize => "O tamanho do chunk deve ser maior que zero.".to_owned(),
-        ChunkDocumentError::InvalidChunk(_) => "Nao foi possivel criar chunks para o documento.".to_owned(),
+        ChunkDocumentError::InvalidChunkSize => {
+            "O tamanho do chunk deve ser maior que zero.".to_owned()
+        }
+        ChunkDocumentError::InvalidChunk(_) => {
+            "Nao foi possivel criar chunks para o documento.".to_owned()
+        }
+    }
+}
+
+fn format_storage_error(error: StorageError) -> String {
+    match error {
+        StorageError::OpenFailed(_)
+        | StorageError::MigrationFailed(_)
+        | StorageError::SaveDocumentFailed(_)
+        | StorageError::ListDocumentsFailed(_)
+        | StorageError::SaveChunksFailed(_)
+        | StorageError::ListChunksFailed(_)
+        | StorageError::InvalidDocumentId(_)
+        | StorageError::InvalidBookId(_)
+        | StorageError::InvalidChunkId(_)
+        | StorageError::InvalidChunkDocumentId(_)
+        | StorageError::InvalidChunkPosition(_)
+        | StorageError::InvalidChunkTokenEstimate(_)
+        | StorageError::InvalidLanguage(_) => {
+            "Nao foi possivel salvar os chunks do documento.".to_owned()
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{chunk_text_document_from_request, ChunkTextDocumentRequest};
-    use crate::domain::Language;
+    use super::{
+        chunk_text_document_from_request, chunk_text_document_with_storage,
+        ChunkTextDocumentRequest,
+    };
+    use crate::{domain::Language, infrastructure::storage::SQLiteStorage};
     use uuid::Uuid;
 
     #[test]
@@ -77,6 +126,25 @@ mod tests {
         assert_eq!(response.chunks[0].content, "um dois");
         assert_eq!(response.chunks[1].content, "tres quatro");
         assert_eq!(response.chunks[2].content, "cinco");
+    }
+
+    #[test]
+    fn chunks_and_persists_imported_text_document() {
+        let mut storage = SQLiteStorage::open_in_memory().unwrap();
+        let document_id = Uuid::new_v4();
+        let request = ChunkTextDocumentRequest {
+            document_id,
+            book_id: Uuid::new_v4(),
+            content: "um dois tres quatro cinco".to_owned(),
+            language: Language::Pt,
+            max_words_per_chunk: 2,
+        };
+
+        let response = chunk_text_document_with_storage(request, &mut storage).unwrap();
+        let chunks = storage.list_chunks_by_document(document_id).unwrap();
+
+        assert_eq!(chunks, response.chunks);
+        assert_eq!(chunks.len(), 3);
     }
 
     #[test]

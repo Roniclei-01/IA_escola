@@ -68,6 +68,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - comando `import_text_book` persistindo documentos no SQLite;
 - comando `list_imported_documents` para recuperar documentos salvos;
 - UI carregando documentos salvos ao iniciar e exibindo lista de biblioteca;
+- persistencia SQLite de `document_chunks`;
+- comando `chunk_text_document` persistindo chunks gerados no SQLite;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -142,14 +144,12 @@ docs/
 
 ## Proximos passos
 
-1. Inicializar Git.
-2. Criar scaffold Tauri + React + TypeScript.
-3. Configurar Vitest, Playwright e testes Rust.
-4. Criar testes do dominio inicial.
-5. Implementar entidades `Book`, `DocumentChunk`, `StudyCard` e `ModelProfile`.
-6. Criar testes do pipeline `.txt -> chunks -> flashcards`.
-7. Implementar adaptador inicial para Ollama.
-8. Criar tela minima de biblioteca e estudo.
+1. Criar comando para listar chunks persistidos por documento.
+2. Fazer a UI reutilizar chunks salvos ao abrir um documento da biblioteca.
+3. Persistir `study_cards` em SQLite.
+4. Criar comando para listar cards persistidos por documento.
+5. Implementar adaptador inicial para Ollama.
+6. Evoluir tela de biblioteca, estudo e configuracoes.
 
 ## Comandos de desenvolvimento
 

@@ -127,17 +127,18 @@ SQLite sera o banco inicial. A primeira implementacao usa `rusqlite`, por ser si
 
 Ele deve armazenar metadados, chunks, cards, configuracoes e sessoes de estudo.
 
-Tabelas iniciais:
+Tabelas ja iniciadas:
+
+- `documents`.
+- `document_chunks`.
+
+Tabelas futuras:
 
 - `books`.
-- `document_chunks`.
 - `study_cards`.
 - `model_profiles`.
 - `user_settings`.
 - `study_sessions`.
-
-Tabelas futuras:
-
 - `exercises`.
 - `review_events`.
 - `semantic_index`.

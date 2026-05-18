@@ -40,8 +40,14 @@ fn format_storage_error(error: StorageError) -> String {
         | StorageError::MigrationFailed(_)
         | StorageError::SaveDocumentFailed(_)
         | StorageError::ListDocumentsFailed(_)
+        | StorageError::SaveChunksFailed(_)
+        | StorageError::ListChunksFailed(_)
         | StorageError::InvalidDocumentId(_)
         | StorageError::InvalidBookId(_)
+        | StorageError::InvalidChunkId(_)
+        | StorageError::InvalidChunkDocumentId(_)
+        | StorageError::InvalidChunkPosition(_)
+        | StorageError::InvalidChunkTokenEstimate(_)
         | StorageError::InvalidLanguage(_) => {
             "Nao foi possivel acessar os documentos salvos.".to_owned()
         }

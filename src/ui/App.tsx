@@ -1,9 +1,13 @@
 import { useTranslation } from "react-i18next";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   importTextBook as defaultImportTextBook,
   type ImportTextBookResponse
 } from "../infrastructure/tauri/import-text-book";
+import {
+  listImportedDocuments as defaultListImportedDocuments,
+  type ListImportedDocumentsResponse
+} from "../infrastructure/tauri/list-imported-documents";
 import {
   chunkTextDocument as defaultChunkTextDocument,
   toChunkRequest,
@@ -16,9 +20,11 @@ import { generateStudyCards } from "../app/generate-study-cards";
 import { ImportPanel } from "./components/ImportPanel";
 import { DocumentSummary } from "./components/DocumentSummary";
 import { StudyCardViewer } from "./components/StudyCardViewer";
+import { SavedDocumentsList } from "./components/SavedDocumentsList";
 
 interface AppProps {
   importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
+  listImportedDocuments?: () => Promise<ListImportedDocumentsResponse>;
   chunkTextDocument?: (
     request: ReturnType<typeof toChunkRequest>
   ) => Promise<ChunkTextDocumentResponse>;
@@ -40,6 +46,7 @@ async function defaultGenerateCards(chunks: ImportedDocumentChunk[]) {
 
 export function App({
   importTextBook = defaultImportTextBook,
+  listImportedDocuments = defaultListImportedDocuments,
   chunkTextDocument = defaultChunkTextDocument,
   generateCards = defaultGenerateCards
 }: AppProps) {
@@ -50,10 +57,42 @@ export function App({
   const [document, setDocument] = useState<ImportTextBookResponse | null>(null);
   const [chunkCount, setChunkCount] = useState<number | null>(null);
   const [cards, setCards] = useState<StudyCard[]>([]);
+  const [savedDocuments, setSavedDocuments] = useState<ImportTextBookResponse[]>([]);
+  const [isLoadingSavedDocuments, setIsLoadingSavedDocuments] = useState(true);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
 
   const activeCard = cards[activeCardIndex] ?? null;
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadSavedDocuments() {
+      setIsLoadingSavedDocuments(true);
+
+      try {
+        const response = await listImportedDocuments();
+
+        if (isCurrent) {
+          setSavedDocuments(response.documents);
+        }
+      } catch {
+        if (isCurrent) {
+          setError(t("library.savedDocumentsError"));
+        }
+      } finally {
+        if (isCurrent) {
+          setIsLoadingSavedDocuments(false);
+        }
+      }
+    }
+
+    void loadSavedDocuments();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [listImportedDocuments, t]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,6 +116,7 @@ export function App({
       const chunkResponse = await chunkTextDocument(toChunkRequest(importedDocument, 180));
       const generatedCards = await generateCards(chunkResponse.chunks);
       setDocument(importedDocument);
+      setSavedDocuments((currentDocuments) => [importedDocument, ...currentDocuments]);
       setChunkCount(chunkResponse.chunks.length);
       setCards(generatedCards);
       setActiveCardIndex(0);
@@ -122,6 +162,25 @@ export function App({
             {error}
           </p>
         ) : null}
+
+        <SavedDocumentsList
+          documents={savedDocuments}
+          isLoading={isLoadingSavedDocuments}
+          labels={{
+            title: t("library.savedDocuments"),
+            loading: t("library.loadingSavedDocuments"),
+            empty: t("library.noSavedDocuments"),
+            itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 })
+          }}
+          onSelectDocument={(selectedDocument) => {
+            setDocument(selectedDocument);
+            setChunkCount(null);
+            setCards([]);
+            setActiveCardIndex(0);
+            setIsAnswerVisible(false);
+            setError(null);
+          }}
+        />
 
         {document ? (
           <DocumentSummary

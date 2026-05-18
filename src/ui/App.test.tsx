@@ -3,11 +3,33 @@ import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import "../i18n";
 
+const listNoDocuments = vi.fn().mockResolvedValue({ documents: [] });
+
 describe("App", () => {
-  it("renders the product name", () => {
-    render(<App />);
+  it("renders the product name", async () => {
+    render(<App listImportedDocuments={listNoDocuments} />);
 
     expect(screen.getByRole("heading", { name: "Estudo IA Local" })).toBeInTheDocument();
+    expect(await screen.findByText("Nenhum documento salvo ainda.")).toBeInTheDocument();
+  });
+
+  it("loads saved documents on startup", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-saved",
+          book_id: "book-saved",
+          content: "Documento salvo anteriormente.",
+          language: "Pt"
+        }
+      ]
+    });
+
+    render(<App listImportedDocuments={listImportedDocuments} />);
+
+    expect(listImportedDocuments).toHaveBeenCalled();
+    expect(await screen.findByText("Documentos salvos")).toBeInTheDocument();
+    expect(screen.getByText("Documento salvo anteriormente.")).toBeInTheDocument();
   });
 
   it("imports a text book from a file path", async () => {
@@ -30,7 +52,13 @@ describe("App", () => {
       ]
     });
 
-    render(<App importTextBook={importTextBook} chunkTextDocument={chunkTextDocument} />);
+    render(
+      <App
+        importTextBook={importTextBook}
+        listImportedDocuments={listNoDocuments}
+        chunkTextDocument={chunkTextDocument}
+      />
+    );
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
       target: { value: "/tmp/book.txt" }
@@ -48,10 +76,11 @@ describe("App", () => {
       max_words_per_chunk: 180
     });
     expect(await screen.findByText("Documento importado")).toBeInTheDocument();
-    expect(screen.getByText("Conteudo importado para estudo.")).toBeInTheDocument();
+    expect(screen.getAllByText("Conteudo importado para estudo.").length).toBeGreaterThan(0);
     expect(screen.getByText("1 chunk gerado")).toBeInTheDocument();
     expect(await screen.findByText("1 card gerado")).toBeInTheDocument();
     expect(screen.getByText("Pergunta 1 sobre o trecho 0")).toBeInTheDocument();
+    expect(screen.getAllByText("Conteudo importado para estudo.").length).toBeGreaterThan(0);
   });
 
   it("reveals the answer and advances through study cards", async () => {
@@ -103,6 +132,7 @@ describe("App", () => {
     render(
       <App
         importTextBook={importTextBook}
+        listImportedDocuments={listNoDocuments}
         chunkTextDocument={chunkTextDocument}
         generateCards={generateCards}
       />
@@ -130,7 +160,7 @@ describe("App", () => {
   it("shows an error when import fails", async () => {
     const importTextBook = vi.fn().mockRejectedValue(new Error("Arquivo de texto nao encontrado."));
 
-    render(<App importTextBook={importTextBook} />);
+    render(<App importTextBook={importTextBook} listImportedDocuments={listNoDocuments} />);
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
       target: { value: "/tmp/missing.txt" }
@@ -149,7 +179,13 @@ describe("App", () => {
     });
     const chunkTextDocument = vi.fn().mockRejectedValue(new Error("Falha ao gerar chunks."));
 
-    render(<App importTextBook={importTextBook} chunkTextDocument={chunkTextDocument} />);
+    render(
+      <App
+        importTextBook={importTextBook}
+        listImportedDocuments={listNoDocuments}
+        chunkTextDocument={chunkTextDocument}
+      />
+    );
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
       target: { value: "/tmp/book.txt" }
@@ -183,6 +219,7 @@ describe("App", () => {
     render(
       <App
         importTextBook={importTextBook}
+        listImportedDocuments={listNoDocuments}
         chunkTextDocument={chunkTextDocument}
         generateCards={generateCards}
       />

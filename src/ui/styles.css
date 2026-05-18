@@ -137,10 +137,53 @@ h1 {
 }
 
 .document-preview,
-.empty-state {
+.empty-state,
+.saved-documents {
   margin-top: 28px;
   padding-top: 24px;
   border-top: 1px solid #e1e5df;
+}
+
+.saved-documents h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.saved-documents p {
+  margin: 12px 0 0;
+  color: #526256;
+}
+
+.saved-documents ul {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 14px 0 0;
+  list-style: none;
+}
+
+.saved-documents button {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #d8ddd4;
+  border-radius: 6px;
+  color: #18201c;
+  background: #fbfcfa;
+  text-align: left;
+  cursor: pointer;
+}
+
+.saved-documents span {
+  color: #526256;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.saved-documents strong {
+  font-size: 0.95rem;
 }
 
 .document-preview h2 {

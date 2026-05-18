@@ -51,4 +51,16 @@ describe("i18n", () => {
       "Revelar respuesta"
     );
   });
+
+  it("has saved document labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "library.savedDocuments")).toBe(
+      "Documentos salvos"
+    );
+    expect(i18n.getResource("en", "translation", "library.savedDocuments")).toBe(
+      "Saved documents"
+    );
+    expect(i18n.getResource("es", "translation", "library.savedDocuments")).toBe(
+      "Documentos guardados"
+    );
+  });
 });

@@ -99,6 +99,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - metricas de retencao por documento com percentual de acertos e cards mais dificeis;
 - tendencia temporal de retencao comparando sessoes concluidas;
 - evolucao semanal de cards dificeis por periodo de estudo;
+- filtro de periodo para metricas de estudo com resumo de sessoes, revisoes, acertos e dificuldades;
 - filtros da biblioteca por tipo de arquivo e status de revisao;
 - busca textual na biblioteca por conteudo e caminho de origem;
 - ordenacao da biblioteca por data, tipo e status;
@@ -192,7 +193,7 @@ docs/
 
 1. Evoluir exportacao para formatos avancados de Anki.
 2. Melhorar a paginacao e identidade visual do relatorio PDF.
-3. Adicionar filtros de periodo nas metricas de estudo.
+3. Adicionar metas de estudo por documento.
 
 ## Comandos de desenvolvimento
 

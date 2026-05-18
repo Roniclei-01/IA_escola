@@ -119,6 +119,7 @@ type OperationStatus =
 type SourceTypeFilter = "all" | "txt" | "pdf";
 type ReviewStatusFilter = "all" | "reviewed" | "pending";
 type LibrarySortMode = "oldest" | "newest" | "type" | "status";
+type MetricPeriodFilter = "all" | "last7" | "last30";
 
 interface DocumentProgressSummary {
   documentId: string;
@@ -152,6 +153,13 @@ interface HardCardPeriodTrend {
     label: string;
     difficultCount: number;
   }>;
+}
+
+interface StudyMetricPeriodSummary {
+  sessionCount: number;
+  reviewCount: number;
+  easyCount: number;
+  difficultCount: number;
 }
 
 function toCardReviewMap(
@@ -286,11 +294,53 @@ function difficultCountFromSummary(summary: StudySessionSummary): number {
   return summary.again_count + summary.hard_count;
 }
 
-function buildHardCardPeriodTrend(summaries: StudySessionSummary[]): HardCardPeriodTrend | null {
-  const weekSeconds = 7 * 24 * 60 * 60;
-  const completedSummaries = summaries.filter(
+function completedStudySessionSummaries(summaries: StudySessionSummary[]): StudySessionSummary[] {
+  return summaries.filter(
     (summary) => summary.easy_count + summary.hard_count + summary.again_count > 0
   );
+}
+
+function filterStudySummariesByMetricPeriod(
+  summaries: StudySessionSummary[],
+  periodFilter: MetricPeriodFilter
+): StudySessionSummary[] {
+  const completedSummaries = completedStudySessionSummaries(summaries);
+
+  if (periodFilter === "all" || completedSummaries.length === 0) {
+    return completedSummaries;
+  }
+
+  const referenceStartedAt = Math.max(...completedSummaries.map((summary) => summary.started_at));
+  const periodDays = periodFilter === "last7" ? 7 : 30;
+  const cutoffStartedAt = referenceStartedAt - periodDays * 24 * 60 * 60;
+
+  return completedSummaries.filter((summary) => summary.started_at >= cutoffStartedAt);
+}
+
+function buildStudyMetricPeriodSummary(
+  summaries: StudySessionSummary[]
+): StudyMetricPeriodSummary | null {
+  if (summaries.length === 0) {
+    return null;
+  }
+
+  const easyCount = summaries.reduce((total, summary) => total + summary.easy_count, 0);
+  const difficultCount = summaries.reduce(
+    (total, summary) => total + difficultCountFromSummary(summary),
+    0
+  );
+
+  return {
+    sessionCount: summaries.length,
+    reviewCount: easyCount + difficultCount,
+    easyCount,
+    difficultCount
+  };
+}
+
+function buildHardCardPeriodTrend(summaries: StudySessionSummary[]): HardCardPeriodTrend | null {
+  const weekSeconds = 7 * 24 * 60 * 60;
+  const completedSummaries = completedStudySessionSummaries(summaries);
   const difficultCountsByWeek = completedSummaries.reduce<Record<number, number>>(
     (countsByWeek, summary) => {
       const weekKey = Math.floor(summary.started_at / weekSeconds);
@@ -701,6 +751,7 @@ export function App({
   const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatusFilter>("all");
   const [librarySearchQuery, setLibrarySearchQuery] = useState("");
   const [librarySortMode, setLibrarySortMode] = useState<LibrarySortMode>("oldest");
+  const [metricPeriodFilter, setMetricPeriodFilter] = useState<MetricPeriodFilter>("all");
   const [isLoadingSavedDocuments, setIsLoadingSavedDocuments] = useState(true);
   const [isLoadingArchivedDocuments, setIsLoadingArchivedDocuments] = useState(true);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
@@ -736,8 +787,13 @@ export function App({
     Math.floor(Date.now() / 1000)
   );
   const retentionMetrics = buildRetentionMetrics(cards, reviewHistory);
-  const sessionTrend = buildSessionTrend(studySessionSummaries);
-  const hardCardPeriodTrend = buildHardCardPeriodTrend(studySessionSummaries);
+  const filteredMetricSessionSummaries = filterStudySummariesByMetricPeriod(
+    studySessionSummaries,
+    metricPeriodFilter
+  );
+  const studyMetricPeriodSummary = buildStudyMetricPeriodSummary(filteredMetricSessionSummaries);
+  const sessionTrend = buildSessionTrend(filteredMetricSessionSummaries);
+  const hardCardPeriodTrend = buildHardCardPeriodTrend(filteredMetricSessionSummaries);
   const reviewCounts = Object.values(cardReviews).reduce(
     (counts, review) => ({
       ...counts,
@@ -1702,6 +1758,61 @@ export function App({
                 ) : (
                   <p>{t("study.noHardCards")}</p>
                 )}
+              </section>
+            ) : null}
+            {studyMetricPeriodSummary ? (
+              <section className="study-metric-period" aria-labelledby="study-metric-period-title">
+                <div className="study-metric-period-header">
+                  <h3 id="study-metric-period-title">{t("study.metricPeriodTitle")}</h3>
+                  <label htmlFor="metric-period-filter">
+                    {t("study.metricPeriodFilterLabel")}
+                  </label>
+                  <select
+                    id="metric-period-filter"
+                    value={metricPeriodFilter}
+                    onChange={(event) =>
+                      setMetricPeriodFilter(event.target.value as MetricPeriodFilter)
+                    }
+                  >
+                    <option value="all">{t("study.metricPeriodAll")}</option>
+                    <option value="last7">{t("study.metricPeriodLast7")}</option>
+                    <option value="last30">{t("study.metricPeriodLast30")}</option>
+                  </select>
+                </div>
+                <dl>
+                  <div>
+                    <dt>{t("progress.sessionsLabel")}</dt>
+                    <dd>
+                      {t("study.metricPeriodSessions", {
+                        count: studyMetricPeriodSummary.sessionCount
+                      })}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{t("progress.reviewsLabel")}</dt>
+                    <dd>
+                      {t("study.metricPeriodReviews", {
+                        count: studyMetricPeriodSummary.reviewCount
+                      })}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{t("study.easy")}</dt>
+                    <dd>
+                      {t("study.metricPeriodEasy", {
+                        count: studyMetricPeriodSummary.easyCount
+                      })}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{t("study.hard")}</dt>
+                    <dd>
+                      {t("study.metricPeriodDifficult", {
+                        count: studyMetricPeriodSummary.difficultCount
+                      })}
+                    </dd>
+                  </div>
+                </dl>
               </section>
             ) : null}
             {sessionTrend ? (

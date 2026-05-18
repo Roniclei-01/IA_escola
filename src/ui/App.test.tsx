@@ -1342,6 +1342,69 @@ describe("App", () => {
     expect(screen.getByText("1 card dificil")).toBeInTheDocument();
   });
 
+  it("filters study metrics by period", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-period-filter",
+          book_id: "book-period-filter",
+          content: "Geografia fisica.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/geografia.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-period-filter",
+        bookId: "book-period-filter",
+        chunkId: "chunk-period-filter",
+        front: "O que e relevo?",
+        back: "Forma da superficie terrestre.",
+        tags: ["geografia"]
+      }
+    ]);
+    const listStudySessionSummaries = vi.fn().mockResolvedValue([
+      {
+        session_id: "session-period-old",
+        document_id: "document-period-filter",
+        started_at: 1700000000,
+        again_count: 2,
+        hard_count: 1,
+        easy_count: 1
+      },
+      {
+        session_id: "session-period-latest",
+        document_id: "document-period-filter",
+        started_at: 1700864000,
+        again_count: 0,
+        hard_count: 1,
+        easy_count: 4
+      }
+    ]);
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listStudySessionSummaries
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Geografia fisica/ }));
+
+    expect(await screen.findByText("Resumo do periodo")).toBeInTheDocument();
+    expect(screen.getByText("2 sessoes no periodo")).toBeInTheDocument();
+    expect(screen.getByText("9 revisoes no periodo")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Periodo das metricas"), {
+      target: { value: "last7" }
+    });
+
+    expect(screen.getByText("1 sessao no periodo")).toBeInTheDocument();
+    expect(screen.getByText("5 revisoes no periodo")).toBeInTheDocument();
+    expect(screen.queryByText("9 revisoes no periodo")).not.toBeInTheDocument();
+  });
+
   it("exports study cards as an Anki TSV deck", async () => {
     const downloadTextFile = vi.fn();
     const listImportedDocuments = vi.fn().mockResolvedValue({

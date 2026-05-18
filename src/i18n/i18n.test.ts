@@ -106,6 +106,9 @@ describe("i18n", () => {
       "Progresso por documento"
     );
     expect(i18n.getResource("pt", "translation", "study.retentionTitle")).toBe("Retencao");
+    expect(i18n.getResource("pt", "translation", "study.metricPeriodTitle")).toBe(
+      "Resumo do periodo"
+    );
     expect(i18n.getResource("pt", "translation", "study.sessionTrendTitle")).toBe(
       "Tendencia por sessao"
     );

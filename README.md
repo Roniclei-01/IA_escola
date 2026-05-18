@@ -96,6 +96,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - revisao com marcacao de acerto, erro, dificuldade, prioridade e proxima data;
 - historico visual de revisoes por documento com prioridade media;
 - fila visual de cards vencidos ordenada por prioridade;
+- metricas de retencao por documento com percentual de acertos e cards mais dificeis;
 - filtros da biblioteca por tipo de arquivo e status de revisao;
 - busca textual na biblioteca por conteudo e caminho de origem;
 - ordenacao da biblioteca por data, tipo e status;
@@ -187,7 +188,7 @@ docs/
 ## Proximos passos
 
 1. Evoluir exportacao para PDF e formatos avancados de Anki.
-2. Evoluir metricas de retencao com tendencia temporal e cards mais dificeis.
+2. Evoluir metricas de retencao com tendencia temporal por sessao.
 3. Melhorar exportacao PDF do relatorio de estudo.
 
 ## Comandos de desenvolvimento

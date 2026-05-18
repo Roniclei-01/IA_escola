@@ -128,6 +128,17 @@ interface DocumentProgressSummary {
   isTopReviewed: boolean;
 }
 
+interface RetentionMetrics {
+  retentionPercent: number;
+  hardCardCount: number;
+  hardCards: Array<{
+    cardId: string;
+    front: string;
+    rating: StudyReviewRating;
+    priority: number;
+  }>;
+}
+
 function toCardReviewMap(
   reviews: Array<{ card_id: string; rating: StudyReviewRating }>
 ): Record<string, CardReview> {
@@ -189,6 +200,38 @@ function averagePriority(reviews: StudyReview[]): number {
 
   const totalPriority = reviews.reduce((total, review) => total + review.priority, 0);
   return Math.round(totalPriority / reviews.length);
+}
+
+function buildRetentionMetrics(cards: StudyCard[], reviews: StudyReview[]): RetentionMetrics {
+  const totalReviews = reviews.length;
+  const easyReviews = reviews.filter((review) => review.rating === "easy").length;
+  const cardsById = new Map(cards.map((card) => [card.id, card]));
+  const hardestReviewsByCard = reviews.reduce<Record<string, StudyReview>>((reviewsByCard, review) => {
+    if (review.rating === "easy") {
+      return reviewsByCard;
+    }
+
+    const currentReview = reviewsByCard[review.card_id];
+    if (!currentReview || review.priority > currentReview.priority) {
+      reviewsByCard[review.card_id] = review;
+    }
+
+    return reviewsByCard;
+  }, {});
+
+  return {
+    retentionPercent: totalReviews > 0 ? Math.round((easyReviews / totalReviews) * 100) : 0,
+    hardCardCount: Object.keys(hardestReviewsByCard).length,
+    hardCards: Object.values(hardestReviewsByCard)
+      .map((review) => ({
+        cardId: review.card_id,
+        front: cardsById.get(review.card_id)?.front ?? review.card_id,
+        rating: review.rating,
+        priority: review.priority
+      }))
+      .sort((firstCard, secondCard) => secondCard.priority - firstCard.priority)
+      .slice(0, 3)
+  };
 }
 
 function getDocumentTitle(document: ImportTextBookResponse): string {
@@ -498,6 +541,7 @@ export function App({
     cardReviewSchedules,
     Math.floor(Date.now() / 1000)
   );
+  const retentionMetrics = buildRetentionMetrics(cards, reviewHistory);
   const reviewCounts = Object.values(cardReviews).reduce(
     (counts, review) => ({
       ...counts,
@@ -1418,6 +1462,40 @@ export function App({
                   })
               }}
             />
+            {reviewHistory.length > 0 ? (
+              <section className="retention-metrics" aria-labelledby="retention-metrics-title">
+                <h3 id="retention-metrics-title">{t("study.retentionTitle")}</h3>
+                <div className="retention-summary">
+                  <strong>
+                    {t("study.retentionRate", {
+                      percent: retentionMetrics.retentionPercent
+                    })}
+                  </strong>
+                  <span>
+                    {t("study.hardCardsSummary", {
+                      count: retentionMetrics.hardCardCount
+                    })}
+                  </span>
+                </div>
+                {retentionMetrics.hardCards.length > 0 ? (
+                  <ul>
+                    {retentionMetrics.hardCards.map((hardCard) => (
+                      <li key={hardCard.cardId}>
+                        <span>
+                          {t("study.hardCardMeta", {
+                            rating: getReviewRatingLabel(hardCard.rating, t),
+                            priority: hardCard.priority
+                          })}
+                        </span>
+                        <strong>{hardCard.front}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>{t("study.noHardCards")}</p>
+                )}
+              </section>
+            ) : null}
             <StudySessionHistory
               summaries={studySessionSummaries}
               labels={{

@@ -102,6 +102,7 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "progress.title")).toBe(
       "Progresso por documento"
     );
+    expect(i18n.getResource("pt", "translation", "study.retentionTitle")).toBe("Retencao");
   });
 
   it("has saved document labels in every supported language", () => {

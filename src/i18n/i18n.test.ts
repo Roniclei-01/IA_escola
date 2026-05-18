@@ -69,4 +69,16 @@ describe("i18n", () => {
     expect(i18n.getResource("en", "translation", "settings.testOllama")).toBe("Test");
     expect(i18n.getResource("es", "translation", "settings.testOllama")).toBe("Probar");
   });
+
+  it("has operation progress labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "library.generatingCardsWithOllama")).toBe(
+      "Gerando cards com Ollama."
+    );
+    expect(i18n.getResource("en", "translation", "library.generatingCardsWithOllama")).toBe(
+      "Generating cards with Ollama."
+    );
+    expect(i18n.getResource("es", "translation", "library.generatingCardsWithOllama")).toBe(
+      "Generando cards con Ollama."
+    );
+  });
 });

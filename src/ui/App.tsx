@@ -57,6 +57,13 @@ interface AppProps {
   saveOllamaSettings?: (settings: OllamaSettings) => Promise<OllamaSettings>;
 }
 
+type OperationStatus =
+  | "importingDocument"
+  | "chunkingDocument"
+  | "generatingCardsWithOllama"
+  | "savingStudyCards"
+  | "loadingSavedCards";
+
 export function App({
   importTextBook = defaultImportTextBook,
   listImportedDocuments = defaultListImportedDocuments,
@@ -73,6 +80,7 @@ export function App({
   const [filePath, setFilePath] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
   const [document, setDocument] = useState<ImportTextBookResponse | null>(null);
   const [chunkCount, setChunkCount] = useState<number | null>(null);
   const [cards, setCards] = useState<StudyCard[]>([]);
@@ -154,6 +162,7 @@ export function App({
 
     setIsImporting(true);
     setError(null);
+    setOperationStatus("importingDocument");
     setChunkCount(null);
     setCards([]);
     setActiveCardIndex(0);
@@ -161,8 +170,11 @@ export function App({
 
     try {
       const importedDocument = await importTextBook(trimmedPath);
+      setOperationStatus("chunkingDocument");
       const chunkResponse = await chunkTextDocument(toChunkRequest(importedDocument, 180));
+      setOperationStatus("generatingCardsWithOllama");
       const generatedCards = await generateCards(chunkResponse.chunks);
+      setOperationStatus("savingStudyCards");
       const persistedCards =
         generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
       setDocument(importedDocument);
@@ -180,6 +192,7 @@ export function App({
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
       setIsImporting(false);
+      setOperationStatus(null);
     }
   }
 
@@ -190,6 +203,7 @@ export function App({
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
     setError(null);
+    setOperationStatus("loadingSavedCards");
 
     try {
       const persistedCards = await listStudyCards(selectedDocument.document_id);
@@ -199,23 +213,29 @@ export function App({
         setCards(persistedCards);
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
+        setOperationStatus(null);
         return;
       }
 
+      setOperationStatus("chunkingDocument");
       const chunkResponse = await listDocumentChunks(selectedDocument.document_id);
+      setOperationStatus("generatingCardsWithOllama");
       const generatedCards =
         chunkResponse.chunks.length > 0 ? await generateCards(chunkResponse.chunks) : [];
+      setOperationStatus("savingStudyCards");
       const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
 
       setChunkCount(chunkResponse.chunks.length);
       setCards(savedCards);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
+      setOperationStatus(null);
     } catch (unknownError) {
       setChunkCount(null);
       setCards([]);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
+      setOperationStatus(null);
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     }
   }
@@ -274,6 +294,12 @@ export function App({
         {error ? (
           <p className="message error" role="alert">
             {error}
+          </p>
+        ) : null}
+
+        {operationStatus ? (
+          <p className="message info" role="status">
+            {t(`library.${operationStatus}`)}
           </p>
         ) : null}
 

@@ -116,7 +116,7 @@ interface ModelAdapter {
 
 Adaptadores previstos:
 
-- `OllamaModelAdapter` no MVP, iniciado no backend Rust com cliente injetavel, cliente HTTP local, comando de teste de conexao, painel de configuracao na UI e comando de geracao de cards.
+- `OllamaModelAdapter` no MVP, iniciado no backend Rust com cliente injetavel, cliente HTTP local, comando de teste de conexao, painel de configuracao na UI, comando de geracao de cards e feedback visual durante operacoes longas.
 - `LlamaCppModelAdapter` em fase futura.
 - `OpenAIModelAdapter` opcional para recursos pagos ou nuvem.
 - `MockModelAdapter` para testes.

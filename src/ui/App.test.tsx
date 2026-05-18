@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
+import type { StudyCard } from "../domain/model-adapter";
 import { App } from "./App";
 import "../i18n";
 
@@ -270,6 +271,68 @@ describe("App", () => {
     expect(await screen.findByText("1 card gerado")).toBeInTheDocument();
     expect(screen.getByText("Pergunta 1 sobre o trecho 0")).toBeInTheDocument();
     expect(screen.getAllByText("Conteudo importado para estudo.").length).toBeGreaterThan(0);
+  });
+
+  it("shows progress while Ollama generates cards", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-1",
+      book_id: "book-1",
+      content: "Conteudo importado para estudo.",
+      language: "Pt"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-1",
+          book_id: "book-1",
+          document_id: "document-1",
+          position: 0,
+          content: "Conteudo importado para estudo.",
+          token_estimate: 4
+        }
+      ]
+    });
+    let resolveCards: (cards: Array<{
+      id: string;
+      bookId: string;
+      chunkId: string;
+      front: string;
+      back: string;
+      tags: string[];
+    }>) => void = () => {};
+    const generateCards = vi.fn(
+      () =>
+        new Promise<StudyCard[]>((resolve) => {
+          resolveCards = resolve;
+        })
+    );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      generateCards,
+      saveStudyCards: saveCards
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+      target: { value: "/tmp/book.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+
+    resolveCards([
+      {
+        id: "card-1",
+        bookId: "book-1",
+        chunkId: "chunk-1",
+        front: "Pergunta gerada",
+        back: "Resposta gerada",
+        tags: ["ollama"]
+      }
+    ]);
+
+    expect(await screen.findByText("Pergunta gerada")).toBeInTheDocument();
   });
 
   it("reveals the answer and advances through study cards", async () => {

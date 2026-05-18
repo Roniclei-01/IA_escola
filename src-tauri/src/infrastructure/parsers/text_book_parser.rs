@@ -1,4 +1,8 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use lopdf::Document as PdfDocument;
 use thiserror::Error;
@@ -23,9 +27,36 @@ pub enum TextBookParserError {
     InvalidDocument(#[from] DocumentError),
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TextBookParserOptions {
     pub ocr_enabled: bool,
+    pub ocr_engine: OcrEngineOptions,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OcrEngineOptions {
+    pub pdftoppm_path: PathBuf,
+    pub tesseract_path: PathBuf,
+    pub language: String,
+}
+
+impl Default for TextBookParserOptions {
+    fn default() -> Self {
+        Self {
+            ocr_enabled: false,
+            ocr_engine: OcrEngineOptions::default(),
+        }
+    }
+}
+
+impl Default for OcrEngineOptions {
+    fn default() -> Self {
+        Self {
+            pdftoppm_path: PathBuf::from("pdftoppm"),
+            tesseract_path: PathBuf::from("tesseract"),
+            language: "por".to_owned(),
+        }
+    }
 }
 
 pub fn parse_text_book(
@@ -63,10 +94,7 @@ pub fn parse_text_book_with_options(
             fs::read_to_string(path).map_err(|_| TextBookParserError::ReadFailed)?,
             DocumentSourceType::Txt,
         ),
-        Some("pdf") => (
-            extract_pdf_text(path, options.ocr_enabled)?,
-            DocumentSourceType::Pdf,
-        ),
+        Some("pdf") => (extract_pdf_text(path, &options)?, DocumentSourceType::Pdf),
         _ => return Err(TextBookParserError::UnsupportedExtension),
     };
 
@@ -80,7 +108,10 @@ pub fn parse_text_book_with_options(
     .map_err(TextBookParserError::InvalidDocument)
 }
 
-fn extract_pdf_text(path: &Path, ocr_enabled: bool) -> Result<String, TextBookParserError> {
+fn extract_pdf_text(
+    path: &Path,
+    options: &TextBookParserOptions,
+) -> Result<String, TextBookParserError> {
     let document = PdfDocument::load(path).map_err(|_| TextBookParserError::PdfReadFailed)?;
     let page_numbers = document.get_pages().keys().copied().collect::<Vec<_>>();
 
@@ -89,8 +120,8 @@ fn extract_pdf_text(path: &Path, ocr_enabled: bool) -> Result<String, TextBookPa
         .map_err(|_| TextBookParserError::PdfReadFailed)?;
 
     if extracted_text.trim().is_empty() {
-        if ocr_enabled {
-            return Err(TextBookParserError::OcrUnavailable);
+        if options.ocr_enabled {
+            return extract_pdf_text_with_ocr(path, &options.ocr_engine);
         }
 
         return Err(TextBookParserError::PdfNeedsOcr);
@@ -99,9 +130,85 @@ fn extract_pdf_text(path: &Path, ocr_enabled: bool) -> Result<String, TextBookPa
     Ok(extracted_text)
 }
 
+fn extract_pdf_text_with_ocr(
+    path: &Path,
+    engine: &OcrEngineOptions,
+) -> Result<String, TextBookParserError> {
+    let output_dir =
+        std::env::temp_dir().join(format!("estudo-ia-local-ocr-{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(&output_dir).map_err(|_| TextBookParserError::OcrUnavailable)?;
+
+    let output_prefix = output_dir.join("page");
+    let raster_status = Command::new(&engine.pdftoppm_path)
+        .arg("-png")
+        .arg("-r")
+        .arg("300")
+        .arg(path)
+        .arg(&output_prefix)
+        .status()
+        .map_err(|_| TextBookParserError::OcrUnavailable)?;
+
+    if !raster_status.success() {
+        let _ = fs::remove_dir_all(&output_dir);
+        return Err(TextBookParserError::OcrUnavailable);
+    }
+
+    let mut page_images = fs::read_dir(&output_dir)
+        .map_err(|_| TextBookParserError::OcrUnavailable)?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|page_path| {
+            page_path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                == Some("png")
+        })
+        .collect::<Vec<_>>();
+    page_images.sort();
+
+    if page_images.is_empty() {
+        let _ = fs::remove_dir_all(&output_dir);
+        return Err(TextBookParserError::OcrUnavailable);
+    }
+
+    let mut pages_text = Vec::new();
+
+    for page_image in page_images {
+        let output = Command::new(&engine.tesseract_path)
+            .arg(&page_image)
+            .arg("stdout")
+            .arg("-l")
+            .arg(&engine.language)
+            .output()
+            .map_err(|_| TextBookParserError::OcrUnavailable)?;
+
+        if !output.status.success() {
+            let _ = fs::remove_dir_all(&output_dir);
+            return Err(TextBookParserError::OcrUnavailable);
+        }
+
+        pages_text.push(String::from_utf8_lossy(&output.stdout).trim().to_owned());
+    }
+
+    let _ = fs::remove_dir_all(&output_dir);
+
+    let text = pages_text.join("\n\n");
+
+    if text.trim().is_empty() {
+        return Err(TextBookParserError::InvalidDocument(
+            DocumentError::EmptyContent,
+        ));
+    }
+
+    Ok(text)
+}
+
 #[cfg(test)]
 mod tests {
     use std::{fs, path::PathBuf};
+
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
 
     use lopdf::{
         content::{Content, Operation},
@@ -209,10 +316,49 @@ mod tests {
             Uuid::new_v4(),
             path,
             Language::Pt,
-            TextBookParserOptions { ocr_enabled: true },
+            TextBookParserOptions {
+                ocr_enabled: true,
+                ..TextBookParserOptions::default()
+            },
         );
 
         assert_eq!(result.unwrap_err(), TextBookParserError::OcrUnavailable);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn extracts_pdf_text_with_configured_ocr_engine() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("scanned.pdf");
+        let pdftoppm_path = dir.path().join("pdftoppm");
+        let tesseract_path = dir.path().join("tesseract");
+        write_pdf_file(&path, "");
+        write_executable(
+            &pdftoppm_path,
+            "#!/bin/sh\nprefix=\"$5\"\ntouch \"${prefix}-1.png\"\n",
+        );
+        write_executable(
+            &tesseract_path,
+            "#!/bin/sh\nprintf 'Texto reconhecido por OCR.'\n",
+        );
+
+        let document = parse_text_book_with_options(
+            Uuid::new_v4(),
+            &path,
+            Language::Pt,
+            TextBookParserOptions {
+                ocr_enabled: true,
+                ocr_engine: super::OcrEngineOptions {
+                    pdftoppm_path,
+                    tesseract_path,
+                    language: "por".to_owned(),
+                },
+            },
+        )
+        .unwrap();
+
+        assert_eq!(document.content, "Texto reconhecido por OCR.");
+        assert_eq!(document.source_type, DocumentSourceType::Pdf);
     }
 
     #[test]
@@ -272,5 +418,13 @@ mod tests {
         });
         document.trailer.set("Root", catalog_id);
         document.save(path).unwrap();
+    }
+
+    #[cfg(unix)]
+    fn write_executable(path: &PathBuf, content: &str) {
+        fs::write(path, content).unwrap();
+        let mut permissions = fs::metadata(path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(path, permissions).unwrap();
     }
 }

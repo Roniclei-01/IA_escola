@@ -55,7 +55,10 @@ pub fn import_text_book_with_storage(
         book_id,
         file_path,
         Language::Pt,
-        TextBookParserOptions { ocr_enabled },
+        TextBookParserOptions {
+            ocr_enabled,
+            ..TextBookParserOptions::default()
+        },
     )
     .map_err(format_parser_error)?;
     storage

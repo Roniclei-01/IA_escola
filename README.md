@@ -90,7 +90,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - persistencia SQLite das configuracoes do Ollama em `app_settings`;
 - comandos `load_ollama_settings` e `save_ollama_settings`;
 - comando `generate_study_cards` usando Ollama e configuracoes salvas;
-- UI usando Ollama por padrao para gerar cards, com testes ainda injetando geradores previsiveis;
+- UI usando Ollama por padrao com `llama3.2:1b` para reduzir gargalo local, com testes ainda injetando geradores previsiveis;
 - feedback visual para importacao, chunking, geracao com Ollama, salvamento e carregamento de cards;
 - fallback de desenvolvimento para gerar cards mockados quando o Ollama falhar;
 - revisao com marcacao de acerto, erro, dificuldade, prioridade e proxima data;

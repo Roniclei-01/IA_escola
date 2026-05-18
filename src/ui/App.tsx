@@ -1041,7 +1041,7 @@ export function App({
     Record<string, { priority: number; nextReviewAt: number }>
   >({});
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://127.0.0.1:11434");
-  const [ollamaModel, setOllamaModel] = useState("llama3.2");
+  const [ollamaModel, setOllamaModel] = useState("llama3.2:1b");
   const [isStudyGoalNotificationEnabled, setIsStudyGoalNotificationEnabled] = useState(true);
   const [studyGoalReminderTime, setStudyGoalReminderTime] = useState("08:00");
   const [isTestingOllama, setIsTestingOllama] = useState(false);

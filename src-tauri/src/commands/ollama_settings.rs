@@ -5,7 +5,7 @@ use crate::infrastructure::storage::{SQLiteStorage, StorageError};
 const OLLAMA_BASE_URL_KEY: &str = "ollama.base_url";
 const OLLAMA_MODEL_KEY: &str = "ollama.model";
 const DEFAULT_OLLAMA_BASE_URL: &str = "http://127.0.0.1:11434";
-const DEFAULT_OLLAMA_MODEL: &str = "llama3.2";
+const DEFAULT_OLLAMA_MODEL: &str = "llama3.2:1b";
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct OllamaSettings {

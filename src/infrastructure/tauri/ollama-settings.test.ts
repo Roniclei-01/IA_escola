@@ -16,13 +16,13 @@ describe("ollama settings", () => {
   it("loads Ollama settings from Tauri", async () => {
     invokeMock.mockResolvedValue({
       base_url: "http://127.0.0.1:11434",
-      model: "llama3.2"
+      model: "llama3.2:1b"
     });
 
     const settings = await loadOllamaSettings();
 
     expect(invokeMock).toHaveBeenCalledWith("load_ollama_settings");
-    expect(settings.model).toBe("llama3.2");
+    expect(settings.model).toBe("llama3.2:1b");
   });
 
   it("saves Ollama settings through Tauri", async () => {

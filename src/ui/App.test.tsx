@@ -35,7 +35,7 @@ const selectNoFile = vi.fn().mockResolvedValue(null);
 const saveCards = vi.fn().mockImplementation(async (cards: unknown[]) => cards);
 const loadDefaultOllamaSettings = vi.fn().mockResolvedValue({
   base_url: "http://127.0.0.1:11434",
-  model: "llama3.2"
+  model: "llama3.2:1b"
 });
 const saveOllamaSettings = vi.fn().mockImplementation(async (settings: unknown) => settings);
 const loadDefaultNotificationSettings = vi.fn().mockResolvedValue({

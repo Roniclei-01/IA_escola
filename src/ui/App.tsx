@@ -1,6 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { FormEvent, useEffect, useState } from "react";
 import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification
+} from "@tauri-apps/plugin-notification";
+import {
   importTextBook as defaultImportTextBook,
   type ImportTextBookResponse
 } from "../infrastructure/tauri/import-text-book";
@@ -145,19 +150,15 @@ async function defaultNotifyStudyGoalReminder(notification: {
   title: string;
   body: string;
 }): Promise<void> {
-  if (typeof window === "undefined" || !("Notification" in window)) {
-    return;
+  let permissionGranted = await isPermissionGranted();
+
+  if (!permissionGranted) {
+    const permission = await requestPermission();
+    permissionGranted = permission === "granted";
   }
 
-  const notificationApi = window.Notification;
-  let permission = notificationApi.permission;
-
-  if (permission === "default") {
-    permission = await notificationApi.requestPermission();
-  }
-
-  if (permission === "granted") {
-    new notificationApi(notification.title, { body: notification.body });
+  if (permissionGranted) {
+    sendNotification(notification);
   }
 }
 

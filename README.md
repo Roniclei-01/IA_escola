@@ -104,6 +104,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - alerta visual para metas diarias ou semanais ainda nao cumpridas;
 - notificacao local para metas recorrentes salvas com revisoes pendentes;
 - preferencia persistida para ativar ou desativar lembretes de meta;
+- plugin nativo de notificacoes do Tauri para lembretes de meta;
 - filtros da biblioteca por tipo de arquivo e status de revisao;
 - busca textual na biblioteca por conteudo e caminho de origem;
 - ordenacao da biblioteca por data, tipo e status;
@@ -196,7 +197,7 @@ docs/
 ## Proximos passos
 
 1. Evoluir exportacao Anki para pacote `.apkg`.
-2. Evoluir notificacoes locais para plugin nativo do Tauri.
+2. Adicionar agendamento de notificacoes para metas recorrentes.
 
 ## Comandos de desenvolvimento
 

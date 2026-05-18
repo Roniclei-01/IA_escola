@@ -27,6 +27,11 @@ import {
   saveStudyCards as defaultSaveStudyCards
 } from "../infrastructure/tauri/study-cards";
 import {
+  listStudyReviews as defaultListStudyReviews,
+  saveStudyReview as defaultSaveStudyReview,
+  type StudyReviewRating
+} from "../infrastructure/tauri/study-reviews";
+import {
   testOllamaConnection as defaultTestOllamaConnection,
   type TestOllamaConnectionResponse
 } from "../infrastructure/tauri/ollama";
@@ -51,6 +56,10 @@ interface AppProps {
   generateCards?: (chunks: ImportedDocumentChunk[]) => Promise<StudyCard[]>;
   saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
   listStudyCards?: (documentId: string) => Promise<StudyCard[]>;
+  saveStudyReview?: (cardId: string, rating: StudyReviewRating) => Promise<unknown>;
+  listStudyReviews?: (
+    documentId: string
+  ) => Promise<Array<{ card_id: string; rating: StudyReviewRating }>>;
   testOllamaConnection?: (request: {
     model: string;
     base_url?: string;
@@ -67,6 +76,15 @@ type OperationStatus =
   | "savingStudyCards"
   | "loadingSavedCards";
 
+function toCardReviewMap(
+  reviews: Array<{ card_id: string; rating: StudyReviewRating }>
+): Record<string, CardReview> {
+  return reviews.reduce<Record<string, CardReview>>((reviewMap, review) => {
+    reviewMap[review.card_id] = review.rating;
+    return reviewMap;
+  }, {});
+}
+
 export function App({
   importTextBook = defaultImportTextBook,
   listImportedDocuments = defaultListImportedDocuments,
@@ -75,6 +93,8 @@ export function App({
   generateCards = generateStudyCardsWithOllama,
   saveStudyCards = defaultSaveStudyCards,
   listStudyCards = defaultListStudyCards,
+  saveStudyReview = defaultSaveStudyReview,
+  listStudyReviews = defaultListStudyReviews,
   testOllamaConnection = defaultTestOllamaConnection,
   loadOllamaSettings = defaultLoadOllamaSettings,
   saveOllamaSettings = defaultSaveOllamaSettings,
@@ -247,11 +267,12 @@ export function App({
       const persistedCards = await listStudyCards(selectedDocument.document_id);
 
       if (persistedCards.length > 0) {
+        const persistedReviews = await listStudyReviews(selectedDocument.document_id);
         setChunkCount(new Set(persistedCards.map((card) => card.chunkId)).size);
         setCards(persistedCards);
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
-        setCardReviews({});
+        setCardReviews(toCardReviewMap(persistedReviews));
         setOperationStatus(null);
         return;
       }
@@ -309,19 +330,27 @@ export function App({
     }
   }
 
-  function handleReviewCard(review: CardReview) {
+  async function handleReviewCard(review: CardReview) {
     if (!activeCard) {
       return;
     }
 
+    const reviewedCard = activeCard;
+
     setCardReviews((currentReviews) => ({
       ...currentReviews,
-      [activeCard.id]: review
+      [reviewedCard.id]: review
     }));
 
     if (activeCardIndex < cards.length - 1) {
       setActiveCardIndex((currentIndex) => currentIndex + 1);
       setIsAnswerVisible(false);
+    }
+
+    try {
+      await saveStudyReview(reviewedCard.id, review);
+    } catch {
+      setError(t("study.reviewSaveError"));
     }
   }
 
@@ -438,7 +467,9 @@ export function App({
                   setActiveCardIndex((currentIndex) => Math.min(currentIndex + 1, cards.length - 1));
                   setIsAnswerVisible(false);
                 }}
-                onReviewCard={handleReviewCard}
+                onReviewCard={(review) => {
+                  void handleReviewCard(review);
+                }}
               />
             ) : null}
           </DocumentSummary>

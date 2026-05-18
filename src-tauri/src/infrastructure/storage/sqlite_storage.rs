@@ -4,7 +4,7 @@ use rusqlite::{params, Connection};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::domain::{Document, DocumentChunk, Language, StudyCard};
+use crate::domain::{Document, DocumentChunk, Language, StudyCard, StudyReview, StudyReviewRating};
 
 #[derive(Debug, Error)]
 pub enum StorageError {
@@ -24,6 +24,10 @@ pub enum StorageError {
     SaveStudyCardsFailed(#[source] rusqlite::Error),
     #[error("failed to list study cards")]
     ListStudyCardsFailed(#[source] rusqlite::Error),
+    #[error("failed to save study review")]
+    SaveStudyReviewFailed(#[source] rusqlite::Error),
+    #[error("failed to list study reviews")]
+    ListStudyReviewsFailed(#[source] rusqlite::Error),
     #[error("failed to save app setting")]
     SaveSettingFailed(#[source] rusqlite::Error),
     #[error("failed to load app setting")]
@@ -46,6 +50,12 @@ pub enum StorageError {
     InvalidStudyCardChunkId(#[source] uuid::Error),
     #[error("stored study card has invalid tags")]
     InvalidStudyCardTags(#[source] serde_json::Error),
+    #[error("stored study review has invalid id")]
+    InvalidStudyReviewId(#[source] uuid::Error),
+    #[error("stored study review has invalid card id")]
+    InvalidStudyReviewCardId(#[source] uuid::Error),
+    #[error("stored study review has invalid rating")]
+    InvalidStudyReviewRating(String),
     #[error("stored document has invalid language")]
     InvalidLanguage(String),
 }
@@ -286,6 +296,60 @@ impl SQLiteStorage {
         Ok(cards)
     }
 
+    pub fn save_study_review(&self, review: &StudyReview) -> Result<(), StorageError> {
+        self.connection
+            .execute(
+                "INSERT OR REPLACE INTO study_reviews (id, card_id, rating)
+                 VALUES (?1, ?2, ?3)",
+                params![
+                    review.id.to_string(),
+                    review.card_id.to_string(),
+                    rating_to_code(&review.rating),
+                ],
+            )
+            .map_err(StorageError::SaveStudyReviewFailed)?;
+
+        Ok(())
+    }
+
+    pub fn list_study_reviews_by_document(
+        &self,
+        document_id: Uuid,
+    ) -> Result<Vec<StudyReview>, StorageError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT study_reviews.id,
+                        study_reviews.card_id,
+                        study_reviews.rating
+                 FROM study_reviews
+                 INNER JOIN study_cards ON study_cards.id = study_reviews.card_id
+                 INNER JOIN document_chunks ON document_chunks.id = study_cards.chunk_id
+                 WHERE document_chunks.document_id = ?1
+                 ORDER BY study_reviews.created_at ASC",
+            )
+            .map_err(StorageError::ListStudyReviewsFailed)?;
+
+        let rows = statement
+            .query_map([document_id.to_string()], |row| {
+                Ok(RawStudyReview {
+                    id: row.get(0)?,
+                    card_id: row.get(1)?,
+                    rating: row.get(2)?,
+                })
+            })
+            .map_err(StorageError::ListStudyReviewsFailed)?;
+
+        let mut reviews = Vec::new();
+
+        for row in rows {
+            let raw_review = row.map_err(StorageError::ListStudyReviewsFailed)?;
+            reviews.push(raw_review.try_into()?);
+        }
+
+        Ok(reviews)
+    }
+
     pub fn save_setting(&self, key: &str, value: &str) -> Result<(), StorageError> {
         self.connection
             .execute(
@@ -348,6 +412,13 @@ impl SQLiteStorage {
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
 
+                CREATE TABLE IF NOT EXISTS study_reviews (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    card_id TEXT NOT NULL,
+                    rating TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
                 CREATE TABLE IF NOT EXISTS app_settings (
                     key TEXT PRIMARY KEY NOT NULL,
                     value TEXT NOT NULL,
@@ -381,6 +452,12 @@ struct RawStudyCard {
     front: String,
     back: String,
     tags: String,
+}
+
+struct RawStudyReview {
+    id: String,
+    card_id: String,
+    rating: String,
 }
 
 impl TryFrom<RawDocument> for Document {
@@ -433,6 +510,19 @@ impl TryFrom<RawStudyCard> for StudyCard {
     }
 }
 
+impl TryFrom<RawStudyReview> for StudyReview {
+    type Error = StorageError;
+
+    fn try_from(raw: RawStudyReview) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: Uuid::parse_str(&raw.id).map_err(StorageError::InvalidStudyReviewId)?,
+            card_id: Uuid::parse_str(&raw.card_id)
+                .map_err(StorageError::InvalidStudyReviewCardId)?,
+            rating: rating_from_code(&raw.rating)?,
+        })
+    }
+}
+
 fn language_to_code(language: &Language) -> &'static str {
     match language {
         Language::Pt => "pt",
@@ -450,12 +540,31 @@ fn language_from_code(code: &str) -> Result<Language, StorageError> {
     }
 }
 
+fn rating_to_code(rating: &StudyReviewRating) -> &'static str {
+    match rating {
+        StudyReviewRating::Again => "again",
+        StudyReviewRating::Hard => "hard",
+        StudyReviewRating::Easy => "easy",
+    }
+}
+
+fn rating_from_code(code: &str) -> Result<StudyReviewRating, StorageError> {
+    match code {
+        "again" => Ok(StudyReviewRating::Again),
+        "hard" => Ok(StudyReviewRating::Hard),
+        "easy" => Ok(StudyReviewRating::Easy),
+        value => Err(StorageError::InvalidStudyReviewRating(value.to_owned())),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use uuid::Uuid;
 
     use super::SQLiteStorage;
-    use crate::domain::{Document, DocumentChunk, Language, StudyCard};
+    use crate::domain::{
+        Document, DocumentChunk, Language, StudyCard, StudyReview, StudyReviewRating,
+    };
 
     #[test]
     fn creates_documents_table_on_open() {
@@ -491,6 +600,18 @@ mod tests {
         let storage = SQLiteStorage::open_in_memory().unwrap();
 
         assert_eq!(storage.load_setting("ollama.model").unwrap(), None);
+    }
+
+    #[test]
+    fn creates_study_reviews_table_on_open() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+
+        assert_eq!(
+            storage
+                .list_study_reviews_by_document(Uuid::new_v4())
+                .unwrap(),
+            Vec::<StudyReview>::new()
+        );
     }
 
     #[test]
@@ -659,6 +780,32 @@ mod tests {
         let cards = storage.list_study_cards_by_document(document_id).unwrap();
 
         assert_eq!(cards, vec![replacement_card]);
+    }
+
+    #[test]
+    fn saves_and_lists_study_reviews_by_document() {
+        let mut storage = SQLiteStorage::open_in_memory().unwrap();
+        let book_id = Uuid::new_v4();
+        let document_id = Uuid::new_v4();
+        let other_document_id = Uuid::new_v4();
+        let chunk = DocumentChunk::new(book_id, document_id, 1, "chunk").unwrap();
+        let other_chunk = DocumentChunk::new(book_id, other_document_id, 1, "outro").unwrap();
+        let card = StudyCard::new(book_id, chunk.id, "Pergunta", "Resposta", vec![]).unwrap();
+        let other_card =
+            StudyCard::new(book_id, other_chunk.id, "Outra", "Resposta", vec![]).unwrap();
+        let review = StudyReview::new(card.id, StudyReviewRating::Easy).unwrap();
+        let other_review = StudyReview::new(other_card.id, StudyReviewRating::Again).unwrap();
+
+        storage.save_chunks(&[chunk, other_chunk]).unwrap();
+        storage
+            .save_study_cards(&[card.clone(), other_card])
+            .unwrap();
+        storage.save_study_review(&review).unwrap();
+        storage.save_study_review(&other_review).unwrap();
+
+        let reviews = storage.list_study_reviews_by_document(document_id).unwrap();
+
+        assert_eq!(reviews, vec![review]);
     }
 
     #[test]

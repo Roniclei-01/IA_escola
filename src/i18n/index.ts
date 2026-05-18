@@ -46,7 +46,8 @@ export const resources = {
         nextCard: "Proximo card",
         again: "Errei",
         hard: "Dificil",
-        easy: "Acertei"
+        easy: "Acertei",
+        reviewSaveError: "Nao foi possivel salvar a revisao do card."
       },
       settings: {
         ollamaTitle: "Ollama",
@@ -104,7 +105,8 @@ export const resources = {
         nextCard: "Next card",
         again: "Missed",
         hard: "Hard",
-        easy: "Correct"
+        easy: "Correct",
+        reviewSaveError: "Could not save the card review."
       },
       settings: {
         ollamaTitle: "Ollama",
@@ -162,7 +164,8 @@ export const resources = {
         nextCard: "Siguiente card",
         again: "Falle",
         hard: "Dificil",
-        easy: "Acerto"
+        easy: "Acerto",
+        reviewSaveError: "No fue posible guardar la revision del card."
       },
       settings: {
         ollamaTitle: "Ollama",

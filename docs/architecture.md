@@ -132,10 +132,12 @@ Tabelas ja iniciadas:
 - `documents`.
 - `document_chunks`.
 - `study_cards`.
-- `study_sessions` e `study_reviews` em fase futura para persistir desempenho.
+- `study_reviews`.
 - `app_settings`.
 
 Tabelas futuras:
+
+- `study_sessions` para agrupar revisoes por sessao.
 
 - `books`.
 - `model_profiles`.

@@ -7,6 +7,12 @@ import "../i18n";
 
 const listNoDocuments = vi.fn().mockResolvedValue({ documents: [] });
 const listNoStudyCards = vi.fn().mockResolvedValue([]);
+const listNoStudyReviews = vi.fn().mockResolvedValue([]);
+const saveStudyReview = vi.fn().mockResolvedValue({
+  id: "review-1",
+  card_id: "card-1",
+  rating: "easy"
+});
 const saveCards = vi.fn().mockImplementation(async (cards: unknown[]) => cards);
 const loadDefaultOllamaSettings = vi.fn().mockResolvedValue({
   base_url: "http://127.0.0.1:11434",
@@ -18,6 +24,8 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
   return render(
     <App
       listImportedDocuments={listNoDocuments}
+      listStudyReviews={listNoStudyReviews}
+      saveStudyReview={saveStudyReview}
       loadOllamaSettings={loadDefaultOllamaSettings}
       saveOllamaSettings={saveOllamaSettings}
       {...props}
@@ -194,12 +202,20 @@ describe("App", () => {
     ]);
     const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
     const generateCards = vi.fn().mockResolvedValue([]);
+    const listStudyReviews = vi.fn().mockResolvedValue([
+      {
+        id: "review-1",
+        card_id: "card-saved",
+        rating: "hard"
+      }
+    ]);
 
     renderApp({
       listImportedDocuments,
       listDocumentChunks,
       listStudyCards,
-      generateCards
+      generateCards,
+      listStudyReviews
     });
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
@@ -209,8 +225,10 @@ describe("App", () => {
     });
     expect(listDocumentChunks).not.toHaveBeenCalled();
     expect(generateCards).not.toHaveBeenCalled();
+    expect(listStudyReviews).toHaveBeenCalledWith("document-saved");
     expect(await screen.findByText("Pergunta persistida")).toBeInTheDocument();
     expect(screen.getByText("1 card gerado")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dificil" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("imports a text book from a file path", async () => {
@@ -506,12 +524,18 @@ describe("App", () => {
         tags: ["mock"]
       }
     ]);
+    const saveStudyReview = vi.fn().mockResolvedValue({
+      id: "review-1",
+      card_id: "card-1",
+      rating: "easy"
+    });
 
     renderApp({
       importTextBook,
       chunkTextDocument,
       generateCards,
-      saveStudyCards: saveCards
+      saveStudyCards: saveCards,
+      saveStudyReview
     });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
@@ -525,6 +549,9 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Acertei" }));
 
     expect(screen.getByText("Pergunta 2")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(saveStudyReview).toHaveBeenCalledWith("card-1", "easy");
+    });
     expect(screen.getByText("Acertos: 1 | Erros: 0 | Dificeis: 0")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Dificil" }));

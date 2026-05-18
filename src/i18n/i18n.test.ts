@@ -68,6 +68,9 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.easy")).toBe("Acertei");
     expect(i18n.getResource("en", "translation", "study.easy")).toBe("Correct");
     expect(i18n.getResource("es", "translation", "study.easy")).toBe("Acerto");
+    expect(i18n.getResource("pt", "translation", "study.reviewSaveError")).toBe(
+      "Nao foi possivel salvar a revisao do card."
+    );
   });
 
   it("has saved document labels in every supported language", () => {

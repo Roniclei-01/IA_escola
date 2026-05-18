@@ -75,6 +75,9 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - persistencia SQLite de `study_cards`;
 - comandos `save_study_cards` e `list_study_cards`;
 - UI salvando cards gerados e reutilizando cards salvos ao abrir documento da biblioteca;
+- persistencia SQLite de `study_reviews`;
+- comandos `save_study_review` e `list_study_reviews`;
+- UI salvando e recarregando marcacoes de revisao dos cards;
 - adaptador inicial `OllamaModelAdapter` no backend Rust com cliente injetavel e testes de contrato;
 - cliente HTTP local para `/api/generate` do Ollama;
 - comando `test_ollama_connection` para validar conexao e modelo;
@@ -86,7 +89,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - UI usando Ollama por padrao para gerar cards, com testes ainda injetando geradores previsiveis;
 - feedback visual para importacao, chunking, geracao com Ollama, salvamento e carregamento de cards;
 - fallback de desenvolvimento para gerar cards mockados quando o Ollama falhar;
-- revisao em sessao com marcacao de acerto, erro e dificuldade;
+- revisao com marcacao de acerto, erro e dificuldade;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -161,9 +164,9 @@ docs/
 
 ## Proximos passos
 
-1. Persistir sessoes de revisao em SQLite.
-2. Melhorar a selecao de arquivos com dialog nativo do Tauri.
-3. Adicionar metadados de origem para diferenciar livros TXT e PDF.
+1. Melhorar a selecao de arquivos com dialog nativo do Tauri.
+2. Adicionar metadados de origem para diferenciar livros TXT e PDF.
+3. Evoluir revisao espacada com agenda e prioridade dos cards.
 
 ## Comandos de desenvolvimento
 

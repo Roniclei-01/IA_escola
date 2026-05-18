@@ -1426,56 +1426,88 @@ export function App({
     setCardReviewSchedules({});
     setCardGenerationProgress(null);
     const operationToken = startCancellableOperation();
+    let importedDocument: ImportTextBookResponse | null = null;
+    let generatedChunkCount: number | null = null;
+    const incrementallySavedCardIds = new Set<string>();
+    const partiallySavedCards: StudyCard[] = [];
 
     try {
-      const importedDocument = await importTextBook(trimmedPath, {
+      importedDocument = await importTextBook(trimmedPath, {
         ocrEnabled: isOcrEnabled,
         ocrLanguage
       });
       if (!isCurrentOperation(operationToken)) {
         return;
       }
+      const currentImportedDocument = importedDocument;
       setOperationStatus("chunkingDocument");
-      const chunkResponse = await chunkTextDocument(toChunkRequest(importedDocument, 180));
+      const chunkResponse = await chunkTextDocument(toChunkRequest(currentImportedDocument, 180));
       if (!isCurrentOperation(operationToken)) {
         return;
       }
+      generatedChunkCount = chunkResponse.chunks.length;
+      setDocument(currentImportedDocument);
+      setSavedDocuments((currentDocuments) => [...currentDocuments, currentImportedDocument]);
+      setDocumentReviewCounts((currentCounts) => ({
+        ...currentCounts,
+        [currentImportedDocument.document_id]: 0
+      }));
+      setDocumentSessionSummariesById((currentSummariesByDocument) => ({
+        ...currentSummariesByDocument,
+        [currentImportedDocument.document_id]: []
+      }));
+      setDocumentProgressSummaries(
+        buildDocumentProgressSummaries([...savedDocuments, currentImportedDocument], {
+          ...documentSessionSummariesById,
+          [currentImportedDocument.document_id]: []
+        })
+      );
+      setChunkCount(chunkResponse.chunks.length);
       setOperationStatus("generatingCardsWithOllama");
-      const generatedCards = await generateCardsWithFallback(chunkResponse.chunks, operationToken);
+      const generatedCards = await generateCardsWithFallback(chunkResponse.chunks, operationToken, {
+        onChunkCards: async (chunkCards) => {
+          if (!isCurrentOperation(operationToken) || chunkCards.length === 0) {
+            return;
+          }
+
+          const savedChunkCards = await saveStudyCards(chunkCards);
+
+          if (!isCurrentOperation(operationToken)) {
+            return;
+          }
+
+          savedChunkCards.forEach((card) => {
+            incrementallySavedCardIds.add(card.id);
+          });
+          partiallySavedCards.push(...savedChunkCards);
+          setCards((currentCards) => [...currentCards, ...savedChunkCards]);
+
+          if (savedChunkCards.length > 0) {
+            setActiveCardIndex(0);
+            setIsAnswerVisible(false);
+          }
+        }
+      });
       if (!isCurrentOperation(operationToken)) {
         return;
       }
       setOperationStatus("savingStudyCards");
       setCardGenerationProgress(null);
+      const unsavedGeneratedCards = generatedCards.filter(
+        (generatedCard) => !incrementallySavedCardIds.has(generatedCard.id)
+      );
       const persistedCards =
-        generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
+        unsavedGeneratedCards.length > 0 ? await saveStudyCards(unsavedGeneratedCards) : [];
       if (!isCurrentOperation(operationToken)) {
         return;
       }
-      setDocument(importedDocument);
-      setSavedDocuments((currentDocuments) => [...currentDocuments, importedDocument]);
-      setDocumentReviewCounts((currentCounts) => ({
-        ...currentCounts,
-        [importedDocument.document_id]: 0
-      }));
-      setDocumentSessionSummariesById((currentSummariesByDocument) => ({
-        ...currentSummariesByDocument,
-        [importedDocument.document_id]: []
-      }));
-      setDocumentProgressSummaries(
-        buildDocumentProgressSummaries([...savedDocuments, importedDocument], {
-          ...documentSessionSummariesById,
-          [importedDocument.document_id]: []
-        })
-      );
-      setChunkCount(chunkResponse.chunks.length);
-      setCards(persistedCards);
+      setCards((currentCards) => [...currentCards, ...persistedCards]);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
       setReviewHistory([]);
       setStudySessionSummaries([]);
-      await beginStudySession(importedDocument.document_id);
+      await beginStudySession(currentImportedDocument.document_id);
       if (!isCurrentOperation(operationToken)) {
         return;
       }
@@ -1484,9 +1516,15 @@ export function App({
       if (!isCurrentOperation(operationToken)) {
         return;
       }
-      setDocument(null);
-      setChunkCount(null);
-      setCards([]);
+      if (partiallySavedCards.length > 0 && importedDocument) {
+        setDocument(importedDocument);
+        setChunkCount(generatedChunkCount);
+        setCards(partiallySavedCards);
+      } else {
+        setDocument(null);
+        setChunkCount(null);
+        setCards([]);
+      }
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});

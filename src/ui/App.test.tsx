@@ -395,7 +395,9 @@ describe("App", () => {
     await waitFor(() => {
       expect(restoreImportedDocument).toHaveBeenCalledWith("document-restored");
     });
-    expect(screen.queryByText("Nenhum documento salvo ainda.")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Nenhum documento salvo ainda.")).not.toBeInTheDocument();
+    });
     expect(screen.getByText("Documento arquivado para restaurar.")).toBeInTheDocument();
     expect(screen.getByText("Nenhum documento arquivado.")).toBeInTheDocument();
   });
@@ -1260,6 +1262,66 @@ describe("App", () => {
     ]);
 
     expect(await screen.findByText("Pergunta gerada")).toBeInTheDocument();
+  });
+
+  it("shows and saves imported cards as each generated chunk completes", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-import-incremental",
+      book_id: "book-import-incremental",
+      content: "Conteudo importado com progresso incremental.",
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/import-incremental.txt"
+    });
+    const chunks = [
+      {
+        id: "chunk-1",
+        book_id: "book-import-incremental",
+        document_id: "document-import-incremental",
+        position: 0,
+        content: "Chunk incremental.",
+        token_estimate: 2
+      }
+    ];
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks });
+    const incrementalCard = {
+      id: "card-incremental",
+      bookId: "book-import-incremental",
+      chunkId: "chunk-1",
+      front: "Pergunta importada incremental",
+      back: "Resposta importada incremental",
+      tags: ["ollama"]
+    };
+    const saveStudyCards = vi.fn().mockImplementation(async (cards: StudyCard[]) => cards);
+    const generateCards = vi.fn(
+      async (
+        _chunks: typeof chunks,
+        options?: GenerateStudyCardsOptions
+      ) => {
+        await options?.onChunkCards?.([incrementalCard], { current: 1, total: 1 });
+
+        return new Promise<StudyCard[]>(() => {
+          // Keep final generation pending so only the incremental save updates the UI.
+        });
+      }
+    );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      generateCards,
+      saveStudyCards,
+      enableDevelopmentFallback: false
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/import-incremental.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByText("1 card gerado")).toBeInTheDocument();
+    expect(screen.getByText("Pergunta importada incremental")).toBeInTheDocument();
+    expect(saveStudyCards).toHaveBeenCalledWith([incrementalCard]);
   });
 
   it("limits initial Ollama generation to the first chunks of a large document", async () => {

@@ -137,6 +137,7 @@ Tabelas ja iniciadas:
 
 `documents` guarda tambem `source_type` e `source_path`, permitindo diferenciar TXT/PDF, mostrar origem na UI e preparar filtros futuros.
 `study_reviews` guarda `rating`, `priority` e `next_review_at`, formando a base para revisao espacada e filas de estudo por prioridade.
+A UI usa esses dados para exibir historico visual por documento, uma fila de cards vencidos e filtros da biblioteca por status de revisao, sem criar tabelas separadas.
 
 Tabelas futuras:
 

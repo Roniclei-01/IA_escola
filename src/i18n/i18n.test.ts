@@ -79,6 +79,12 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.reviewSchedule")).toBe(
       "Proxima revisao: {{nextReviewAt}} | Prioridade: {{priority}}"
     );
+    expect(i18n.getResource("pt", "translation", "study.reviewHistoryTitle")).toBe(
+      "Historico de revisoes"
+    );
+    expect(i18n.getResource("pt", "translation", "study.dueQueueTitle")).toBe(
+      "Fila de revisao"
+    );
   });
 
   it("has saved document labels in every supported language", () => {
@@ -90,6 +96,12 @@ describe("i18n", () => {
     );
     expect(i18n.getResource("es", "translation", "library.savedDocuments")).toBe(
       "Documentos guardados"
+    );
+    expect(i18n.getResource("pt", "translation", "library.sourceFilterLabel")).toBe(
+      "Tipo de arquivo"
+    );
+    expect(i18n.getResource("pt", "translation", "library.reviewStatusFilterLabel")).toBe(
+      "Status de revisao"
     );
   });
 

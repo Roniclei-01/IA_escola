@@ -64,6 +64,69 @@ describe("App", () => {
     expect(screen.getByText("Documento salvo anteriormente.")).toBeInTheDocument();
   });
 
+  it("filters saved documents by source type and review status", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-reviewed",
+          book_id: "book-reviewed",
+          content: "Documento PDF revisado.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/revisado.pdf"
+        },
+        {
+          document_id: "document-pending",
+          book_id: "book-pending",
+          content: "Documento TXT pendente.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/pendente.txt"
+        }
+      ]
+    });
+    const listStudyReviews = vi.fn().mockImplementation(async (documentId: string) => {
+      if (documentId === "document-reviewed") {
+        return [
+          {
+            id: "review-1",
+            card_id: "card-1",
+            rating: "easy",
+            priority: 20,
+            next_review_at: 1700604800
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    renderApp({ listImportedDocuments, listStudyReviews });
+
+    expect(await screen.findByText("Documento PDF revisado.")).toBeInTheDocument();
+    expect(screen.getByText("Documento TXT pendente.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Tipo de arquivo"), {
+      target: { value: "pdf" }
+    });
+
+    expect(screen.getByText("Documento PDF revisado.")).toBeInTheDocument();
+    expect(screen.queryByText("Documento TXT pendente.")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Status de revisao"), {
+      target: { value: "pending" }
+    });
+
+    expect(screen.getByText("Nenhum documento corresponde aos filtros.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Tipo de arquivo"), {
+      target: { value: "all" }
+    });
+
+    expect(screen.getByText("Documento TXT pendente.")).toBeInTheDocument();
+    expect(screen.queryByText("Documento PDF revisado.")).not.toBeInTheDocument();
+  });
+
   it("tests the Ollama connection from settings", async () => {
     const testOllamaConnection = vi.fn().mockResolvedValue({
       ok: true,
@@ -225,6 +288,22 @@ describe("App", () => {
         front: "Pergunta persistida",
         back: "Resposta persistida",
         tags: ["saved"]
+      },
+      {
+        id: "card-again",
+        bookId: "book-saved",
+        chunkId: "chunk-saved",
+        front: "Pergunta atrasada",
+        back: "Resposta atrasada",
+        tags: ["saved"]
+      },
+      {
+        id: "card-future",
+        bookId: "book-saved",
+        chunkId: "chunk-saved",
+        front: "Pergunta futura",
+        back: "Resposta futura",
+        tags: ["saved"]
       }
     ]);
     const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
@@ -236,6 +315,20 @@ describe("App", () => {
         rating: "hard",
         priority: 70,
         next_review_at: 1700086400
+      },
+      {
+        id: "review-2",
+        card_id: "card-again",
+        rating: "again",
+        priority: 100,
+        next_review_at: 1700000000
+      },
+      {
+        id: "review-3",
+        card_id: "card-future",
+        rating: "easy",
+        priority: 20,
+        next_review_at: 4102444800
       }
     ]);
 
@@ -255,10 +348,22 @@ describe("App", () => {
     expect(listDocumentChunks).not.toHaveBeenCalled();
     expect(generateCards).not.toHaveBeenCalled();
     expect(listStudyReviews).toHaveBeenCalledWith("document-saved");
-    expect(await screen.findByText("Pergunta persistida")).toBeInTheDocument();
-    expect(screen.getByText("1 card gerado")).toBeInTheDocument();
+    expect(await screen.findAllByText("Pergunta persistida")).toHaveLength(2);
+    expect(screen.getByText("3 cards gerados")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dificil" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/Prioridade: 70/)).toBeInTheDocument();
+    expect(screen.getByText("Fila de revisao")).toBeInTheDocument();
+    expect(screen.getByText("2 cards vencidos")).toBeInTheDocument();
+    expect(screen.getAllByText(/Prioridade 100/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Prioridade 70/).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Pergunta futura")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Pergunta atrasada/ }));
+
+    expect(screen.getByText("Card 2 de 3")).toBeInTheDocument();
+    expect(screen.getAllByText("Pergunta atrasada")).toHaveLength(2);
+    expect(screen.getByText("Historico de revisoes")).toBeInTheDocument();
+    expect(screen.getByText("3 revisoes | Prioridade media: 63")).toBeInTheDocument();
   });
 
   it("imports a text book from a file path", async () => {
@@ -558,13 +663,13 @@ describe("App", () => {
         tags: ["mock"]
       }
     ]);
-    const saveStudyReview = vi.fn().mockResolvedValue({
-      id: "review-1",
-      card_id: "card-1",
-      rating: "easy",
-      priority: 20,
-      next_review_at: 1700604800
-    });
+    const saveStudyReview = vi.fn().mockImplementation(async (cardId: string, rating: string) => ({
+      id: `review-${cardId}`,
+      card_id: cardId,
+      rating,
+      priority: rating === "hard" ? 70 : 20,
+      next_review_at: rating === "hard" ? 1700086400 : 1700604800
+    }));
 
     renderApp({
       importTextBook,
@@ -588,6 +693,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(saveStudyReview).toHaveBeenCalledWith("card-1", "easy");
     });
+    expect(screen.getByText("1 revisao | Prioridade media: 20")).toBeInTheDocument();
     expect(screen.getByText("Acertos: 1 | Erros: 0 | Dificeis: 0")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Dificil" }));

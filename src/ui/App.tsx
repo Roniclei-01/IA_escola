@@ -47,6 +47,8 @@ import { DocumentSummary } from "./components/DocumentSummary";
 import { StudyCardViewer, type CardReview } from "./components/StudyCardViewer";
 import { SavedDocumentsList } from "./components/SavedDocumentsList";
 import { OllamaSettingsPanel } from "./components/OllamaSettingsPanel";
+import { StudyReviewHistory } from "./components/StudyReviewHistory";
+import { DueStudyQueue, type DueStudyQueueItem } from "./components/DueStudyQueue";
 
 interface AppProps {
   importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
@@ -76,6 +78,9 @@ type OperationStatus =
   | "generatingCardsWithOllama"
   | "savingStudyCards"
   | "loadingSavedCards";
+
+type SourceTypeFilter = "all" | "txt" | "pdf";
+type ReviewStatusFilter = "all" | "reviewed" | "pending";
 
 function toCardReviewMap(
   reviews: Array<{ card_id: string; rating: StudyReviewRating }>
@@ -119,6 +124,83 @@ function formatNextReview(timestampSeconds: number): string {
   }).format(new Date(timestampSeconds * 1000));
 }
 
+function getReviewRatingLabel(rating: StudyReviewRating, t: ReturnType<typeof useTranslation>["t"]) {
+  if (rating === "again") {
+    return t("study.again");
+  }
+
+  if (rating === "hard") {
+    return t("study.hard");
+  }
+
+  return t("study.easy");
+}
+
+function averagePriority(reviews: StudyReview[]): number {
+  if (reviews.length === 0) {
+    return 0;
+  }
+
+  const totalPriority = reviews.reduce((total, review) => total + review.priority, 0);
+  return Math.round(totalPriority / reviews.length);
+}
+
+function buildDueStudyQueue(
+  cards: StudyCard[],
+  schedules: Record<string, { priority: number; nextReviewAt: number }>,
+  nowSeconds: number
+): DueStudyQueueItem[] {
+  return cards
+    .flatMap((card) => {
+      const schedule = schedules[card.id];
+
+      if (!schedule || schedule.nextReviewAt > nowSeconds) {
+        return [];
+      }
+
+      return [
+        {
+          card,
+          priority: schedule.priority,
+          nextReviewAt: schedule.nextReviewAt
+        }
+      ];
+    })
+    .sort((firstItem, secondItem) => {
+      if (secondItem.priority !== firstItem.priority) {
+        return secondItem.priority - firstItem.priority;
+      }
+
+      return firstItem.nextReviewAt - secondItem.nextReviewAt;
+    });
+}
+
+function filterSavedDocuments(
+  documents: ImportTextBookResponse[],
+  sourceTypeFilter: SourceTypeFilter,
+  reviewStatusFilter: ReviewStatusFilter,
+  reviewCounts: Record<string, number>
+): ImportTextBookResponse[] {
+  return documents.filter((savedDocument) => {
+    const sourceType = savedDocument.source_type ?? "txt";
+    const reviewCount = reviewCounts[savedDocument.document_id] ?? 0;
+
+    if (sourceTypeFilter !== "all" && sourceType !== sourceTypeFilter) {
+      return false;
+    }
+
+    if (reviewStatusFilter === "reviewed") {
+      return reviewCount > 0;
+    }
+
+    if (reviewStatusFilter === "pending") {
+      return reviewCount === 0;
+    }
+
+    return true;
+  });
+}
+
 export function App({
   importTextBook = defaultImportTextBook,
   listImportedDocuments = defaultListImportedDocuments,
@@ -145,10 +227,14 @@ export function App({
   const [chunkCount, setChunkCount] = useState<number | null>(null);
   const [cards, setCards] = useState<StudyCard[]>([]);
   const [savedDocuments, setSavedDocuments] = useState<ImportTextBookResponse[]>([]);
+  const [documentReviewCounts, setDocumentReviewCounts] = useState<Record<string, number>>({});
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
+  const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatusFilter>("all");
   const [isLoadingSavedDocuments, setIsLoadingSavedDocuments] = useState(true);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
   const [cardReviews, setCardReviews] = useState<Record<string, CardReview>>({});
+  const [reviewHistory, setReviewHistory] = useState<StudyReview[]>([]);
   const [cardReviewSchedules, setCardReviewSchedules] = useState<
     Record<string, { priority: number; nextReviewAt: number }>
   >({});
@@ -158,7 +244,18 @@ export function App({
   const [ollamaStatus, setOllamaStatus] = useState<string | null>(null);
 
   const activeCard = cards[activeCardIndex] ?? null;
+  const filteredSavedDocuments = filterSavedDocuments(
+    savedDocuments,
+    sourceTypeFilter,
+    reviewStatusFilter,
+    documentReviewCounts
+  );
   const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
+  const dueStudyQueue = buildDueStudyQueue(
+    cards,
+    cardReviewSchedules,
+    Math.floor(Date.now() / 1000)
+  );
   const reviewCounts = Object.values(cardReviews).reduce(
     (counts, review) => ({
       ...counts,
@@ -194,9 +291,20 @@ export function App({
 
       try {
         const response = await listImportedDocuments();
+        const reviewCountEntries = await Promise.all(
+          response.documents.map(async (savedDocument) => {
+            try {
+              const reviews = await listStudyReviews(savedDocument.document_id);
+              return [savedDocument.document_id, reviews.length] as const;
+            } catch {
+              return [savedDocument.document_id, 0] as const;
+            }
+          })
+        );
 
         if (isCurrent) {
           setSavedDocuments(response.documents);
+          setDocumentReviewCounts(Object.fromEntries(reviewCountEntries));
         }
       } catch {
         if (isCurrent) {
@@ -214,7 +322,7 @@ export function App({
     return () => {
       isCurrent = false;
     };
-  }, [listImportedDocuments, t]);
+  }, [listImportedDocuments, listStudyReviews, t]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -260,6 +368,7 @@ export function App({
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
     setCardReviews({});
+    setReviewHistory([]);
     setCardReviewSchedules({});
 
     try {
@@ -273,11 +382,16 @@ export function App({
         generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
       setDocument(importedDocument);
       setSavedDocuments((currentDocuments) => [importedDocument, ...currentDocuments]);
+      setDocumentReviewCounts((currentCounts) => ({
+        ...currentCounts,
+        [importedDocument.document_id]: 0
+      }));
       setChunkCount(chunkResponse.chunks.length);
       setCards(persistedCards);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
+      setReviewHistory([]);
       setCardReviewSchedules({});
     } catch (unknownError) {
       setDocument(null);
@@ -286,6 +400,7 @@ export function App({
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
+      setReviewHistory([]);
       setCardReviewSchedules({});
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
@@ -301,6 +416,7 @@ export function App({
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
     setCardReviews({});
+    setReviewHistory([]);
     setCardReviewSchedules({});
     setError(null);
     setWarning(null);
@@ -316,6 +432,11 @@ export function App({
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
         setCardReviews(toCardReviewMap(persistedReviews));
+        setReviewHistory(persistedReviews);
+        setDocumentReviewCounts((currentCounts) => ({
+          ...currentCounts,
+          [selectedDocument.document_id]: persistedReviews.length
+        }));
         setCardReviewSchedules(toCardReviewScheduleMap(persistedReviews));
         setOperationStatus(null);
         return;
@@ -334,6 +455,7 @@ export function App({
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
+      setReviewHistory([]);
       setCardReviewSchedules({});
       setOperationStatus(null);
     } catch (unknownError) {
@@ -342,6 +464,7 @@ export function App({
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
+      setReviewHistory([]);
       setCardReviewSchedules({});
       setOperationStatus(null);
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
@@ -410,6 +533,13 @@ export function App({
 
     try {
       const savedReview = await saveStudyReview(reviewedCard.id, review);
+      setReviewHistory((currentReviews) => [...currentReviews, savedReview]);
+      if (document) {
+        setDocumentReviewCounts((currentCounts) => ({
+          ...currentCounts,
+          [document.document_id]: (currentCounts[document.document_id] ?? 0) + 1
+        }));
+      }
       setCardReviewSchedules((currentSchedules) => ({
         ...currentSchedules,
         [reviewedCard.id]: {
@@ -419,6 +549,15 @@ export function App({
       }));
     } catch {
       setError(t("study.reviewSaveError"));
+    }
+  }
+
+  function handleSelectDueCard(cardId: string) {
+    const cardIndex = cards.findIndex((card) => card.id === cardId);
+
+    if (cardIndex >= 0) {
+      setActiveCardIndex(cardIndex);
+      setIsAnswerVisible(false);
     }
   }
 
@@ -486,15 +625,28 @@ export function App({
         />
 
         <SavedDocumentsList
-          documents={savedDocuments}
+          documents={filteredSavedDocuments}
           isLoading={isLoadingSavedDocuments}
+          filters={{
+            sourceType: sourceTypeFilter,
+            reviewStatus: reviewStatusFilter
+          }}
           labels={{
             title: t("library.savedDocuments"),
             loading: t("library.loadingSavedDocuments"),
             empty: t("library.noSavedDocuments"),
+            noFilterResults: t("library.noFilteredDocuments"),
+            sourceFilterLabel: t("library.sourceFilterLabel"),
+            allSourceTypes: t("library.allSourceTypes"),
+            reviewStatusFilterLabel: t("library.reviewStatusFilterLabel"),
+            allReviewStatuses: t("library.allReviewStatuses"),
+            reviewed: t("library.reviewed"),
+            pendingReview: t("library.pendingReview"),
             itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 }),
             sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
           }}
+          onSourceTypeFilterChange={setSourceTypeFilter}
+          onReviewStatusFilterChange={setReviewStatusFilter}
           onSelectDocument={(selectedDocument) => {
             void handleSelectSavedDocument(selectedDocument);
           }}
@@ -559,6 +711,37 @@ export function App({
                 }}
               />
             ) : null}
+            <DueStudyQueue
+              items={dueStudyQueue}
+              labels={{
+                title: t("study.dueQueueTitle"),
+                summary: t("study.dueQueueSummary", { count: dueStudyQueue.length }),
+                empty: t("study.dueQueueEmpty"),
+                item: (item) =>
+                  t("study.dueQueueItem", {
+                    priority: item.priority,
+                    nextReviewAt: formatNextReview(item.nextReviewAt)
+                  })
+              }}
+              onSelectCard={handleSelectDueCard}
+            />
+            <StudyReviewHistory
+              reviews={reviewHistory}
+              labels={{
+                title: t("study.reviewHistoryTitle"),
+                summary: t("study.reviewHistorySummary", {
+                  count: reviewHistory.length,
+                  averagePriority: averagePriority(reviewHistory)
+                }),
+                empty: t("study.reviewHistoryEmpty"),
+                ratingLabel: (rating) => getReviewRatingLabel(rating, t),
+                reviewItem: (review) =>
+                  t("study.reviewHistoryItem", {
+                    priority: review.priority,
+                    nextReviewAt: formatNextReview(review.next_review_at)
+                  })
+              }}
+            />
           </DocumentSummary>
         ) : (
           <section className="empty-state" aria-label={t("library.emptyStateLabel")}>

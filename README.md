@@ -80,7 +80,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - persistencia SQLite de `study_reviews`;
 - agenda inicial de revisao com `priority` e `next_review_at`;
 - comandos `save_study_review` e `list_study_reviews`;
-- UI salvando e recarregando marcacoes de revisao, prioridade e proxima revisao dos cards;
+- UI salvando e recarregando marcacoes de revisao, prioridade, proxima revisao e historico do documento;
 - adaptador inicial `OllamaModelAdapter` no backend Rust com cliente injetavel e testes de contrato;
 - cliente HTTP local para `/api/generate` do Ollama;
 - comando `test_ollama_connection` para validar conexao e modelo;
@@ -93,6 +93,9 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - feedback visual para importacao, chunking, geracao com Ollama, salvamento e carregamento de cards;
 - fallback de desenvolvimento para gerar cards mockados quando o Ollama falhar;
 - revisao com marcacao de acerto, erro, dificuldade, prioridade e proxima data;
+- historico visual de revisoes por documento com prioridade media;
+- fila visual de cards vencidos ordenada por prioridade;
+- filtros da biblioteca por tipo de arquivo e status de revisao;
 - dialog nativo do Tauri para selecionar arquivos `.txt` e `.pdf`;
 - exibicao do tipo e caminho de origem na biblioteca e na previa do documento;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
@@ -169,9 +172,9 @@ docs/
 
 ## Proximos passos
 
-1. Criar historico visual de revisoes por documento.
-2. Criar fila de cards vencidos por prioridade.
-3. Melhorar suporte a PDFs digitalizados com OCR opcional.
+1. Melhorar suporte a PDFs digitalizados com OCR opcional.
+2. Criar sessoes de estudo para agrupar revisoes por rodada.
+3. Adicionar busca textual na biblioteca.
 
 ## Comandos de desenvolvimento
 

@@ -221,6 +221,29 @@ h1 {
   color: #526256;
 }
 
+.library-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, auto) minmax(0, 1fr) minmax(120px, auto);
+  gap: 10px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.library-filters label {
+  color: #2d3932;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.library-filters select {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #cfd7d1;
+  border-radius: 6px;
+  color: #18201c;
+  background: #fbfcfa;
+}
+
 .saved-documents ul {
   display: grid;
   gap: 8px;
@@ -348,6 +371,75 @@ h1 {
   color: #3b315f;
 }
 
+.review-history,
+.due-study-queue {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #dce2dc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.review-history h3,
+.due-study-queue h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.review-history p,
+.due-study-queue p {
+  margin: 10px 0 0;
+}
+
+.review-history ul,
+.due-study-queue ul {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 12px 0 0;
+  list-style: none;
+}
+
+.review-history li {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #e1e5df;
+  border-radius: 6px;
+  background: #fbfcfa;
+}
+
+.due-study-queue li {
+  display: block;
+}
+
+.due-study-queue button {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #d8ddd4;
+  border-radius: 6px;
+  color: #18201c;
+  background: #fbfcfa;
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-history span,
+.due-study-queue span {
+  color: #526256;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.review-history strong,
+.due-study-queue strong {
+  color: #24352b;
+  font-size: 0.9rem;
+}
+
 .card-front {
   color: #18201c;
   font-weight: 700;
@@ -401,7 +493,8 @@ h1 {
 
   .workspace-header,
   .import-row,
-  .settings-row {
+    .settings-row,
+    .library-filters {
     grid-template-columns: 1fr;
   }
 

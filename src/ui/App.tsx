@@ -3,6 +3,8 @@ import { FormEvent, useEffect, useState } from "react";
 import {
   isPermissionGranted,
   requestPermission,
+  Schedule,
+  ScheduleEvery,
   sendNotification
 } from "@tauri-apps/plugin-notification";
 import {
@@ -128,7 +130,7 @@ interface AppProps {
   testOcrDependencies?: () => Promise<OcrDependencies>;
   downloadTextFile?: (fileName: string, content: string) => void;
   printStudySessionReport?: (fileName: string, html: string) => void;
-  notifyStudyGoalReminder?: (notification: { title: string; body: string }) => Promise<void> | void;
+  notifyStudyGoalReminder?: (notification: StudyGoalReminderNotification) => Promise<void> | void;
   confirmDelete?: (message: string) => boolean;
   enableDevelopmentFallback?: boolean;
 }
@@ -146,10 +148,27 @@ type LibrarySortMode = "oldest" | "newest" | "type" | "status";
 type MetricPeriodFilter = "all" | "last7" | "last30";
 type StudyGoalRecurrence = StudyGoal["recurrence"];
 
-async function defaultNotifyStudyGoalReminder(notification: {
+interface StudyGoalReminderNotification {
   title: string;
   body: string;
-}): Promise<void> {
+  recurrence: StudyGoalRecurrence;
+}
+
+function scheduleForStudyGoalRecurrence(recurrence: StudyGoalRecurrence): Schedule | undefined {
+  if (recurrence === "daily") {
+    return Schedule.every(ScheduleEvery.Day, 1);
+  }
+
+  if (recurrence === "weekly") {
+    return Schedule.every(ScheduleEvery.Week, 1);
+  }
+
+  return undefined;
+}
+
+async function defaultNotifyStudyGoalReminder(
+  notification: StudyGoalReminderNotification
+): Promise<void> {
   let permissionGranted = await isPermissionGranted();
 
   if (!permissionGranted) {
@@ -158,7 +177,13 @@ async function defaultNotifyStudyGoalReminder(notification: {
   }
 
   if (permissionGranted) {
-    sendNotification(notification);
+    const schedule = scheduleForStudyGoalRecurrence(notification.recurrence);
+
+    sendNotification({
+      title: notification.title,
+      body: notification.body,
+      ...(schedule ? { schedule } : {})
+    });
   }
 }
 
@@ -1776,7 +1801,8 @@ export function App({
           title: t("study.goalNotificationTitle"),
           body: t(savedGoalAlertKey, {
             count: savedGoalProgress.remainingReviews
-          })
+          }),
+          recurrence: savedGoal.recurrence
         });
       }
     } catch (unknownError) {

@@ -1640,7 +1640,8 @@ describe("App", () => {
     });
     expect(notifyStudyGoalReminder).toHaveBeenCalledWith({
       title: "Meta de estudo pendente",
-      body: "Faltam 3 revisoes para cumprir a meta de 7 dias."
+      body: "Faltam 3 revisoes para cumprir a meta de 7 dias.",
+      recurrence: "weekly"
     });
     expect(await screen.findByText("3 de 6 revisoes")).toBeInTheDocument();
     expect(screen.getByText("50% concluido")).toBeInTheDocument();

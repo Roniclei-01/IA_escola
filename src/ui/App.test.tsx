@@ -1237,6 +1237,9 @@ describe("App", () => {
     expect(printStudySessionReport.mock.calls[0][1]).toContain("@bottom-center");
     expect(printStudySessionReport.mock.calls[0][1]).toContain("counter(page)");
     expect(printStudySessionReport.mock.calls[0][1]).toContain("break-inside: avoid");
+    expect(printStudySessionReport.mock.calls[0][1]).toContain('<section class="performance-chart"');
+    expect(printStudySessionReport.mock.calls[0][1]).toContain('class="chart-bar easy" style="width: 80%"');
+    expect(printStudySessionReport.mock.calls[0][1]).toContain('class="chart-bar again" style="width: 20%"');
     expect(printStudySessionReport.mock.calls[0][1]).toContain("<strong>Acertos</strong>");
     expect(printStudySessionReport.mock.calls[0][1]).toContain("<span>4</span>");
   });

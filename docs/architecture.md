@@ -139,7 +139,7 @@ Tabelas ja iniciadas:
 `study_reviews` guarda `rating`, `priority`, `next_review_at` e `session_id`, formando a base para revisao espacada, filas de estudo por prioridade, metricas de retencao, cards mais dificeis, filtros de periodo, tendencia por sessao, evolucao semanal de dificuldade e agrupamento de rodadas.
 `study_sessions` registra o documento estudado e o inicio da rodada.
 `app_settings` guarda configuracoes locais e metas de revisao por documento, incluindo recorrencia geral, diaria ou semanal.
-A UI usa esses dados para exibir historico visual por documento, uma fila de cards vencidos, filtros, busca textual, ordenacao da biblioteca, comparativo de progresso entre documentos, resumo filtravel de metricas por periodo, metas persistidas e recorrentes de revisao por documento com alerta visual de pendencia, resumo de desempenho por sessao, tendencia temporal de retencao, evolucao de cards dificeis por periodo, exportacao local de relatorio Markdown, previa e relatorio imprimivel em PDF com paginacao, e exportacao de cards para Anki em TSV com diretivas de importacao e tags de origem.
+A UI usa esses dados para exibir historico visual por documento, uma fila de cards vencidos, filtros, busca textual, ordenacao da biblioteca, comparativo de progresso entre documentos, resumo filtravel de metricas por periodo, metas persistidas e recorrentes de revisao por documento com alerta visual de pendencia, resumo de desempenho por sessao, tendencia temporal de retencao, evolucao de cards dificeis por periodo, exportacao local de relatorio Markdown, previa e relatorio imprimivel em PDF com paginacao e grafico de desempenho, e exportacao de cards para Anki em TSV com diretivas de importacao e tags de origem.
 
 Tabelas futuras:
 

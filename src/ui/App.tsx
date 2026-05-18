@@ -606,6 +606,9 @@ function buildPrintableStudySessionReport(
   const totalHard = summaries.reduce((total, summary) => total + summary.hard_count, 0);
   const totalEasy = summaries.reduce((total, summary) => total + summary.easy_count, 0);
   const totalReviews = totalAgain + totalHard + totalEasy;
+  const easyPercent = totalReviews > 0 ? Math.round((totalEasy / totalReviews) * 100) : 0;
+  const hardPercent = totalReviews > 0 ? Math.round((totalHard / totalReviews) * 100) : 0;
+  const againPercent = totalReviews > 0 ? Math.round((totalAgain / totalReviews) * 100) : 0;
   const sessionRows = summaries
     .map((summary, index) => {
       const startedAt = formatNextReview(summary.started_at);
@@ -649,6 +652,15 @@ function buildPrintableStudySessionReport(
       .report-cover p { margin: 8px 0 0; color: #536259; }
       .meta, .summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
       .box { border: 1px solid #dce2dc; border-radius: 6px; padding: 10px; break-inside: avoid; }
+      .performance-chart { display: grid; gap: 10px; break-inside: avoid; }
+      .chart-row { display: grid; grid-template-columns: 92px 1fr 48px; align-items: center; gap: 10px; }
+      .chart-label { color: #536259; font-size: 12px; font-weight: 700; }
+      .chart-track { height: 14px; overflow: hidden; border-radius: 999px; background: #edf1ee; }
+      .chart-bar { height: 100%; border-radius: 999px; }
+      .chart-bar.easy { background: #2f7d56; }
+      .chart-bar.hard { background: #c78f21; }
+      .chart-bar.again { background: #b84a4a; }
+      .chart-value { color: #17201b; font-size: 12px; font-weight: 700; text-align: right; }
       strong { display: block; color: #536259; font-size: 11px; text-transform: uppercase; }
       span { display: block; margin-top: 4px; font-weight: 700; }
       table { width: 100%; border-collapse: collapse; margin-top: 12px; }
@@ -675,6 +687,24 @@ function buildPrintableStudySessionReport(
       <div class="box"><strong>Acertos</strong><span>${totalEasy}</span></div>
       <div class="box"><strong>Dificeis</strong><span>${totalHard}</span></div>
       <div class="box"><strong>Erros</strong><span>${totalAgain}</span></div>
+    </section>
+    <h2>Grafico de desempenho</h2>
+    <section class="performance-chart" aria-label="Grafico de desempenho">
+      <div class="chart-row">
+        <span class="chart-label">Acertos</span>
+        <div class="chart-track"><div class="chart-bar easy" style="width: ${easyPercent}%"></div></div>
+        <span class="chart-value">${easyPercent}%</span>
+      </div>
+      <div class="chart-row">
+        <span class="chart-label">Dificeis</span>
+        <div class="chart-track"><div class="chart-bar hard" style="width: ${hardPercent}%"></div></div>
+        <span class="chart-value">${hardPercent}%</span>
+      </div>
+      <div class="chart-row">
+        <span class="chart-label">Erros</span>
+        <div class="chart-track"><div class="chart-bar again" style="width: ${againPercent}%"></div></div>
+        <span class="chart-value">${againPercent}%</span>
+      </div>
     </section>
     <h2>Sessoes</h2>
     <table>

@@ -1188,6 +1188,28 @@ export function App({
     }
   }
 
+  async function saveGeneratedChunkCards(
+    chunkCards: StudyCard[],
+    operationToken: number,
+    savedCardIds: Set<string>,
+    onSaved: (savedCards: StudyCard[]) => void
+  ) {
+    if (!isCurrentOperation(operationToken) || chunkCards.length === 0) {
+      return;
+    }
+
+    const savedChunkCards = await saveStudyCards(chunkCards);
+
+    if (!isCurrentOperation(operationToken)) {
+      return;
+    }
+
+    savedChunkCards.forEach((card) => {
+      savedCardIds.add(card.id);
+    });
+    onSaved(savedChunkCards);
+  }
+
   async function beginStudySession(documentId: string) {
     const session = await startStudySession(documentId);
 
@@ -1466,26 +1488,20 @@ export function App({
       setOperationStatus("generatingCardsWithOllama");
       const generatedCards = await generateCardsWithFallback(chunkResponse.chunks, operationToken, {
         onChunkCards: async (chunkCards) => {
-          if (!isCurrentOperation(operationToken) || chunkCards.length === 0) {
-            return;
-          }
+          await saveGeneratedChunkCards(
+            chunkCards,
+            operationToken,
+            incrementallySavedCardIds,
+            (savedChunkCards) => {
+              partiallySavedCards.push(...savedChunkCards);
+              setCards((currentCards) => [...currentCards, ...savedChunkCards]);
 
-          const savedChunkCards = await saveStudyCards(chunkCards);
-
-          if (!isCurrentOperation(operationToken)) {
-            return;
-          }
-
-          savedChunkCards.forEach((card) => {
-            incrementallySavedCardIds.add(card.id);
-          });
-          partiallySavedCards.push(...savedChunkCards);
-          setCards((currentCards) => [...currentCards, ...savedChunkCards]);
-
-          if (savedChunkCards.length > 0) {
-            setActiveCardIndex(0);
-            setIsAnswerVisible(false);
-          }
+              if (savedChunkCards.length > 0) {
+                setActiveCardIndex(0);
+                setIsAnswerVisible(false);
+              }
+            }
+          );
         }
       });
       if (!isCurrentOperation(operationToken)) {
@@ -1810,25 +1826,19 @@ export function App({
         remainingChunks.length > 0
           ? await generateCardsWithFallback(remainingChunks, operationToken, {
               onChunkCards: async (chunkCards) => {
-                if (!isCurrentOperation(operationToken) || chunkCards.length === 0) {
-                  return;
-                }
+                await saveGeneratedChunkCards(
+                  chunkCards,
+                  operationToken,
+                  incrementallySavedCardIds,
+                  (savedChunkCards) => {
+                    setCards((currentCards) => [...currentCards, ...savedChunkCards]);
 
-                const savedChunkCards = await saveStudyCards(chunkCards);
-
-                if (!isCurrentOperation(operationToken)) {
-                  return;
-                }
-
-                savedChunkCards.forEach((card) => {
-                  incrementallySavedCardIds.add(card.id);
-                });
-                setCards((currentCards) => [...currentCards, ...savedChunkCards]);
-
-                if (!activeCard && savedChunkCards.length > 0) {
-                  setActiveCardIndex(0);
-                  setIsAnswerVisible(false);
-                }
+                    if (!activeCard && savedChunkCards.length > 0) {
+                      setActiveCardIndex(0);
+                      setIsAnswerVisible(false);
+                    }
+                  }
+                );
               }
             })
           : [];

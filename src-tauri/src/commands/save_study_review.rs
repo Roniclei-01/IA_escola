@@ -9,6 +9,7 @@ use crate::{
 #[derive(Debug, Eq, PartialEq, Deserialize)]
 pub struct SaveStudyReviewRequest {
     pub card_id: Uuid,
+    pub session_id: Option<Uuid>,
     pub rating: StudyReviewRating,
 }
 
@@ -21,8 +22,11 @@ pub fn save_study_review_with_storage(
     request: SaveStudyReviewRequest,
     storage: &SQLiteStorage,
 ) -> Result<SaveStudyReviewResponse, String> {
-    let review =
-        StudyReview::new(request.card_id, request.rating).map_err(|_| format_review_error())?;
+    let review = match request.session_id {
+        Some(session_id) => StudyReview::new_in_session(request.card_id, session_id, request.rating),
+        None => StudyReview::new(request.card_id, request.rating),
+    }
+    .map_err(|_| format_review_error())?;
 
     storage
         .save_study_review(&review)
@@ -74,6 +78,7 @@ mod tests {
         let response = save_study_review_with_storage(
             SaveStudyReviewRequest {
                 card_id: card.id,
+                session_id: None,
                 rating: StudyReviewRating::Hard,
             },
             &storage,

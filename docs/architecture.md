@@ -133,19 +133,18 @@ Tabelas ja iniciadas:
 - `document_chunks`.
 - `study_cards`.
 - `study_reviews`.
+- `study_sessions`.
 - `app_settings`.
 
 `documents` guarda tambem `source_type` e `source_path`, permitindo diferenciar TXT/PDF, mostrar origem na UI e preparar filtros futuros.
-`study_reviews` guarda `rating`, `priority` e `next_review_at`, formando a base para revisao espacada e filas de estudo por prioridade.
-A UI usa esses dados para exibir historico visual por documento, uma fila de cards vencidos e filtros da biblioteca por status de revisao, sem criar tabelas separadas.
+`study_reviews` guarda `rating`, `priority`, `next_review_at` e `session_id`, formando a base para revisao espacada, filas de estudo por prioridade e agrupamento de rodadas.
+`study_sessions` registra o documento estudado e o inicio da rodada.
+A UI usa esses dados para exibir historico visual por documento, uma fila de cards vencidos, filtros, busca textual e ordenacao da biblioteca, alem de resumo de desempenho por sessao e exportacao local de relatorio Markdown.
 
 Tabelas futuras:
 
-- `study_sessions` para agrupar revisoes por sessao.
-
 - `books`.
 - `model_profiles`.
-- `study_sessions`.
 - `exercises`.
 - `review_events`.
 - `semantic_index`.

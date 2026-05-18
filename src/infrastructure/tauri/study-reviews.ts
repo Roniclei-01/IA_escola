@@ -5,6 +5,7 @@ export type StudyReviewRating = "again" | "hard" | "easy";
 export interface StudyReview {
   id: string;
   card_id: string;
+  session_id: string | null;
   rating: StudyReviewRating;
   priority: number;
   next_review_at: number;
@@ -20,11 +21,13 @@ export interface ListStudyReviewsResponse {
 
 export async function saveStudyReview(
   cardId: string,
-  rating: StudyReviewRating
+  rating: StudyReviewRating,
+  sessionId: string | null = null
 ): Promise<StudyReview> {
   const response = await invoke<SaveStudyReviewResponse>("save_study_review", {
     request: {
       card_id: cardId,
+      session_id: sessionId,
       rating
     }
   });

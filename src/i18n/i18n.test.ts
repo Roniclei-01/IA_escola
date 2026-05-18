@@ -85,6 +85,15 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.dueQueueTitle")).toBe(
       "Fila de revisao"
     );
+    expect(i18n.getResource("pt", "translation", "study.sessionSummary_one")).toBe(
+      "{{count}} revisao nesta sessao"
+    );
+    expect(i18n.getResource("pt", "translation", "study.sessionHistoryTitle")).toBe(
+      "Sessoes de estudo"
+    );
+    expect(i18n.getResource("pt", "translation", "study.exportSessionReport")).toBe(
+      "Exportar relatorio"
+    );
   });
 
   it("has saved document labels in every supported language", () => {
@@ -102,6 +111,12 @@ describe("i18n", () => {
     );
     expect(i18n.getResource("pt", "translation", "library.reviewStatusFilterLabel")).toBe(
       "Status de revisao"
+    );
+    expect(i18n.getResource("pt", "translation", "library.searchLabel")).toBe(
+      "Buscar na biblioteca"
+    );
+    expect(i18n.getResource("pt", "translation", "library.sortLabel")).toBe(
+      "Ordenar biblioteca"
     );
   });
 

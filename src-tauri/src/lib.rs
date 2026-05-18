@@ -22,6 +22,8 @@ pub fn run() {
             commands::save_study_cards::save_study_cards,
             commands::list_study_cards::list_study_cards,
             commands::save_study_review::save_study_review,
+            commands::start_study_session::start_study_session,
+            commands::list_study_session_summaries::list_study_session_summaries,
             commands::list_study_reviews::list_study_reviews,
             commands::test_ollama_connection::test_ollama_connection,
             commands::ollama_settings::load_ollama_settings,

@@ -32,6 +32,12 @@ import {
   type StudyReview,
   type StudyReviewRating
 } from "../infrastructure/tauri/study-reviews";
+import {
+  listStudySessionSummaries as defaultListStudySessionSummaries,
+  startStudySession as defaultStartStudySession,
+  type StudySession,
+  type StudySessionSummary
+} from "../infrastructure/tauri/study-sessions";
 import { selectStudyFile as defaultSelectStudyFile } from "../infrastructure/tauri/file-dialog";
 import {
   testOllamaConnection as defaultTestOllamaConnection,
@@ -49,6 +55,7 @@ import { SavedDocumentsList } from "./components/SavedDocumentsList";
 import { OllamaSettingsPanel } from "./components/OllamaSettingsPanel";
 import { StudyReviewHistory } from "./components/StudyReviewHistory";
 import { DueStudyQueue, type DueStudyQueueItem } from "./components/DueStudyQueue";
+import { StudySessionHistory } from "./components/StudySessionHistory";
 
 interface AppProps {
   importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
@@ -60,8 +67,14 @@ interface AppProps {
   generateCards?: (chunks: ImportedDocumentChunk[]) => Promise<StudyCard[]>;
   saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
   listStudyCards?: (documentId: string) => Promise<StudyCard[]>;
-  saveStudyReview?: (cardId: string, rating: StudyReviewRating) => Promise<StudyReview>;
+  saveStudyReview?: (
+    cardId: string,
+    rating: StudyReviewRating,
+    sessionId?: string | null
+  ) => Promise<StudyReview>;
   listStudyReviews?: (documentId: string) => Promise<StudyReview[]>;
+  startStudySession?: (documentId: string) => Promise<StudySession>;
+  listStudySessionSummaries?: (documentId: string) => Promise<StudySessionSummary[]>;
   selectStudyFile?: () => Promise<string | null>;
   testOllamaConnection?: (request: {
     model: string;
@@ -69,6 +82,7 @@ interface AppProps {
   }) => Promise<TestOllamaConnectionResponse>;
   loadOllamaSettings?: () => Promise<OllamaSettings>;
   saveOllamaSettings?: (settings: OllamaSettings) => Promise<OllamaSettings>;
+  downloadTextFile?: (fileName: string, content: string) => void;
   enableDevelopmentFallback?: boolean;
 }
 
@@ -81,6 +95,7 @@ type OperationStatus =
 
 type SourceTypeFilter = "all" | "txt" | "pdf";
 type ReviewStatusFilter = "all" | "reviewed" | "pending";
+type LibrarySortMode = "oldest" | "newest" | "type" | "status";
 
 function toCardReviewMap(
   reviews: Array<{ card_id: string; rating: StudyReviewRating }>
@@ -145,6 +160,65 @@ function averagePriority(reviews: StudyReview[]): number {
   return Math.round(totalPriority / reviews.length);
 }
 
+function defaultDownloadTextFile(fileName: string, content: string) {
+  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function sanitizeReportFileName(value: string): string {
+  const normalizedValue = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalizedValue || "documento";
+}
+
+function buildStudySessionReport(
+  document: ImportTextBookResponse,
+  summaries: StudySessionSummary[]
+): string {
+  const documentTitle = document.content.split("\n")[0]?.trim() || "Documento";
+  const totalAgain = summaries.reduce((total, summary) => total + summary.again_count, 0);
+  const totalHard = summaries.reduce((total, summary) => total + summary.hard_count, 0);
+  const totalEasy = summaries.reduce((total, summary) => total + summary.easy_count, 0);
+  const totalReviews = totalAgain + totalHard + totalEasy;
+  const sessionLines = summaries.map((summary, index) => {
+    const startedAt = formatNextReview(summary.started_at);
+
+    return [
+      `## Sessao ${index + 1}`,
+      "",
+      `- Inicio: ${startedAt}`,
+      `- Acertos: ${summary.easy_count}`,
+      `- Dificeis: ${summary.hard_count}`,
+      `- Erros: ${summary.again_count}`
+    ].join("\n");
+  });
+
+  return [
+    `# Relatorio de estudo - ${documentTitle}`,
+    "",
+    `- Documento: ${documentTitle}`,
+    `- Origem: ${document.source_path ?? "Nao informada"}`,
+    `- Tipo: ${document.source_type ?? "txt"}`,
+    `- Sessoes: ${summaries.length}`,
+    `- Revisoes: ${totalReviews}`,
+    `- Acertos: ${totalEasy}`,
+    `- Dificeis: ${totalHard}`,
+    `- Erros: ${totalAgain}`,
+    "",
+    ...sessionLines
+  ].join("\n");
+}
+
 function buildDueStudyQueue(
   cards: StudyCard[],
   schedules: Record<string, { priority: number; nextReviewAt: number }>,
@@ -179,26 +253,58 @@ function filterSavedDocuments(
   documents: ImportTextBookResponse[],
   sourceTypeFilter: SourceTypeFilter,
   reviewStatusFilter: ReviewStatusFilter,
+  searchQuery: string,
+  sortMode: LibrarySortMode,
   reviewCounts: Record<string, number>
 ): ImportTextBookResponse[] {
-  return documents.filter((savedDocument) => {
-    const sourceType = savedDocument.source_type ?? "txt";
-    const reviewCount = reviewCounts[savedDocument.document_id] ?? 0;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
 
-    if (sourceTypeFilter !== "all" && sourceType !== sourceTypeFilter) {
-      return false;
-    }
+  return documents
+    .map((savedDocument, originalIndex) => ({ savedDocument, originalIndex }))
+    .filter(({ savedDocument }) => {
+      const sourceType = savedDocument.source_type ?? "txt";
+      const reviewCount = reviewCounts[savedDocument.document_id] ?? 0;
+      const searchableText =
+        `${savedDocument.content} ${savedDocument.source_path ?? ""}`.toLowerCase();
 
-    if (reviewStatusFilter === "reviewed") {
-      return reviewCount > 0;
-    }
+      if (sourceTypeFilter !== "all" && sourceType !== sourceTypeFilter) {
+        return false;
+      }
 
-    if (reviewStatusFilter === "pending") {
-      return reviewCount === 0;
-    }
+      if (normalizedQuery && !searchableText.includes(normalizedQuery)) {
+        return false;
+      }
 
-    return true;
-  });
+      if (reviewStatusFilter === "reviewed") {
+        return reviewCount > 0;
+      }
+
+      if (reviewStatusFilter === "pending") {
+        return reviewCount === 0;
+      }
+
+      return true;
+    })
+    .sort((firstItem, secondItem) => {
+      if (sortMode === "newest") {
+        return secondItem.originalIndex - firstItem.originalIndex;
+      }
+
+      if (sortMode === "type") {
+        return (firstItem.savedDocument.source_type ?? "txt").localeCompare(
+          secondItem.savedDocument.source_type ?? "txt"
+        );
+      }
+
+      if (sortMode === "status") {
+        const firstReviewCount = reviewCounts[firstItem.savedDocument.document_id] ?? 0;
+        const secondReviewCount = reviewCounts[secondItem.savedDocument.document_id] ?? 0;
+        return Number(secondReviewCount > 0) - Number(firstReviewCount > 0);
+      }
+
+      return firstItem.originalIndex - secondItem.originalIndex;
+    })
+    .map(({ savedDocument }) => savedDocument);
 }
 
 export function App({
@@ -211,10 +317,13 @@ export function App({
   listStudyCards = defaultListStudyCards,
   saveStudyReview = defaultSaveStudyReview,
   listStudyReviews = defaultListStudyReviews,
+  startStudySession = defaultStartStudySession,
+  listStudySessionSummaries = defaultListStudySessionSummaries,
   selectStudyFile = defaultSelectStudyFile,
   testOllamaConnection = defaultTestOllamaConnection,
   loadOllamaSettings = defaultLoadOllamaSettings,
   saveOllamaSettings = defaultSaveOllamaSettings,
+  downloadTextFile = defaultDownloadTextFile,
   enableDevelopmentFallback = import.meta.env.DEV
 }: AppProps) {
   const { t } = useTranslation();
@@ -230,11 +339,16 @@ export function App({
   const [documentReviewCounts, setDocumentReviewCounts] = useState<Record<string, number>>({});
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
   const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatusFilter>("all");
+  const [librarySearchQuery, setLibrarySearchQuery] = useState("");
+  const [librarySortMode, setLibrarySortMode] = useState<LibrarySortMode>("oldest");
   const [isLoadingSavedDocuments, setIsLoadingSavedDocuments] = useState(true);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
   const [cardReviews, setCardReviews] = useState<Record<string, CardReview>>({});
   const [reviewHistory, setReviewHistory] = useState<StudyReview[]>([]);
+  const [activeStudySession, setActiveStudySession] = useState<StudySession | null>(null);
+  const [studySessionReviewCount, setStudySessionReviewCount] = useState(0);
+  const [studySessionSummaries, setStudySessionSummaries] = useState<StudySessionSummary[]>([]);
   const [cardReviewSchedules, setCardReviewSchedules] = useState<
     Record<string, { priority: number; nextReviewAt: number }>
   >({});
@@ -248,6 +362,8 @@ export function App({
     savedDocuments,
     sourceTypeFilter,
     reviewStatusFilter,
+    librarySearchQuery,
+    librarySortMode,
     documentReviewCounts
   );
   const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
@@ -281,6 +397,24 @@ export function App({
       setWarning(t("library.mockGenerationFallback"));
       return fallbackCards;
     }
+  }
+
+  async function beginStudySession(documentId: string) {
+    const session = await startStudySession(documentId);
+
+    setActiveStudySession(session);
+    setStudySessionReviewCount(0);
+    setStudySessionSummaries((currentSummaries) => [
+      ...currentSummaries,
+      {
+        session_id: session.id,
+        document_id: session.document_id,
+        started_at: session.started_at,
+        again_count: 0,
+        hard_count: 0,
+        easy_count: 0
+      }
+    ]);
   }
 
   useEffect(() => {
@@ -369,6 +503,9 @@ export function App({
     setIsAnswerVisible(false);
     setCardReviews({});
     setReviewHistory([]);
+    setActiveStudySession(null);
+    setStudySessionReviewCount(0);
+    setStudySessionSummaries([]);
     setCardReviewSchedules({});
 
     try {
@@ -381,7 +518,7 @@ export function App({
       const persistedCards =
         generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
       setDocument(importedDocument);
-      setSavedDocuments((currentDocuments) => [importedDocument, ...currentDocuments]);
+      setSavedDocuments((currentDocuments) => [...currentDocuments, importedDocument]);
       setDocumentReviewCounts((currentCounts) => ({
         ...currentCounts,
         [importedDocument.document_id]: 0
@@ -392,6 +529,8 @@ export function App({
       setIsAnswerVisible(false);
       setCardReviews({});
       setReviewHistory([]);
+      setStudySessionSummaries([]);
+      await beginStudySession(importedDocument.document_id);
       setCardReviewSchedules({});
     } catch (unknownError) {
       setDocument(null);
@@ -401,6 +540,9 @@ export function App({
       setIsAnswerVisible(false);
       setCardReviews({});
       setReviewHistory([]);
+      setActiveStudySession(null);
+      setStudySessionReviewCount(0);
+      setStudySessionSummaries([]);
       setCardReviewSchedules({});
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
@@ -417,6 +559,9 @@ export function App({
     setIsAnswerVisible(false);
     setCardReviews({});
     setReviewHistory([]);
+    setActiveStudySession(null);
+    setStudySessionReviewCount(0);
+    setStudySessionSummaries([]);
     setCardReviewSchedules({});
     setError(null);
     setWarning(null);
@@ -427,12 +572,17 @@ export function App({
 
       if (persistedCards.length > 0) {
         const persistedReviews = await listStudyReviews(selectedDocument.document_id);
+        const persistedSessionSummaries = await listStudySessionSummaries(
+          selectedDocument.document_id
+        );
         setChunkCount(new Set(persistedCards.map((card) => card.chunkId)).size);
         setCards(persistedCards);
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
         setCardReviews(toCardReviewMap(persistedReviews));
         setReviewHistory(persistedReviews);
+        setStudySessionSummaries(persistedSessionSummaries);
+        await beginStudySession(selectedDocument.document_id);
         setDocumentReviewCounts((currentCounts) => ({
           ...currentCounts,
           [selectedDocument.document_id]: persistedReviews.length
@@ -456,6 +606,8 @@ export function App({
       setIsAnswerVisible(false);
       setCardReviews({});
       setReviewHistory([]);
+      setStudySessionSummaries([]);
+      await beginStudySession(selectedDocument.document_id);
       setCardReviewSchedules({});
       setOperationStatus(null);
     } catch (unknownError) {
@@ -465,6 +617,9 @@ export function App({
       setIsAnswerVisible(false);
       setCardReviews({});
       setReviewHistory([]);
+      setActiveStudySession(null);
+      setStudySessionReviewCount(0);
+      setStudySessionSummaries([]);
       setCardReviewSchedules({});
       setOperationStatus(null);
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
@@ -532,8 +687,25 @@ export function App({
     }
 
     try {
-      const savedReview = await saveStudyReview(reviewedCard.id, review);
+      const savedReview = await saveStudyReview(reviewedCard.id, review, activeStudySession?.id ?? null);
       setReviewHistory((currentReviews) => [...currentReviews, savedReview]);
+      setStudySessionReviewCount((currentCount) => currentCount + 1);
+      if (activeStudySession) {
+        setStudySessionSummaries((currentSummaries) =>
+          currentSummaries.map((summary) => {
+            if (summary.session_id !== activeStudySession.id) {
+              return summary;
+            }
+
+            return {
+              ...summary,
+              again_count: summary.again_count + (review === "again" ? 1 : 0),
+              hard_count: summary.hard_count + (review === "hard" ? 1 : 0),
+              easy_count: summary.easy_count + (review === "easy" ? 1 : 0)
+            };
+          })
+        );
+      }
       if (document) {
         setDocumentReviewCounts((currentCounts) => ({
           ...currentCounts,
@@ -559,6 +731,15 @@ export function App({
       setActiveCardIndex(cardIndex);
       setIsAnswerVisible(false);
     }
+  }
+
+  function handleExportStudySessionReport() {
+    if (!document || studySessionSummaries.length === 0) {
+      return;
+    }
+
+    const fileName = `relatorio-estudo-${sanitizeReportFileName(document.document_id)}.md`;
+    downloadTextFile(fileName, buildStudySessionReport(document, studySessionSummaries));
   }
 
   return (
@@ -629,24 +810,35 @@ export function App({
           isLoading={isLoadingSavedDocuments}
           filters={{
             sourceType: sourceTypeFilter,
-            reviewStatus: reviewStatusFilter
+            reviewStatus: reviewStatusFilter,
+            searchQuery: librarySearchQuery,
+            sortMode: librarySortMode
           }}
           labels={{
             title: t("library.savedDocuments"),
             loading: t("library.loadingSavedDocuments"),
             empty: t("library.noSavedDocuments"),
             noFilterResults: t("library.noFilteredDocuments"),
+            searchLabel: t("library.searchLabel"),
+            searchPlaceholder: t("library.searchPlaceholder"),
             sourceFilterLabel: t("library.sourceFilterLabel"),
             allSourceTypes: t("library.allSourceTypes"),
             reviewStatusFilterLabel: t("library.reviewStatusFilterLabel"),
             allReviewStatuses: t("library.allReviewStatuses"),
             reviewed: t("library.reviewed"),
             pendingReview: t("library.pendingReview"),
+            sortLabel: t("library.sortLabel"),
+            oldestFirst: t("library.oldestFirst"),
+            newestFirst: t("library.newestFirst"),
+            sortByType: t("library.sortByType"),
+            sortByStatus: t("library.sortByStatus"),
             itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 }),
             sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
           }}
+          onSearchQueryChange={setLibrarySearchQuery}
           onSourceTypeFilterChange={setSourceTypeFilter}
           onReviewStatusFilterChange={setReviewStatusFilter}
+          onSortModeChange={setLibrarySortMode}
           onSelectDocument={(selectedDocument) => {
             void handleSelectSavedDocument(selectedDocument);
           }}
@@ -711,6 +903,11 @@ export function App({
                 }}
               />
             ) : null}
+            {activeStudySession ? (
+              <p className="session-summary">
+                {t("study.sessionSummary", { count: studySessionReviewCount })}
+              </p>
+            ) : null}
             <DueStudyQueue
               items={dueStudyQueue}
               labels={{
@@ -741,6 +938,26 @@ export function App({
                     nextReviewAt: formatNextReview(review.next_review_at)
                   })
               }}
+            />
+            <StudySessionHistory
+              summaries={studySessionSummaries}
+              labels={{
+                title: t("study.sessionHistoryTitle"),
+                empty: t("study.sessionHistoryEmpty"),
+                exportReport: t("study.exportSessionReport"),
+                itemLabel: (summary, index) =>
+                  t("study.sessionHistoryItem", {
+                    number: index,
+                    startedAt: formatNextReview(summary.started_at)
+                  }),
+                itemCounts: (summary) =>
+                  t("study.sessionHistoryCounts", {
+                    easy: summary.easy_count,
+                    again: summary.again_count,
+                    hard: summary.hard_count
+                  })
+              }}
+              onExportReport={handleExportStudySessionReport}
             />
           </DocumentSummary>
         ) : (

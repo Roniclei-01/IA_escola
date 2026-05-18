@@ -6,23 +6,34 @@ interface SavedDocumentsListProps {
   filters: {
     sourceType: "all" | "txt" | "pdf";
     reviewStatus: "all" | "reviewed" | "pending";
+    searchQuery: string;
+    sortMode: "oldest" | "newest" | "type" | "status";
   };
   labels: {
     title: string;
     loading: string;
     empty: string;
     noFilterResults: string;
+    searchLabel: string;
+    searchPlaceholder: string;
     sourceFilterLabel: string;
     allSourceTypes: string;
     reviewStatusFilterLabel: string;
     allReviewStatuses: string;
     reviewed: string;
     pendingReview: string;
+    sortLabel: string;
+    oldestFirst: string;
+    newestFirst: string;
+    sortByType: string;
+    sortByStatus: string;
     itemLabel: (index: number) => string;
     sourceType: (sourceType: ImportTextBookResponse["source_type"]) => string;
   };
+  onSearchQueryChange: (query: string) => void;
   onSourceTypeFilterChange: (sourceType: "all" | "txt" | "pdf") => void;
   onReviewStatusFilterChange: (reviewStatus: "all" | "reviewed" | "pending") => void;
+  onSortModeChange: (sortMode: "oldest" | "newest" | "type" | "status") => void;
   onSelectDocument: (document: ImportTextBookResponse) => void;
 }
 
@@ -31,16 +42,30 @@ export function SavedDocumentsList({
   isLoading,
   filters,
   labels,
+  onSearchQueryChange,
   onSourceTypeFilterChange,
   onReviewStatusFilterChange,
+  onSortModeChange,
   onSelectDocument
 }: SavedDocumentsListProps) {
-  const hasActiveFilters = filters.sourceType !== "all" || filters.reviewStatus !== "all";
+  const hasActiveFilters =
+    filters.sourceType !== "all" ||
+    filters.reviewStatus !== "all" ||
+    filters.searchQuery.trim().length > 0;
 
   return (
     <section className="saved-documents" aria-labelledby="saved-documents-title">
       <h2 id="saved-documents-title">{labels.title}</h2>
       <div className="library-filters">
+        <label htmlFor="library-search">{labels.searchLabel}</label>
+        <input
+          id="library-search"
+          type="search"
+          value={filters.searchQuery}
+          placeholder={labels.searchPlaceholder}
+          onChange={(event) => onSearchQueryChange(event.target.value)}
+        />
+
         <label htmlFor="source-type-filter">{labels.sourceFilterLabel}</label>
         <select
           id="source-type-filter"
@@ -65,6 +90,20 @@ export function SavedDocumentsList({
           <option value="all">{labels.allReviewStatuses}</option>
           <option value="reviewed">{labels.reviewed}</option>
           <option value="pending">{labels.pendingReview}</option>
+        </select>
+
+        <label htmlFor="library-sort">{labels.sortLabel}</label>
+        <select
+          id="library-sort"
+          value={filters.sortMode}
+          onChange={(event) =>
+            onSortModeChange(event.target.value as "oldest" | "newest" | "type" | "status")
+          }
+        >
+          <option value="oldest">{labels.oldestFirst}</option>
+          <option value="newest">{labels.newestFirst}</option>
+          <option value="type">{labels.sortByType}</option>
+          <option value="status">{labels.sortByStatus}</option>
         </select>
       </div>
       {isLoading ? <p>{labels.loading}</p> : null}

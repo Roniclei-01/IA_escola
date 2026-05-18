@@ -18,17 +18,19 @@ describe("study review Tauri bridge", () => {
       review: {
         id: "review-1",
         card_id: "card-1",
+        session_id: "session-1",
         rating: "easy",
         priority: 20,
         next_review_at: 1700604800
       }
     });
 
-    const review = await saveStudyReview("card-1", "easy");
+    const review = await saveStudyReview("card-1", "easy", "session-1");
 
     expect(invokeMock).toHaveBeenCalledWith("save_study_review", {
       request: {
         card_id: "card-1",
+        session_id: "session-1",
         rating: "easy"
       }
     });
@@ -41,6 +43,7 @@ describe("study review Tauri bridge", () => {
         {
         id: "review-1",
         card_id: "card-1",
+        session_id: null,
         rating: "hard",
         priority: 70,
         next_review_at: 1700086400

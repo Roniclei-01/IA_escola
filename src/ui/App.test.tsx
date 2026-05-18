@@ -8,12 +8,19 @@ import "../i18n";
 const listNoDocuments = vi.fn().mockResolvedValue({ documents: [] });
 const listNoStudyCards = vi.fn().mockResolvedValue([]);
 const listNoStudyReviews = vi.fn().mockResolvedValue([]);
+const listNoStudySessionSummaries = vi.fn().mockResolvedValue([]);
 const saveStudyReview = vi.fn().mockResolvedValue({
   id: "review-1",
   card_id: "card-1",
+  session_id: "session-1",
   rating: "easy",
   priority: 20,
   next_review_at: 1700604800
+});
+const startStudySession = vi.fn().mockResolvedValue({
+  id: "session-1",
+  document_id: "document-1",
+  started_at: 1700000000
 });
 const selectNoFile = vi.fn().mockResolvedValue(null);
 const saveCards = vi.fn().mockImplementation(async (cards: unknown[]) => cards);
@@ -28,7 +35,9 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
     <App
       listImportedDocuments={listNoDocuments}
       listStudyReviews={listNoStudyReviews}
+      listStudySessionSummaries={listNoStudySessionSummaries}
       saveStudyReview={saveStudyReview}
+      startStudySession={startStudySession}
       selectStudyFile={selectNoFile}
       loadOllamaSettings={loadDefaultOllamaSettings}
       saveOllamaSettings={saveOllamaSettings}
@@ -91,6 +100,7 @@ describe("App", () => {
           {
             id: "review-1",
             card_id: "card-1",
+            session_id: "session-1",
             rating: "easy",
             priority: 20,
             next_review_at: 1700604800
@@ -125,6 +135,115 @@ describe("App", () => {
 
     expect(screen.getByText("Documento TXT pendente.")).toBeInTheDocument();
     expect(screen.queryByText("Documento PDF revisado.")).not.toBeInTheDocument();
+  });
+
+  it("searches saved documents by content and source path", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-algebra",
+          book_id: "book-algebra",
+          content: "Apostila de algebra linear.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/matematica/algebra.pdf"
+        },
+        {
+          document_id: "document-history",
+          book_id: "book-history",
+          content: "Resumo de historia do Brasil.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/humanas/brasil.txt"
+        }
+      ]
+    });
+
+    renderApp({ listImportedDocuments });
+
+    expect(await screen.findByText("Apostila de algebra linear.")).toBeInTheDocument();
+    expect(screen.getByText("Resumo de historia do Brasil.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Buscar na biblioteca"), {
+      target: { value: "historia" }
+    });
+
+    expect(screen.queryByText("Apostila de algebra linear.")).not.toBeInTheDocument();
+    expect(screen.getByText("Resumo de historia do Brasil.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Buscar na biblioteca"), {
+      target: { value: "ALGEBRA.PDF" }
+    });
+
+    expect(screen.getByText("Apostila de algebra linear.")).toBeInTheDocument();
+    expect(screen.queryByText("Resumo de historia do Brasil.")).not.toBeInTheDocument();
+  });
+
+  it("sorts saved documents by date, source type and review status", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-old-reviewed",
+          book_id: "book-old-reviewed",
+          content: "Documento antigo revisado.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/antigo.txt"
+        },
+        {
+          document_id: "document-new-pending",
+          book_id: "book-new-pending",
+          content: "Documento novo pendente.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/novo.pdf"
+        }
+      ]
+    });
+    const listStudyReviews = vi.fn().mockImplementation(async (documentId: string) => {
+      if (documentId === "document-old-reviewed") {
+        return [
+          {
+            id: "review-1",
+            card_id: "card-1",
+            session_id: "session-1",
+            rating: "easy",
+            priority: 20,
+            next_review_at: 1700604800
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    renderApp({ listImportedDocuments, listStudyReviews });
+
+    expect(await screen.findByText("Documento antigo revisado.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Ordenar biblioteca"), {
+      target: { value: "newest" }
+    });
+
+    expect(screen.getAllByRole("button", { name: /Documento/ })[0]).toHaveTextContent(
+      "Documento novo pendente."
+    );
+
+    fireEvent.change(screen.getByLabelText("Ordenar biblioteca"), {
+      target: { value: "type" }
+    });
+
+    expect(screen.getAllByRole("button", { name: /Documento/ })[0]).toHaveTextContent(
+      "Documento novo pendente."
+    );
+
+    fireEvent.change(screen.getByLabelText("Ordenar biblioteca"), {
+      target: { value: "status" }
+    });
+
+    expect(screen.getAllByRole("button", { name: /Documento/ })[0]).toHaveTextContent(
+      "Documento antigo revisado."
+    );
   });
 
   it("tests the Ollama connection from settings", async () => {
@@ -312,6 +431,7 @@ describe("App", () => {
       {
         id: "review-1",
         card_id: "card-saved",
+        session_id: "session-1",
         rating: "hard",
         priority: 70,
         next_review_at: 1700086400
@@ -319,6 +439,7 @@ describe("App", () => {
       {
         id: "review-2",
         card_id: "card-again",
+        session_id: "session-1",
         rating: "again",
         priority: 100,
         next_review_at: 1700000000
@@ -326,6 +447,7 @@ describe("App", () => {
       {
         id: "review-3",
         card_id: "card-future",
+        session_id: "session-1",
         rating: "easy",
         priority: 20,
         next_review_at: 4102444800
@@ -666,6 +788,7 @@ describe("App", () => {
     const saveStudyReview = vi.fn().mockImplementation(async (cardId: string, rating: string) => ({
       id: `review-${cardId}`,
       card_id: cardId,
+      session_id: "session-import",
       rating,
       priority: rating === "hard" ? 70 : 20,
       next_review_at: rating === "hard" ? 1700086400 : 1700604800
@@ -685,25 +808,97 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByText("Pergunta 1")).toBeInTheDocument();
-    expect(screen.getByText("Acertos: 0 | Erros: 0 | Dificeis: 0")).toBeInTheDocument();
+    expect(screen.getAllByText("Acertos: 0 | Erros: 0 | Dificeis: 0")).toHaveLength(2);
 
     fireEvent.click(screen.getByRole("button", { name: "Acertei" }));
 
     expect(screen.getByText("Pergunta 2")).toBeInTheDocument();
     await waitFor(() => {
-      expect(saveStudyReview).toHaveBeenCalledWith("card-1", "easy");
+      expect(saveStudyReview).toHaveBeenCalledWith("card-1", "easy", "session-1");
     });
     expect(screen.getByText("1 revisao | Prioridade media: 20")).toBeInTheDocument();
-    expect(screen.getByText("Acertos: 1 | Erros: 0 | Dificeis: 0")).toBeInTheDocument();
+    expect(screen.getByText("1 revisao nesta sessao")).toBeInTheDocument();
+    expect(screen.getByText("Sessoes de estudo")).toBeInTheDocument();
+    expect(screen.getAllByText("Acertos: 1 | Erros: 0 | Dificeis: 0")).toHaveLength(2);
 
     fireEvent.click(screen.getByRole("button", { name: "Dificil" }));
 
     await waitFor(() => {
-      expect(saveStudyReview).toHaveBeenCalledWith("card-2", "hard");
+      expect(saveStudyReview).toHaveBeenCalledWith("card-2", "hard", "session-1");
     });
+    expect(screen.getByText("2 revisoes nesta sessao")).toBeInTheDocument();
+    expect(screen.getAllByText("Acertos: 1 | Erros: 0 | Dificeis: 1")).toHaveLength(2);
     expect(screen.getByText("Card 2 de 2")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dificil" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("Acertos: 1 | Erros: 0 | Dificeis: 1")).toBeInTheDocument();
+  });
+
+  it("exports a markdown report from study sessions", async () => {
+    const downloadTextFile = vi.fn();
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-saved",
+          book_id: "book-saved",
+          content: "Algebra linear\nVetores e matrizes.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/algebra.pdf"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-saved",
+        bookId: "book-saved",
+        chunkId: "chunk-saved",
+        front: "O que e vetor?",
+        back: "Objeto matematico com modulo, direcao e sentido.",
+        tags: ["saved"]
+      }
+    ]);
+    const listStudyReviews = vi.fn().mockResolvedValue([
+      {
+        id: "review-1",
+        card_id: "card-saved",
+        session_id: "session-persisted",
+        rating: "easy",
+        priority: 20,
+        next_review_at: 1700604800
+      }
+    ]);
+    const listStudySessionSummaries = vi.fn().mockResolvedValue([
+      {
+        session_id: "session-persisted",
+        document_id: "document-saved",
+        started_at: 1700000000,
+        again_count: 1,
+        hard_count: 2,
+        easy_count: 3
+      }
+    ]);
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listStudyReviews,
+      listStudySessionSummaries,
+      downloadTextFile
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Algebra linear/ }));
+    expect(await screen.findByText("Sessoes de estudo")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Exportar relatorio" }));
+
+    expect(downloadTextFile).toHaveBeenCalledWith(
+      "relatorio-estudo-document-saved.md",
+      expect.stringContaining("# Relatorio de estudo - Algebra linear")
+    );
+    expect(downloadTextFile.mock.calls[0][1]).toContain("- Sessoes: 2");
+    expect(downloadTextFile.mock.calls[0][1]).toContain("- Acertos: 3");
+    expect(downloadTextFile.mock.calls[0][1]).toContain("- Dificeis: 2");
+    expect(downloadTextFile.mock.calls[0][1]).toContain("- Erros: 1");
+    expect(downloadTextFile.mock.calls[0][1]).toContain("## Sessao 1");
   });
 
   it("shows an error when import fails", async () => {

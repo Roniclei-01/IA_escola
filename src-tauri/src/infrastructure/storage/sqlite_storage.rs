@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::domain::{
     Document, DocumentChunk, DocumentSourceType, Language, StudyCard, StudyReview,
-    StudyReviewRating,
+    StudyReviewRating, StudySession, StudySessionSummary,
 };
 
 #[derive(Debug, Error)]
@@ -31,6 +31,12 @@ pub enum StorageError {
     SaveStudyReviewFailed(#[source] rusqlite::Error),
     #[error("failed to list study reviews")]
     ListStudyReviewsFailed(#[source] rusqlite::Error),
+    #[error("failed to save study session")]
+    SaveStudySessionFailed(#[source] rusqlite::Error),
+    #[error("failed to list study sessions")]
+    ListStudySessionsFailed(#[source] rusqlite::Error),
+    #[error("failed to list study session summaries")]
+    ListStudySessionSummariesFailed(#[source] rusqlite::Error),
     #[error("failed to save app setting")]
     SaveSettingFailed(#[source] rusqlite::Error),
     #[error("failed to load app setting")]
@@ -57,10 +63,18 @@ pub enum StorageError {
     InvalidStudyReviewId(#[source] uuid::Error),
     #[error("stored study review has invalid card id")]
     InvalidStudyReviewCardId(#[source] uuid::Error),
+    #[error("stored study review has invalid session id")]
+    InvalidStudyReviewSessionId(#[source] uuid::Error),
     #[error("stored study review has invalid rating")]
     InvalidStudyReviewRating(String),
     #[error("stored study review priority is invalid")]
     InvalidStudyReviewPriority(i64),
+    #[error("stored study session has invalid id")]
+    InvalidStudySessionId(#[source] uuid::Error),
+    #[error("stored study session has invalid document id")]
+    InvalidStudySessionDocumentId(#[source] uuid::Error),
+    #[error("stored study session summary count is invalid")]
+    InvalidStudySessionSummaryCount(i64),
     #[error("stored document has invalid language")]
     InvalidLanguage(String),
     #[error("stored document has invalid source type")]
@@ -316,11 +330,12 @@ impl SQLiteStorage {
         self.connection
             .execute(
                 "INSERT OR REPLACE INTO study_reviews
-                    (id, card_id, rating, priority, next_review_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                    (id, card_id, session_id, rating, priority, next_review_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
                     review.id.to_string(),
                     review.card_id.to_string(),
+                    review.session_id.map(|session_id| session_id.to_string()),
                     rating_to_code(&review.rating),
                     review.priority,
                     review.next_review_at,
@@ -340,6 +355,7 @@ impl SQLiteStorage {
             .prepare(
                 "SELECT study_reviews.id,
                         study_reviews.card_id,
+                        study_reviews.session_id,
                         study_reviews.rating,
                         study_reviews.priority,
                         study_reviews.next_review_at
@@ -356,9 +372,10 @@ impl SQLiteStorage {
                 Ok(RawStudyReview {
                     id: row.get(0)?,
                     card_id: row.get(1)?,
-                    rating: row.get(2)?,
-                    priority: row.get(3)?,
-                    next_review_at: row.get(4)?,
+                    session_id: row.get(2)?,
+                    rating: row.get(3)?,
+                    priority: row.get(4)?,
+                    next_review_at: row.get(5)?,
                 })
             })
             .map_err(StorageError::ListStudyReviewsFailed)?;
@@ -371,6 +388,101 @@ impl SQLiteStorage {
         }
 
         Ok(reviews)
+    }
+
+    pub fn save_study_session(&self, session: &StudySession) -> Result<(), StorageError> {
+        self.connection
+            .execute(
+                "INSERT OR REPLACE INTO study_sessions
+                    (id, document_id, started_at)
+                 VALUES (?1, ?2, ?3)",
+                params![
+                    session.id.to_string(),
+                    session.document_id.to_string(),
+                    session.started_at,
+                ],
+            )
+            .map_err(StorageError::SaveStudySessionFailed)?;
+
+        Ok(())
+    }
+
+    pub fn list_study_sessions_by_document(
+        &self,
+        document_id: Uuid,
+    ) -> Result<Vec<StudySession>, StorageError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT id, document_id, started_at
+                 FROM study_sessions
+                 WHERE document_id = ?1
+                 ORDER BY started_at ASC",
+            )
+            .map_err(StorageError::ListStudySessionsFailed)?;
+
+        let rows = statement
+            .query_map([document_id.to_string()], |row| {
+                Ok(RawStudySession {
+                    id: row.get(0)?,
+                    document_id: row.get(1)?,
+                    started_at: row.get(2)?,
+                })
+            })
+            .map_err(StorageError::ListStudySessionsFailed)?;
+
+        let mut sessions = Vec::new();
+
+        for row in rows {
+            let raw_session = row.map_err(StorageError::ListStudySessionsFailed)?;
+            sessions.push(raw_session.try_into()?);
+        }
+
+        Ok(sessions)
+    }
+
+    pub fn list_study_session_summaries_by_document(
+        &self,
+        document_id: Uuid,
+    ) -> Result<Vec<StudySessionSummary>, StorageError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT study_sessions.id,
+                        study_sessions.document_id,
+                        study_sessions.started_at,
+                        COALESCE(SUM(CASE WHEN study_reviews.rating = 'again' THEN 1 ELSE 0 END), 0),
+                        COALESCE(SUM(CASE WHEN study_reviews.rating = 'hard' THEN 1 ELSE 0 END), 0),
+                        COALESCE(SUM(CASE WHEN study_reviews.rating = 'easy' THEN 1 ELSE 0 END), 0)
+                 FROM study_sessions
+                 LEFT JOIN study_reviews ON study_reviews.session_id = study_sessions.id
+                 WHERE study_sessions.document_id = ?1
+                 GROUP BY study_sessions.id, study_sessions.document_id, study_sessions.started_at
+                 ORDER BY study_sessions.started_at ASC",
+            )
+            .map_err(StorageError::ListStudySessionSummariesFailed)?;
+
+        let rows = statement
+            .query_map([document_id.to_string()], |row| {
+                Ok(RawStudySessionSummary {
+                    session_id: row.get(0)?,
+                    document_id: row.get(1)?,
+                    started_at: row.get(2)?,
+                    again_count: row.get(3)?,
+                    hard_count: row.get(4)?,
+                    easy_count: row.get(5)?,
+                })
+            })
+            .map_err(StorageError::ListStudySessionSummariesFailed)?;
+
+        let mut summaries = Vec::new();
+
+        for row in rows {
+            let raw_summary = row.map_err(StorageError::ListStudySessionSummariesFailed)?;
+            summaries.push(raw_summary.try_into()?);
+        }
+
+        Ok(summaries)
     }
 
     pub fn save_setting(&self, key: &str, value: &str) -> Result<(), StorageError> {
@@ -440,9 +552,17 @@ impl SQLiteStorage {
                 CREATE TABLE IF NOT EXISTS study_reviews (
                     id TEXT PRIMARY KEY NOT NULL,
                     card_id TEXT NOT NULL,
+                    session_id TEXT,
                     rating TEXT NOT NULL,
                     priority INTEGER NOT NULL DEFAULT 50,
                     next_review_at INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS study_sessions (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    document_id TEXT NOT NULL,
+                    started_at INTEGER NOT NULL,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -455,7 +575,7 @@ impl SQLiteStorage {
             .map_err(StorageError::MigrationFailed)?;
 
         self.ensure_documents_metadata_columns()?;
-        self.ensure_study_review_schedule_columns()
+        self.ensure_study_review_columns()
     }
 
     fn ensure_documents_metadata_columns(&self) -> Result<(), StorageError> {
@@ -480,7 +600,13 @@ impl SQLiteStorage {
         Ok(())
     }
 
-    fn ensure_study_review_schedule_columns(&self) -> Result<(), StorageError> {
+    fn ensure_study_review_columns(&self) -> Result<(), StorageError> {
+        if !self.has_column("study_reviews", "session_id")? {
+            self.connection
+                .execute("ALTER TABLE study_reviews ADD COLUMN session_id TEXT", [])
+                .map_err(StorageError::MigrationFailed)?;
+        }
+
         if !self.has_column("study_reviews", "priority")? {
             self.connection
                 .execute(
@@ -551,9 +677,25 @@ struct RawStudyCard {
 struct RawStudyReview {
     id: String,
     card_id: String,
+    session_id: Option<String>,
     rating: String,
     priority: i64,
     next_review_at: i64,
+}
+
+struct RawStudySession {
+    id: String,
+    document_id: String,
+    started_at: i64,
+}
+
+struct RawStudySessionSummary {
+    session_id: String,
+    document_id: String,
+    started_at: i64,
+    again_count: i64,
+    hard_count: i64,
+    easy_count: i64,
 }
 
 impl TryFrom<RawDocument> for Document {
@@ -619,9 +761,48 @@ impl TryFrom<RawStudyReview> for StudyReview {
             id: Uuid::parse_str(&raw.id).map_err(StorageError::InvalidStudyReviewId)?,
             card_id: Uuid::parse_str(&raw.card_id)
                 .map_err(StorageError::InvalidStudyReviewCardId)?,
+            session_id: raw
+                .session_id
+                .map(|session_id| {
+                    Uuid::parse_str(&session_id).map_err(StorageError::InvalidStudyReviewSessionId)
+                })
+                .transpose()?,
             rating: rating_from_code(&raw.rating)?,
             priority,
             next_review_at: raw.next_review_at,
+        })
+    }
+}
+
+impl TryFrom<RawStudySession> for StudySession {
+    type Error = StorageError;
+
+    fn try_from(raw: RawStudySession) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: Uuid::parse_str(&raw.id).map_err(StorageError::InvalidStudySessionId)?,
+            document_id: Uuid::parse_str(&raw.document_id)
+                .map_err(StorageError::InvalidStudySessionDocumentId)?,
+            started_at: raw.started_at,
+        })
+    }
+}
+
+impl TryFrom<RawStudySessionSummary> for StudySessionSummary {
+    type Error = StorageError;
+
+    fn try_from(raw: RawStudySessionSummary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            session_id: Uuid::parse_str(&raw.session_id)
+                .map_err(StorageError::InvalidStudySessionId)?,
+            document_id: Uuid::parse_str(&raw.document_id)
+                .map_err(StorageError::InvalidStudySessionDocumentId)?,
+            started_at: raw.started_at,
+            again_count: u32::try_from(raw.again_count)
+                .map_err(|_| StorageError::InvalidStudySessionSummaryCount(raw.again_count))?,
+            hard_count: u32::try_from(raw.hard_count)
+                .map_err(|_| StorageError::InvalidStudySessionSummaryCount(raw.hard_count))?,
+            easy_count: u32::try_from(raw.easy_count)
+                .map_err(|_| StorageError::InvalidStudySessionSummaryCount(raw.easy_count))?,
         })
     }
 }
@@ -684,7 +865,7 @@ mod tests {
     use super::SQLiteStorage;
     use crate::domain::{
         Document, DocumentChunk, DocumentSourceType, Language, StudyCard, StudyReview,
-        StudyReviewRating,
+        StudyReviewRating, StudySession, StudySessionSummary,
     };
 
     #[test]
@@ -767,6 +948,18 @@ mod tests {
                 .list_study_reviews_by_document(Uuid::new_v4())
                 .unwrap(),
             Vec::<StudyReview>::new()
+        );
+    }
+
+    #[test]
+    fn creates_study_sessions_table_on_open() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+
+        assert_eq!(
+            storage
+                .list_study_sessions_by_document(Uuid::new_v4())
+                .unwrap(),
+            Vec::<StudySession>::new()
         );
     }
 
@@ -979,6 +1172,86 @@ mod tests {
     }
 
     #[test]
+    fn saves_and_lists_study_sessions_by_document() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let document_id = Uuid::new_v4();
+        let other_document_id = Uuid::new_v4();
+        let session = StudySession::new_at(document_id, 1_700_000_000).unwrap();
+        let other_session = StudySession::new_at(other_document_id, 1_700_000_100).unwrap();
+
+        storage.save_study_session(&session).unwrap();
+        storage.save_study_session(&other_session).unwrap();
+
+        let sessions = storage.list_study_sessions_by_document(document_id).unwrap();
+
+        assert_eq!(sessions, vec![session]);
+    }
+
+    #[test]
+    fn saves_study_review_with_session_id() {
+        let mut storage = SQLiteStorage::open_in_memory().unwrap();
+        let book_id = Uuid::new_v4();
+        let document_id = Uuid::new_v4();
+        let chunk = DocumentChunk::new(book_id, document_id, 1, "chunk").unwrap();
+        let card = StudyCard::new(book_id, chunk.id, "Pergunta", "Resposta", vec![]).unwrap();
+        let session = StudySession::new(document_id).unwrap();
+        let review =
+            StudyReview::new_in_session(card.id, session.id, StudyReviewRating::Hard).unwrap();
+
+        storage.save_chunks(&[chunk]).unwrap();
+        storage.save_study_cards(&[card]).unwrap();
+        storage.save_study_session(&session).unwrap();
+        storage.save_study_review(&review).unwrap();
+
+        let reviews = storage.list_study_reviews_by_document(document_id).unwrap();
+
+        assert_eq!(reviews, vec![review]);
+    }
+
+    #[test]
+    fn lists_study_session_summaries_by_document() {
+        let mut storage = SQLiteStorage::open_in_memory().unwrap();
+        let book_id = Uuid::new_v4();
+        let document_id = Uuid::new_v4();
+        let chunk = DocumentChunk::new(book_id, document_id, 1, "chunk").unwrap();
+        let first_card = StudyCard::new(book_id, chunk.id, "Pergunta 1", "Resposta 1", vec![])
+            .unwrap();
+        let second_card = StudyCard::new(book_id, chunk.id, "Pergunta 2", "Resposta 2", vec![])
+            .unwrap();
+        let session = StudySession::new_at(document_id, 1_700_000_000).unwrap();
+        let easy_review =
+            StudyReview::new_in_session(first_card.id, session.id, StudyReviewRating::Easy)
+                .unwrap();
+        let hard_review =
+            StudyReview::new_in_session(second_card.id, session.id, StudyReviewRating::Hard)
+                .unwrap();
+
+        storage.save_chunks(&[chunk]).unwrap();
+        storage
+            .save_study_cards(&[first_card, second_card])
+            .unwrap();
+        storage.save_study_session(&session).unwrap();
+        storage.save_study_review(&easy_review).unwrap();
+        storage.save_study_review(&hard_review).unwrap();
+
+        let summaries = storage
+            .list_study_session_summaries_by_document(document_id)
+            .unwrap();
+
+        assert_eq!(
+            summaries,
+            vec![StudySessionSummary {
+                session_id: session.id,
+                document_id,
+                started_at: 1_700_000_000,
+                again_count: 0,
+                hard_count: 1,
+                easy_count: 1,
+            }]
+        );
+    }
+
+    #[test]
     fn migrates_existing_study_reviews_table_with_schedule_metadata() {
         let dir = TempDir::new().unwrap();
         let database_path = dir.path().join("app.db");
@@ -1050,6 +1323,7 @@ mod tests {
         assert!(storage
             .has_column("study_reviews", "next_review_at")
             .unwrap());
+        assert!(storage.has_column("study_reviews", "session_id").unwrap());
     }
 
     #[test]

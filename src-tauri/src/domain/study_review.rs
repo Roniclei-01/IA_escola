@@ -16,6 +16,7 @@ pub enum StudyReviewRating {
 pub struct StudyReview {
     pub id: Uuid,
     pub card_id: Uuid,
+    pub session_id: Option<Uuid>,
     pub rating: StudyReviewRating,
     pub priority: u8,
     pub next_review_at: i64,
@@ -37,6 +38,23 @@ impl StudyReview {
         rating: StudyReviewRating,
         reviewed_at: i64,
     ) -> Result<Self, StudyReviewError> {
+        Self::new_with_session_at(card_id, None, rating, reviewed_at)
+    }
+
+    pub fn new_in_session(
+        card_id: Uuid,
+        session_id: Uuid,
+        rating: StudyReviewRating,
+    ) -> Result<Self, StudyReviewError> {
+        Self::new_with_session_at(card_id, Some(session_id), rating, chrono::Utc::now().timestamp())
+    }
+
+    fn new_with_session_at(
+        card_id: Uuid,
+        session_id: Option<Uuid>,
+        rating: StudyReviewRating,
+        reviewed_at: i64,
+    ) -> Result<Self, StudyReviewError> {
         if card_id.is_nil() {
             return Err(StudyReviewError::EmptyCardId);
         }
@@ -46,6 +64,7 @@ impl StudyReview {
         Ok(Self {
             id: Uuid::new_v4(),
             card_id,
+            session_id,
             rating,
             priority,
             next_review_at: reviewed_at + review_delay_seconds,
@@ -73,9 +92,22 @@ mod tests {
         let review = StudyReview::new_at(card_id, StudyReviewRating::Easy, 1_700_000_000).unwrap();
 
         assert_eq!(review.card_id, card_id);
+        assert_eq!(review.session_id, None);
         assert_eq!(review.rating, StudyReviewRating::Easy);
         assert_eq!(review.priority, 20);
         assert_eq!(review.next_review_at, 1_700_604_800);
+    }
+
+    #[test]
+    fn creates_review_linked_to_study_session() {
+        let card_id = Uuid::new_v4();
+        let session_id = Uuid::new_v4();
+
+        let review =
+            StudyReview::new_in_session(card_id, session_id, StudyReviewRating::Hard).unwrap();
+
+        assert_eq!(review.card_id, card_id);
+        assert_eq!(review.session_id, Some(session_id));
     }
 
     #[test]

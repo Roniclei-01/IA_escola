@@ -76,6 +76,9 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - comandos `save_study_cards` e `list_study_cards`;
 - UI salvando cards gerados e reutilizando cards salvos ao abrir documento da biblioteca;
 - adaptador inicial `OllamaModelAdapter` no backend Rust com cliente injetavel e testes de contrato;
+- cliente HTTP local para `/api/generate` do Ollama;
+- comando `test_ollama_connection` para validar conexao e modelo;
+- ponte TypeScript `testOllamaConnection`;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -150,9 +153,9 @@ docs/
 
 ## Proximos passos
 
-1. Implementar cliente HTTP real para Ollama.
-2. Adicionar configuracao de modelo local na UI.
-3. Criar comando Tauri para testar conexao com Ollama.
+1. Adicionar configuracao de modelo local na UI.
+2. Conectar a tela de configuracoes ao comando `test_ollama_connection`.
+3. Trocar a geracao mockada por Ollama quando o modelo estiver configurado.
 4. Evoluir tela de biblioteca, estudo e configuracoes.
 5. Preparar importacao de PDF como proxima expansao de parser.
 

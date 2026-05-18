@@ -8,7 +8,7 @@ pub struct FlashcardConfig {
     pub language: Language,
 }
 
-#[derive(Debug, Error, Eq, PartialEq)]
+#[derive(Clone, Debug, Error, Eq, PartialEq)]
 pub enum ModelAdapterError {
     #[error("model is unavailable")]
     Unavailable,

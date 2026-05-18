@@ -1,3 +1,9 @@
+use std::{
+    io::{Read, Write},
+    net::TcpStream,
+    time::Duration,
+};
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -9,6 +15,26 @@ use crate::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OllamaModelConfig {
     pub model: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OllamaHttpClient {
+    base_url: String,
+    timeout: Duration,
+}
+
+impl OllamaHttpClient {
+    pub fn new(base_url: impl Into<String>) -> Self {
+        Self {
+            base_url: base_url.into(),
+            timeout: Duration::from_secs(30),
+        }
+    }
+
+    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = timeout;
+        self
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -25,8 +51,12 @@ pub struct OllamaGenerateResponse {
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 pub enum OllamaClientError {
+    #[error("ollama base URL is invalid")]
+    InvalidBaseUrl,
     #[error("ollama is unavailable")]
     Unavailable,
+    #[error("ollama returned HTTP status {0}")]
+    HttpStatus(u16),
     #[error("ollama returned an invalid response")]
     InvalidResponse,
 }
@@ -36,6 +66,128 @@ pub trait OllamaClient {
         &self,
         request: OllamaGenerateRequest,
     ) -> Result<OllamaGenerateResponse, OllamaClientError>;
+}
+
+impl OllamaClient for OllamaHttpClient {
+    fn generate(
+        &self,
+        request: OllamaGenerateRequest,
+    ) -> Result<OllamaGenerateResponse, OllamaClientError> {
+        let endpoint = OllamaEndpoint::parse(&self.base_url)?;
+        let body =
+            serde_json::to_string(&request).map_err(|_| OllamaClientError::InvalidResponse)?;
+        let mut stream =
+            TcpStream::connect(endpoint.address()).map_err(|_| OllamaClientError::Unavailable)?;
+
+        stream
+            .set_read_timeout(Some(self.timeout))
+            .map_err(|_| OllamaClientError::Unavailable)?;
+        stream
+            .set_write_timeout(Some(self.timeout))
+            .map_err(|_| OllamaClientError::Unavailable)?;
+
+        let http_request = format!(
+            "POST {path}/api/generate HTTP/1.1\r\n\
+Host: {host}\r\n\
+Content-Type: application/json\r\n\
+Accept: application/json\r\n\
+Content-Length: {content_length}\r\n\
+Connection: close\r\n\r\n\
+{body}",
+            path = endpoint.path_prefix,
+            host = endpoint.host_header(),
+            content_length = body.len(),
+            body = body
+        );
+
+        stream
+            .write_all(http_request.as_bytes())
+            .map_err(|_| OllamaClientError::Unavailable)?;
+
+        let mut response = String::new();
+        stream
+            .read_to_string(&mut response)
+            .map_err(|_| OllamaClientError::Unavailable)?;
+
+        parse_http_generate_response(&response)
+    }
+}
+
+#[derive(Debug)]
+struct OllamaEndpoint {
+    host: String,
+    port: u16,
+    path_prefix: String,
+}
+
+impl OllamaEndpoint {
+    fn parse(base_url: &str) -> Result<Self, OllamaClientError> {
+        let without_scheme = base_url
+            .trim()
+            .strip_prefix("http://")
+            .ok_or(OllamaClientError::InvalidBaseUrl)?;
+        let (authority, path_prefix) = without_scheme
+            .split_once('/')
+            .map(|(authority, path)| (authority, format!("/{}", path.trim_end_matches('/'))))
+            .unwrap_or((without_scheme, String::new()));
+
+        if authority.is_empty() {
+            return Err(OllamaClientError::InvalidBaseUrl);
+        }
+
+        let (host, port) = authority
+            .rsplit_once(':')
+            .map(|(host, port)| {
+                let port = port
+                    .parse::<u16>()
+                    .map_err(|_| OllamaClientError::InvalidBaseUrl)?;
+
+                Ok((host.to_owned(), port))
+            })
+            .unwrap_or_else(|| Ok((authority.to_owned(), 80)))?;
+
+        if host.is_empty() {
+            return Err(OllamaClientError::InvalidBaseUrl);
+        }
+
+        Ok(Self {
+            host,
+            port,
+            path_prefix,
+        })
+    }
+
+    fn address(&self) -> String {
+        format!("{}:{}", self.host, self.port)
+    }
+
+    fn host_header(&self) -> String {
+        format!("{}:{}", self.host, self.port)
+    }
+}
+
+fn parse_http_generate_response(
+    response: &str,
+) -> Result<OllamaGenerateResponse, OllamaClientError> {
+    let (head, body) = response
+        .split_once("\r\n\r\n")
+        .ok_or(OllamaClientError::InvalidResponse)?;
+    let status_line = head
+        .lines()
+        .next()
+        .ok_or(OllamaClientError::InvalidResponse)?;
+    let status = status_line
+        .split_whitespace()
+        .nth(1)
+        .ok_or(OllamaClientError::InvalidResponse)?
+        .parse::<u16>()
+        .map_err(|_| OllamaClientError::InvalidResponse)?;
+
+    if !(200..300).contains(&status) {
+        return Err(OllamaClientError::HttpStatus(status));
+    }
+
+    serde_json::from_str(body).map_err(|_| OllamaClientError::InvalidResponse)
 }
 
 pub struct OllamaModelAdapter<C> {
@@ -87,7 +239,9 @@ where
 
 fn map_client_error(error: OllamaClientError) -> ModelAdapterError {
     match error {
+        OllamaClientError::InvalidBaseUrl => ModelAdapterError::Unavailable,
         OllamaClientError::Unavailable => ModelAdapterError::Unavailable,
+        OllamaClientError::HttpStatus(_) => ModelAdapterError::Unavailable,
         OllamaClientError::InvalidResponse => ModelAdapterError::InvalidFlashcards,
     }
 }
@@ -178,8 +332,8 @@ mod tests {
     use uuid::Uuid;
 
     use super::{
-        OllamaClient, OllamaClientError, OllamaGenerateRequest, OllamaGenerateResponse,
-        OllamaModelAdapter, OllamaModelConfig,
+        parse_http_generate_response, OllamaClient, OllamaClientError, OllamaEndpoint,
+        OllamaGenerateRequest, OllamaGenerateResponse, OllamaModelAdapter, OllamaModelConfig,
     };
     use crate::{
         app::{FlashcardConfig, ModelAdapter, ModelAdapterError},
@@ -339,5 +493,38 @@ mod tests {
         let result = adapter.generate_text("ola");
 
         assert_eq!(result.unwrap_err(), ModelAdapterError::Unavailable);
+    }
+
+    #[test]
+    fn parses_ollama_http_success_response() {
+        let response =
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"response\":\"ok\"}";
+
+        let response = parse_http_generate_response(response).unwrap();
+
+        assert_eq!(response.response, "ok");
+    }
+
+    #[test]
+    fn rejects_non_success_http_status() {
+        let response = "HTTP/1.1 404 ERROR\r\nContent-Type: application/json\r\n\r\n{\"error\":\"model not found\"}";
+
+        let result = parse_http_generate_response(response);
+        assert_eq!(result.unwrap_err(), OllamaClientError::HttpStatus(404));
+    }
+
+    #[test]
+    fn parses_ollama_endpoint() {
+        let endpoint = OllamaEndpoint::parse("http://127.0.0.1:11434").unwrap();
+
+        assert_eq!(endpoint.address(), "127.0.0.1:11434");
+        assert_eq!(endpoint.host_header(), "127.0.0.1:11434");
+    }
+
+    #[test]
+    fn rejects_invalid_base_url() {
+        let result = OllamaEndpoint::parse("https://127.0.0.1:11434");
+
+        assert_eq!(result.unwrap_err(), OllamaClientError::InvalidBaseUrl);
     }
 }

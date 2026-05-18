@@ -6,6 +6,7 @@ pub mod list_document_chunks;
 pub mod list_imported_documents;
 pub mod list_study_cards;
 pub mod save_study_cards;
+pub mod test_ollama_connection;
 
 #[cfg(feature = "tauri-app")]
 pub use chunk_text_document::chunk_text_document;
@@ -19,6 +20,8 @@ pub use list_imported_documents::list_imported_documents;
 pub use list_study_cards::list_study_cards;
 #[cfg(feature = "tauri-app")]
 pub use save_study_cards::save_study_cards;
+#[cfg(feature = "tauri-app")]
+pub use test_ollama_connection::test_ollama_connection;
 
 pub use chunk_text_document::{
     chunk_text_document_from_request, ChunkTextDocumentRequest, ChunkTextDocumentResponse,
@@ -32,3 +35,6 @@ pub use list_imported_documents::{
 };
 pub use list_study_cards::{list_study_cards_from_storage, ListStudyCardsResponse};
 pub use save_study_cards::{save_study_cards_with_storage, SaveStudyCardsResponse};
+pub use test_ollama_connection::{
+    test_ollama_connection_with_adapter, TestOllamaConnectionRequest, TestOllamaConnectionResponse,
+};

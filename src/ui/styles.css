@@ -136,17 +136,68 @@ h1 {
   background: #fae5e2;
 }
 
+.message.success {
+  color: #1f4e35;
+  background: #e6f4eb;
+}
+
 .document-preview,
 .empty-state,
-.saved-documents {
+.saved-documents,
+.settings-panel {
   margin-top: 28px;
   padding-top: 24px;
   border-top: 1px solid #e1e5df;
 }
 
+.settings-panel h2,
 .saved-documents h2 {
   margin: 0;
   font-size: 1.1rem;
+}
+
+.settings-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.settings-form label {
+  color: #2d3932;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.settings-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #cfd7d1;
+  border-radius: 6px;
+  color: #18201c;
+  background: #fbfcfa;
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.settings-row button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #315b7c;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-row button:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .saved-documents p {
@@ -294,7 +345,8 @@ h1 {
   }
 
   .workspace-header,
-  .import-row {
+  .import-row,
+  .settings-row {
     grid-template-columns: 1fr;
   }
 

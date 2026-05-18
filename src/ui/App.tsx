@@ -25,10 +25,15 @@ import {
   listStudyCards as defaultListStudyCards,
   saveStudyCards as defaultSaveStudyCards
 } from "../infrastructure/tauri/study-cards";
+import {
+  testOllamaConnection as defaultTestOllamaConnection,
+  type TestOllamaConnectionResponse
+} from "../infrastructure/tauri/ollama";
 import { ImportPanel } from "./components/ImportPanel";
 import { DocumentSummary } from "./components/DocumentSummary";
 import { StudyCardViewer } from "./components/StudyCardViewer";
 import { SavedDocumentsList } from "./components/SavedDocumentsList";
+import { OllamaSettingsPanel } from "./components/OllamaSettingsPanel";
 
 interface AppProps {
   importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
@@ -40,6 +45,10 @@ interface AppProps {
   generateCards?: (chunks: ImportedDocumentChunk[]) => Promise<StudyCard[]>;
   saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
   listStudyCards?: (documentId: string) => Promise<StudyCard[]>;
+  testOllamaConnection?: (request: {
+    model: string;
+    base_url?: string;
+  }) => Promise<TestOllamaConnectionResponse>;
 }
 
 const mockModelAdapter = new MockModelAdapter();
@@ -62,7 +71,8 @@ export function App({
   chunkTextDocument = defaultChunkTextDocument,
   generateCards = defaultGenerateCards,
   saveStudyCards = defaultSaveStudyCards,
-  listStudyCards = defaultListStudyCards
+  listStudyCards = defaultListStudyCards,
+  testOllamaConnection = defaultTestOllamaConnection
 }: AppProps) {
   const { t } = useTranslation();
   const [filePath, setFilePath] = useState("");
@@ -75,6 +85,10 @@ export function App({
   const [isLoadingSavedDocuments, setIsLoadingSavedDocuments] = useState(true);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://127.0.0.1:11434");
+  const [ollamaModel, setOllamaModel] = useState("llama3.2");
+  const [isTestingOllama, setIsTestingOllama] = useState(false);
+  const [ollamaStatus, setOllamaStatus] = useState<string | null>(null);
 
   const activeCard = cards[activeCardIndex] ?? null;
 
@@ -186,6 +200,27 @@ export function App({
     }
   }
 
+  async function handleTestOllama(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsTestingOllama(true);
+    setOllamaStatus(null);
+    setError(null);
+
+    try {
+      const response = await testOllamaConnection({
+        model: ollamaModel.trim(),
+        base_url: ollamaBaseUrl.trim()
+      });
+
+      setOllamaStatus(t("settings.ollamaConnectionOk", { model: response.model }));
+    } catch (unknownError) {
+      setOllamaStatus(null);
+      setError(unknownError instanceof Error ? unknownError.message : t("settings.ollamaConnectionError"));
+    } finally {
+      setIsTestingOllama(false);
+    }
+  }
+
   return (
     <main className="app-shell">
       <section className="workspace" aria-labelledby="app-title">
@@ -215,6 +250,23 @@ export function App({
             {error}
           </p>
         ) : null}
+
+        <OllamaSettingsPanel
+          baseUrl={ollamaBaseUrl}
+          model={ollamaModel}
+          isTesting={isTestingOllama}
+          status={ollamaStatus}
+          labels={{
+            title: t("settings.ollamaTitle"),
+            baseUrlLabel: t("settings.ollamaBaseUrlLabel"),
+            modelLabel: t("settings.ollamaModelLabel"),
+            test: t("settings.testOllama"),
+            testing: t("settings.testingOllama")
+          }}
+          onBaseUrlChange={setOllamaBaseUrl}
+          onModelChange={setOllamaModel}
+          onSubmit={handleTestOllama}
+        />
 
         <SavedDocumentsList
           documents={savedDocuments}

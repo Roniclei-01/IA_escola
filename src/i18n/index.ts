@@ -36,6 +36,15 @@ export const resources = {
         progress: "Card {{current}} de {{total}}",
         revealAnswer: "Revelar resposta",
         nextCard: "Proximo card"
+      },
+      settings: {
+        ollamaTitle: "Ollama",
+        ollamaBaseUrlLabel: "URL local do Ollama",
+        ollamaModelLabel: "Modelo",
+        testOllama: "Testar",
+        testingOllama: "Testando",
+        ollamaConnectionOk: "Ollama conectado com o modelo {{model}}.",
+        ollamaConnectionError: "Nao foi possivel testar o Ollama."
       }
     }
   },
@@ -73,6 +82,15 @@ export const resources = {
         progress: "Card {{current}} of {{total}}",
         revealAnswer: "Reveal answer",
         nextCard: "Next card"
+      },
+      settings: {
+        ollamaTitle: "Ollama",
+        ollamaBaseUrlLabel: "Local Ollama URL",
+        ollamaModelLabel: "Model",
+        testOllama: "Test",
+        testingOllama: "Testing",
+        ollamaConnectionOk: "Ollama connected with model {{model}}.",
+        ollamaConnectionError: "Could not test Ollama."
       }
     }
   },
@@ -110,6 +128,15 @@ export const resources = {
         progress: "Card {{current}} de {{total}}",
         revealAnswer: "Revelar respuesta",
         nextCard: "Siguiente card"
+      },
+      settings: {
+        ollamaTitle: "Ollama",
+        ollamaBaseUrlLabel: "URL local de Ollama",
+        ollamaModelLabel: "Modelo",
+        testOllama: "Probar",
+        testingOllama: "Probando",
+        ollamaConnectionOk: "Ollama conectado con el modelo {{model}}.",
+        ollamaConnectionError: "No fue posible probar Ollama."
       }
     }
   }

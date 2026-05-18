@@ -34,6 +34,56 @@ describe("App", () => {
     expect(screen.getByText("Documento salvo anteriormente.")).toBeInTheDocument();
   });
 
+  it("tests the Ollama connection from settings", async () => {
+    const testOllamaConnection = vi.fn().mockResolvedValue({
+      ok: true,
+      model: "mistral",
+      response: "ok"
+    });
+
+    render(
+      <App
+        listImportedDocuments={listNoDocuments}
+        testOllamaConnection={testOllamaConnection}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("URL local do Ollama"), {
+      target: { value: "http://127.0.0.1:11434" }
+    });
+    fireEvent.change(screen.getByLabelText("Modelo"), {
+      target: { value: "mistral" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Testar" }));
+
+    await waitFor(() => {
+      expect(testOllamaConnection).toHaveBeenCalledWith({
+        model: "mistral",
+        base_url: "http://127.0.0.1:11434"
+      });
+    });
+    expect(await screen.findByText("Ollama conectado com o modelo mistral.")).toBeInTheDocument();
+  });
+
+  it("shows an error when the Ollama connection test fails", async () => {
+    const testOllamaConnection = vi
+      .fn()
+      .mockRejectedValue(new Error("Nao foi possivel conectar ao Ollama."));
+
+    render(
+      <App
+        listImportedDocuments={listNoDocuments}
+        testOllamaConnection={testOllamaConnection}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Testar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Nao foi possivel conectar ao Ollama."
+    );
+  });
+
   it("loads persisted chunks when selecting a saved document", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [

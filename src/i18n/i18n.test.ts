@@ -63,4 +63,10 @@ describe("i18n", () => {
       "Documentos guardados"
     );
   });
+
+  it("has Ollama settings labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "settings.testOllama")).toBe("Testar");
+    expect(i18n.getResource("en", "translation", "settings.testOllama")).toBe("Test");
+    expect(i18n.getResource("es", "translation", "settings.testOllama")).toBe("Probar");
+  });
 });

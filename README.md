@@ -214,9 +214,10 @@ docs/
 ## Proximos passos
 
 1. Executar o checklist manual de aceite do MVP 0.1 em `docs/testing-strategy.md`.
-2. Testar o app empacotado fora de `tauri dev`.
-3. Evoluir a geracao de cards para fila em background com progresso por chunk.
-4. Evoluir exportacao Anki para pacote `.apkg`.
+2. Registrar o aceite final em `docs/mvp-acceptance.md`.
+3. Testar o app empacotado fora de `tauri dev`.
+4. Evoluir a geracao de cards para fila em background com progresso por chunk.
+5. Evoluir exportacao Anki para pacote `.apkg`.
 
 ## Comandos de desenvolvimento
 
@@ -225,6 +226,8 @@ npm install
 npm run test
 cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
 npm run test:e2e
+npm run check:mvp
+npm run check:mvp:env
 npm run build
 ```
 

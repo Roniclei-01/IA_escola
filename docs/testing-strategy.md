@@ -101,14 +101,16 @@ O MVP 0.1 so deve ser considerado pronto quando:
 
 ## Checklist manual de aceite do MVP 0.1
 
-Execute este roteiro no app desktop com `npm run tauri dev` antes de declarar o MVP estavel para uso real.
+Execute este roteiro no app desktop com `npm run tauri dev` e registre o resultado em `docs/mvp-acceptance.md` antes de declarar o MVP estavel para uso real.
 
 ### Preparacao
 
 - Confirmar que o Ollama esta ativo.
 - Confirmar que `ollama list` mostra `llama3.2:1b`.
 - Abrir o app e testar a conexao na secao Ollama com URL `http://127.0.0.1:11434` e modelo `llama3.2:1b`.
-- Rodar `npm run check`, `npm run build` e `npm run test:e2e`.
+- Rodar `npm run check:mvp`.
+- Rodar `npm run check:mvp:env`.
+- Gerar e testar o app empacotado com `npm run tauri build`.
 
 ### Fluxo principal com TXT
 

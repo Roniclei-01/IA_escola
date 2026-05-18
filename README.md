@@ -211,8 +211,10 @@ docs/
 
 ## Proximos passos
 
-1. Evoluir exportacao Anki para pacote `.apkg`.
-2. Adicionar cancelamento explicito de lembretes recorrentes ao desativar notificacoes.
+1. Adicionar cancelamento explicito de operacoes longas de IA e importacao.
+2. Evoluir a geracao de cards para fila em background com progresso por chunk.
+3. Evoluir exportacao Anki para pacote `.apkg`.
+4. Adicionar cancelamento explicito de lembretes recorrentes ao desativar notificacoes.
 
 ## Comandos de desenvolvimento
 

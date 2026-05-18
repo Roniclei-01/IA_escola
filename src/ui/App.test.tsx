@@ -701,6 +701,44 @@ describe("App", () => {
     expect(screen.getByText("1 card gerado")).toBeInTheDocument();
   });
 
+  it("disables card generation retry while it is running", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-retry-disabled",
+          book_id: "book-retry-disabled",
+          content: "Conteudo para retry em andamento.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/retry.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([]);
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+    const chunkTextDocument = vi.fn(
+      () =>
+        new Promise<never>(() => {
+          // Keep the operation pending so the disabled state can be asserted.
+        })
+    );
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listDocumentChunks,
+      chunkTextDocument
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
+
+    const generateButton = await screen.findByRole("button", { name: "Gerar cards" });
+    fireEvent.click(generateButton);
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Dividindo conteudo em chunks.");
+    expect(generateButton).toBeDisabled();
+  });
+
   it("collapses long imported document previews until requested", async () => {
     const longContent = `${"Conteudo extenso do PDF. ".repeat(
       60

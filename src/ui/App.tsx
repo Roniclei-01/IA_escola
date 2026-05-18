@@ -1059,9 +1059,16 @@ export function App({
     documentReviewCounts
   );
   const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
+  const isCardGenerationBusy =
+    operationStatus === "chunkingDocument" ||
+    operationStatus === "generatingCardsWithOllama" ||
+    operationStatus === "savingStudyCards";
   const generatedCardChunkIds = new Set(cards.map((card) => card.chunkId));
   const canGenerateMoreCards =
-    Boolean(document) && chunkCount !== null && cards.length > 0 && generatedCardChunkIds.size < chunkCount;
+    Boolean(document) &&
+    chunkCount !== null &&
+    cards.length > 0 &&
+    generatedCardChunkIds.size < chunkCount;
   const dueStudyQueue = buildDueStudyQueue(
     cards,
     cardReviewSchedules,
@@ -2206,6 +2213,7 @@ export function App({
               expandPreview: t("library.expandPreview"),
               collapsePreview: t("library.collapsePreview")
             }}
+            isGeneratingCards={isCardGenerationBusy}
             onGenerateCards={() => {
               void handleGenerateCardsForActiveDocument();
             }}
@@ -2217,6 +2225,7 @@ export function App({
               {canGenerateMoreCards ? (
                 <button
                   type="button"
+                  disabled={isCardGenerationBusy}
                   onClick={() => {
                     void handleGenerateMoreCardsForActiveDocument();
                   }}

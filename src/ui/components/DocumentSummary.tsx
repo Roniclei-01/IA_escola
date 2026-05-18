@@ -18,6 +18,7 @@ interface DocumentSummaryProps {
     expandPreview: string;
     collapsePreview: string;
   };
+  isGeneratingCards?: boolean;
   onGenerateCards?: () => void;
   children?: ReactNode;
 }
@@ -27,6 +28,7 @@ export function DocumentSummary({
   chunkCount,
   cardCount,
   labels,
+  isGeneratingCards = false,
   onGenerateCards,
   children
 }: DocumentSummaryProps) {
@@ -53,7 +55,7 @@ export function DocumentSummary({
       <p className="card-count">{labels.cardCount}</p>
       {cardCount === 0 && onGenerateCards ? (
         <div className="document-actions document-actions-empty">
-          <button type="button" onClick={onGenerateCards}>
+          <button type="button" disabled={isGeneratingCards} onClick={onGenerateCards}>
             {labels.generateCards}
           </button>
         </div>

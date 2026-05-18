@@ -5,6 +5,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use thiserror::Error;
 
 use crate::{
@@ -27,7 +28,7 @@ impl OllamaHttpClient {
     pub fn new(base_url: impl Into<String>) -> Self {
         Self {
             base_url: base_url.into(),
-            timeout: Duration::from_secs(30),
+            timeout: Duration::from_secs(180),
         }
     }
 
@@ -42,6 +43,8 @@ pub struct OllamaGenerateRequest {
     pub model: String,
     pub prompt: String,
     pub stream: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
@@ -212,6 +215,7 @@ where
                 model: self.config.model.clone(),
                 prompt: prompt.to_owned(),
                 stream: false,
+                format: None,
             })
             .map_err(map_client_error)?;
 
@@ -229,6 +233,7 @@ where
                 model: self.config.model.clone(),
                 prompt: build_flashcard_prompt(chunks, config),
                 stream: false,
+                format: Some("json".to_owned()),
             })
             .map_err(map_client_error)?;
 
@@ -265,9 +270,12 @@ fn build_flashcard_prompt(chunks: &[DocumentChunk], config: &FlashcardConfig) ->
         .join("\n\n");
 
     format!(
-        "Gere {cards_per_chunk} flashcard(s) por chunk em {language}. \
-Responda somente JSON valido no formato: \
-[{example}].\n\nChunks:\n{chunk_lines}",
+        "Voce gera flashcards para estudo. \
+Responda em {language}. \
+Retorne somente um array JSON valido, sem markdown e sem texto fora do JSON. \
+Crie exatamente {cards_per_chunk} card(s) por chunk. \
+Cada item deve ter este formato: {example}. \
+Use exatamente o chunk_id informado em cada chunk.\n\nChunks:\n{chunk_lines}",
         cards_per_chunk = config.cards_per_chunk,
         language = language,
         example = r#"{"chunk_id":"uuid","front":"pergunta","back":"resposta","tags":["tag"]}"#,
@@ -277,10 +285,20 @@ Responda somente JSON valido no formato: \
 
 #[derive(Deserialize)]
 struct RawFlashcard {
-    chunk_id: String,
+    #[serde(default, alias = "chunkId")]
+    chunk_id: Option<String>,
+    #[serde(default, alias = "question", alias = "pergunta")]
+    front: Option<String>,
+    #[serde(default, alias = "answer", alias = "resposta")]
+    back: Option<String>,
+    #[serde(default)]
+    tags: Vec<String>,
+}
+
+struct ParsedFlashcard {
+    chunk_id: Option<String>,
     front: String,
     back: String,
-    #[serde(default)]
     tags: Vec<String>,
 }
 
@@ -288,15 +306,22 @@ fn parse_flashcards_response(
     response: &str,
     chunks: &[DocumentChunk],
 ) -> Result<Vec<StudyCard>, ModelAdapterError> {
-    let json = extract_json_array(response).ok_or(ModelAdapterError::InvalidFlashcards)?;
-    let raw_cards: Vec<RawFlashcard> =
-        serde_json::from_str(json).map_err(|_| ModelAdapterError::InvalidFlashcards)?;
+    let raw_cards = parse_raw_flashcards_response(response)?;
     let mut cards = Vec::new();
 
     for raw_card in raw_cards {
-        let chunk = chunks
-            .iter()
-            .find(|chunk| chunk.id.to_string() == raw_card.chunk_id)
+        let matching_chunk = raw_card
+            .chunk_id
+            .as_deref()
+            .and_then(|chunk_id| chunks.iter().find(|chunk| chunk.id.to_string() == chunk_id));
+        let chunk = matching_chunk
+            .or_else(|| {
+                if chunks.len() == 1 {
+                    chunks.first()
+                } else {
+                    None
+                }
+            })
             .ok_or(ModelAdapterError::InvalidFlashcards)?;
 
         cards.push(
@@ -314,9 +339,67 @@ fn parse_flashcards_response(
     Ok(cards)
 }
 
+fn parse_raw_flashcards_response(
+    response: &str,
+) -> Result<Vec<ParsedFlashcard>, ModelAdapterError> {
+    if let Some(json) = extract_json_array(response) {
+        if let Ok(value) = serde_json::from_str(json) {
+            if let Ok(raw_cards) = raw_flashcards_from_value(&value) {
+                return Ok(raw_cards);
+            }
+        }
+    }
+
+    let json = extract_json_object(response).ok_or(ModelAdapterError::InvalidFlashcards)?;
+    let value: Value = serde_json::from_str(json).map_err(|_| ModelAdapterError::InvalidFlashcards)?;
+
+    raw_flashcards_from_value(&value)
+}
+
+fn raw_flashcards_from_value(value: &Value) -> Result<Vec<ParsedFlashcard>, ModelAdapterError> {
+    if let Some(cards) = value.as_array() {
+        return cards.iter().map(parsed_flashcard_from_value).collect();
+    }
+
+    if let Some(cards) = value.get("cards").and_then(Value::as_array) {
+        return cards.iter().map(parsed_flashcard_from_value).collect();
+    }
+
+    if let Some(cards) = value.get("flashcards").and_then(Value::as_array) {
+        return cards.iter().map(parsed_flashcard_from_value).collect();
+    }
+
+    parsed_flashcard_from_value(value).map(|card| vec![card])
+}
+
+fn parsed_flashcard_from_value(value: &Value) -> Result<ParsedFlashcard, ModelAdapterError> {
+    let raw_card: RawFlashcard =
+        serde_json::from_value(value.clone()).map_err(|_| ModelAdapterError::InvalidFlashcards)?;
+    let front = raw_card.front.ok_or(ModelAdapterError::InvalidFlashcards)?;
+    let back = raw_card.back.ok_or(ModelAdapterError::InvalidFlashcards)?;
+
+    Ok(ParsedFlashcard {
+        chunk_id: raw_card.chunk_id,
+        front,
+        back,
+        tags: raw_card.tags,
+    })
+}
+
 fn extract_json_array(response: &str) -> Option<&str> {
     let start = response.find('[')?;
     let end = response.rfind(']')?;
+
+    if start > end {
+        return None;
+    }
+
+    Some(&response[start..=end])
+}
+
+fn extract_json_object(response: &str) -> Option<&str> {
+    let start = response.find('{')?;
+    let end = response.rfind('}')?;
 
     if start > end {
         return None;
@@ -459,6 +542,115 @@ mod tests {
             .unwrap();
 
         assert_eq!(cards[0].front, "Pergunta");
+    }
+
+    #[test]
+    fn accepts_single_flashcard_json_object_response() {
+        let chunk = chunk();
+        let response = format!(
+            r#"{{"chunk_id":"{}","front":"Pergunta unica","back":"Resposta unica","tags":["ollama"]}}"#,
+            chunk.id
+        );
+        let adapter = OllamaModelAdapter::new(
+            FakeOllamaClient::available(response),
+            OllamaModelConfig {
+                model: "llama3.2:1b".to_owned(),
+            },
+        );
+
+        let cards = adapter
+            .create_flashcards(
+                &[chunk],
+                &FlashcardConfig {
+                    cards_per_chunk: 1,
+                    language: Language::Pt,
+                },
+            )
+            .unwrap();
+
+        assert_eq!(cards.len(), 1);
+        assert_eq!(cards[0].front, "Pergunta unica");
+    }
+
+    #[test]
+    fn uses_the_only_chunk_when_single_object_has_imprecise_chunk_id() {
+        let chunk = chunk();
+        let adapter = OllamaModelAdapter::new(
+            FakeOllamaClient::available(
+                r#"{"chunk_id":"chunk-1","front":"Pergunta","back":"Resposta"}"#.to_owned(),
+            ),
+            OllamaModelConfig {
+                model: "llama3.2:1b".to_owned(),
+            },
+        );
+
+        let cards = adapter
+            .create_flashcards(
+                &[chunk.clone()],
+                &FlashcardConfig {
+                    cards_per_chunk: 1,
+                    language: Language::Pt,
+                },
+            )
+            .unwrap();
+
+        assert_eq!(cards[0].chunk_id, chunk.id);
+    }
+
+    #[test]
+    fn accepts_flashcards_wrapped_in_cards_property() {
+        let chunk = chunk();
+        let response = format!(
+            r#"{{"cards":[{{"chunk_id":"{}","question":"Pergunta","answer":"Resposta"}}]}}"#,
+            chunk.id
+        );
+        let adapter = OllamaModelAdapter::new(
+            FakeOllamaClient::available(response),
+            OllamaModelConfig {
+                model: "llama3.2:1b".to_owned(),
+            },
+        );
+
+        let cards = adapter
+            .create_flashcards(
+                &[chunk],
+                &FlashcardConfig {
+                    cards_per_chunk: 1,
+                    language: Language::Pt,
+                },
+            )
+            .unwrap();
+
+        assert_eq!(cards[0].front, "Pergunta");
+        assert_eq!(cards[0].back, "Resposta");
+    }
+
+    #[test]
+    fn accepts_flashcards_wrapped_in_flashcards_property_with_portuguese_fields() {
+        let chunk = chunk();
+        let response = format!(
+            r#"{{"flashcards":[{{"chunkId":"{}","pergunta":"Pergunta PT","resposta":"Resposta PT"}}]}}"#,
+            chunk.id
+        );
+        let adapter = OllamaModelAdapter::new(
+            FakeOllamaClient::available(response),
+            OllamaModelConfig {
+                model: "llama3.2:1b".to_owned(),
+            },
+        );
+
+        let cards = adapter
+            .create_flashcards(
+                &[chunk],
+                &FlashcardConfig {
+                    cards_per_chunk: 1,
+                    language: Language::Pt,
+                },
+            )
+            .unwrap();
+
+        assert_eq!(cards[0].front, "Pergunta PT");
+        assert_eq!(cards[0].back, "Resposta PT");
     }
 
     #[test]

@@ -3,9 +3,9 @@ import type { StudyCard } from "../../domain/model-adapter";
 import type { ImportedDocumentChunk } from "./chunk-text-document";
 import { toStudyCard, type PersistedStudyCard } from "./study-cards";
 
-const DEFAULT_CARD_GENERATION_TIMEOUT_MS = 60000;
+const DEFAULT_CARD_GENERATION_TIMEOUT_MS = 180000;
 const CARD_GENERATION_TIMEOUT_MESSAGE =
-  "A geracao de cards demorou demais. Tente gerar menos cards ou usar um modelo menor.";
+  "A geracao de cards demorou demais. Tente novamente ou use um trecho menor.";
 
 export interface GenerateStudyCardsRequest {
   chunks: ImportedDocumentChunk[];

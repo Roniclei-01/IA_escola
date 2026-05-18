@@ -298,7 +298,7 @@ describe("generateStudyCardsWithOllama", () => {
 
     const result = generateStudyCardsWithOllama([chunk], { timeoutMs: 1000 });
     const expectation = expect(result).rejects.toThrow(
-      "A geracao de cards demorou demais. Tente gerar menos cards ou usar um modelo menor."
+      "A geracao de cards demorou demais. Tente novamente ou use um trecho menor."
     );
 
     await vi.advanceTimersByTimeAsync(1000);

@@ -34,7 +34,7 @@ O usuario deve conseguir estudar a partir de livros e materiais proprios, manten
 
 O primeiro MVP deve validar o fluxo mais importante do produto:
 
-1. importar arquivo `.txt`;
+1. importar arquivo `.txt` ou `.pdf`;
 2. extrair texto;
 3. dividir conteudo em chunks;
 4. gerar flashcards usando um adaptador de IA;
@@ -53,10 +53,10 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - contrato `ModelAdapter`;
 - caso de uso `generate_flashcards`;
 - `MockModelAdapter` no frontend para testes previsiveis;
-- parser de `.txt` no backend Tauri;
+- parser de `.txt` e `.pdf` no backend Tauri;
 - comando Tauri `import_text_book`;
 - ponte TypeScript `importTextBook`;
-- UI minima para informar o caminho de um `.txt`, importar e exibir previa;
+- UI minima para informar o caminho de um arquivo de estudo, importar e exibir previa;
 - comando Tauri `chunk_text_document`;
 - ponte TypeScript `chunkTextDocument`;
 - exibicao da quantidade de chunks gerados apos importacao;
@@ -92,7 +92,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 
 ### Fase inicial
 
-- Importacao de `.txt`.
+- Importacao de `.txt` e `.pdf`.
 - Chunking por tamanho e marcadores simples.
 - Geracao de flashcards.
 - Persistencia local em SQLite.
@@ -102,7 +102,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 
 ### Fase de expansao
 
-- Importacao de PDF e EPUB.
+- Importacao de EPUB e melhorias para PDFs digitalizados.
 - Exercicios de multipla escolha e perguntas abertas.
 - Resumo por capitulo.
 - Revisao espacada.
@@ -160,9 +160,9 @@ docs/
 
 ## Proximos passos
 
-1. Preparar importacao de PDF como proxima expansao de parser.
-2. Evoluir revisao dos cards com marcacao de acerto, erro e dificuldade.
-3. Melhorar a selecao de arquivos com dialog nativo do Tauri.
+1. Evoluir revisao dos cards com marcacao de acerto, erro e dificuldade.
+2. Melhorar a selecao de arquivos com dialog nativo do Tauri.
+3. Adicionar metadados de origem para diferenciar livros TXT e PDF.
 
 ## Comandos de desenvolvimento
 

@@ -10,8 +10,8 @@ export const resources = {
         summary: "Base inicial do aplicativo local-first para importar materiais, gerar flashcards e estudar com IA local."
       },
       library: {
-        status: "Importacao TXT",
-        filePathLabel: "Caminho do arquivo .txt",
+        status: "Importacao TXT/PDF",
+        filePathLabel: "Caminho do arquivo .txt ou .pdf",
         filePathPlaceholder: "/home/usuario/livro.txt",
         import: "Importar",
         importing: "Importando",
@@ -22,7 +22,7 @@ export const resources = {
         loadingSavedCards: "Carregando cards salvos.",
         mockGenerationFallback:
           "Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento.",
-        emptyPath: "Informe o caminho do arquivo .txt.",
+        emptyPath: "Informe o caminho do arquivo .txt ou .pdf.",
         unknownError: "Nao foi possivel importar o arquivo.",
         savedDocuments: "Documentos salvos",
         loadingSavedDocuments: "Carregando documentos salvos",
@@ -64,8 +64,8 @@ export const resources = {
         summary: "Initial local-first app foundation to import materials, generate flashcards and study with local AI."
       },
       library: {
-        status: "TXT import",
-        filePathLabel: "Text file path",
+        status: "TXT/PDF import",
+        filePathLabel: "Study file path",
         filePathPlaceholder: "/home/user/book.txt",
         import: "Import",
         importing: "Importing",
@@ -76,7 +76,7 @@ export const resources = {
         loadingSavedCards: "Loading saved cards.",
         mockGenerationFallback:
           "Ollama failed. Mock cards were generated for development only.",
-        emptyPath: "Enter a .txt file path.",
+        emptyPath: "Enter a .txt or .pdf file path.",
         unknownError: "Could not import the file.",
         savedDocuments: "Saved documents",
         loadingSavedDocuments: "Loading saved documents",
@@ -118,8 +118,8 @@ export const resources = {
         summary: "Base inicial de la aplicacion local-first para importar materiales, generar tarjetas y estudiar con IA local."
       },
       library: {
-        status: "Importacion TXT",
-        filePathLabel: "Ruta del archivo .txt",
+        status: "Importacion TXT/PDF",
+        filePathLabel: "Ruta del archivo .txt o .pdf",
         filePathPlaceholder: "/home/usuario/libro.txt",
         import: "Importar",
         importing: "Importando",
@@ -130,7 +130,7 @@ export const resources = {
         loadingSavedCards: "Cargando cards guardados.",
         mockGenerationFallback:
           "Ollama fallo. Se generaron cards mockados solo para desarrollo.",
-        emptyPath: "Informe la ruta del archivo .txt.",
+        emptyPath: "Informe la ruta del archivo .txt o .pdf.",
         unknownError: "No fue posible importar el archivo.",
         savedDocuments: "Documentos guardados",
         loadingSavedDocuments: "Cargando documentos guardados",

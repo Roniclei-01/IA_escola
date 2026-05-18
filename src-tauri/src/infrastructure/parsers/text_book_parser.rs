@@ -1,17 +1,20 @@
 use std::{fs, path::Path};
 
+use lopdf::Document as PdfDocument;
 use thiserror::Error;
 
 use crate::domain::{Document, DocumentError, Language};
 
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum TextBookParserError {
-    #[error("only .txt files are supported")]
+    #[error("only .txt and .pdf files are supported")]
     UnsupportedExtension,
-    #[error("text file does not exist")]
+    #[error("study file does not exist")]
     FileNotFound,
-    #[error("failed to read text file")]
+    #[error("failed to read study file")]
     ReadFailed,
+    #[error("failed to extract text from pdf")]
+    PdfReadFailed,
     #[error(transparent)]
     InvalidDocument(#[from] DocumentError),
 }
@@ -32,19 +35,32 @@ pub fn parse_text_book(
         .and_then(|value| value.to_str())
         .map(str::to_ascii_lowercase);
 
-    if extension.as_deref() != Some("txt") {
-        return Err(TextBookParserError::UnsupportedExtension);
-    }
-
-    let content = fs::read_to_string(path).map_err(|_| TextBookParserError::ReadFailed)?;
+    let content = match extension.as_deref() {
+        Some("txt") => fs::read_to_string(path).map_err(|_| TextBookParserError::ReadFailed)?,
+        Some("pdf") => extract_pdf_text(path)?,
+        _ => return Err(TextBookParserError::UnsupportedExtension),
+    };
 
     Document::new(book_id, content, language).map_err(TextBookParserError::InvalidDocument)
+}
+
+fn extract_pdf_text(path: &Path) -> Result<String, TextBookParserError> {
+    let document = PdfDocument::load(path).map_err(|_| TextBookParserError::PdfReadFailed)?;
+    let page_numbers = document.get_pages().keys().copied().collect::<Vec<_>>();
+
+    document
+        .extract_text(&page_numbers)
+        .map_err(|_| TextBookParserError::PdfReadFailed)
 }
 
 #[cfg(test)]
 mod tests {
     use std::{fs, path::PathBuf};
 
+    use lopdf::{
+        content::{Content, Operation},
+        dictionary, Document as PdfDocument, Object, Stream,
+    };
     use tempfile::TempDir;
     use uuid::Uuid;
 
@@ -71,9 +87,23 @@ mod tests {
     }
 
     #[test]
+    fn parses_pdf_file_into_document() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("book.pdf");
+        write_pdf_file(&path, "Conteudo PDF importado.");
+        let book_id = Uuid::new_v4();
+
+        let document = parse_text_book(book_id, path, Language::Pt).unwrap();
+
+        assert_eq!(document.book_id, book_id);
+        assert!(document.content.contains("Conteudo PDF importado."));
+        assert_eq!(document.language, Language::Pt);
+    }
+
+    #[test]
     fn rejects_non_txt_file() {
         let dir = TempDir::new().unwrap();
-        let path = write_temp_file(&dir, "book.pdf", "conteudo");
+        let path = write_temp_file(&dir, "book.md", "conteudo");
 
         let result = parse_text_book(Uuid::new_v4(), path, Language::Pt);
 
@@ -97,6 +127,16 @@ mod tests {
     }
 
     #[test]
+    fn rejects_pdf_without_extractable_text() {
+        let dir = TempDir::new().unwrap();
+        let path = write_temp_file(&dir, "empty.pdf", "%PDF-1.4");
+
+        let result = parse_text_book(Uuid::new_v4(), path, Language::Pt);
+
+        assert_eq!(result.unwrap_err(), TextBookParserError::PdfReadFailed);
+    }
+
+    #[test]
     fn rejects_missing_file() {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("missing.txt");
@@ -104,5 +144,54 @@ mod tests {
         let result = parse_text_book(Uuid::new_v4(), path, Language::Pt);
 
         assert_eq!(result.unwrap_err(), TextBookParserError::FileNotFound);
+    }
+
+    fn write_pdf_file(path: &PathBuf, text: &str) {
+        let mut document = PdfDocument::with_version("1.5");
+        let pages_id = document.new_object_id();
+        let font_id = document.add_object(dictionary! {
+            "Type" => "Font",
+            "Subtype" => "Type1",
+            "BaseFont" => "Helvetica"
+        });
+        let content = Content {
+            operations: vec![
+                Operation::new("BT", vec![]),
+                Operation::new(
+                    "Tf",
+                    vec![Object::Name(b"F1".to_vec()), Object::Integer(12)],
+                ),
+                Operation::new("Td", vec![Object::Integer(72), Object::Integer(720)]),
+                Operation::new("Tj", vec![Object::string_literal(text)]),
+                Operation::new("ET", vec![]),
+            ],
+        };
+        let content_id =
+            document.add_object(Stream::new(dictionary! {}, content.encode().unwrap()));
+        let page_id = document.add_object(dictionary! {
+            "Type" => "Page",
+            "Parent" => pages_id,
+            "MediaBox" => vec![0.into(), 0.into(), 612.into(), 792.into()],
+            "Contents" => content_id,
+            "Resources" => dictionary! {
+                "Font" => dictionary! {
+                    "F1" => font_id
+                }
+            }
+        });
+        document.objects.insert(
+            pages_id,
+            Object::Dictionary(dictionary! {
+                "Type" => "Pages",
+                "Kids" => vec![page_id.into()],
+                "Count" => 1
+            }),
+        );
+        let catalog_id = document.add_object(dictionary! {
+            "Type" => "Catalog",
+            "Pages" => pages_id
+        });
+        document.trailer.set("Root", catalog_id);
+        document.save(path).unwrap();
     }
 }

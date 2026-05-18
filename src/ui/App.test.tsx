@@ -251,7 +251,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
@@ -316,7 +316,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
@@ -367,7 +367,7 @@ describe("App", () => {
       enableDevelopmentFallback: true
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
@@ -442,7 +442,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
@@ -469,7 +469,7 @@ describe("App", () => {
       listStudyCards: listNoStudyCards
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
       target: { value: "/tmp/missing.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
@@ -492,7 +492,7 @@ describe("App", () => {
       saveStudyCards: saveCards
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
@@ -529,7 +529,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
       target: { value: "/tmp/book.txt" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));

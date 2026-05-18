@@ -62,11 +62,12 @@ pub fn import_text_book(
 fn format_parser_error(error: TextBookParserError) -> String {
     match error {
         TextBookParserError::UnsupportedExtension => {
-            "Apenas arquivos .txt sao suportados.".to_owned()
+            "Apenas arquivos .txt e .pdf sao suportados.".to_owned()
         }
-        TextBookParserError::FileNotFound => "Arquivo de texto nao encontrado.".to_owned(),
-        TextBookParserError::ReadFailed => "Nao foi possivel ler o arquivo de texto.".to_owned(),
-        TextBookParserError::InvalidDocument(_) => "O arquivo de texto esta vazio.".to_owned(),
+        TextBookParserError::FileNotFound => "Arquivo de estudo nao encontrado.".to_owned(),
+        TextBookParserError::ReadFailed => "Nao foi possivel ler o arquivo de estudo.".to_owned(),
+        TextBookParserError::PdfReadFailed => "Nao foi possivel extrair texto do PDF.".to_owned(),
+        TextBookParserError::InvalidDocument(_) => "O arquivo de estudo esta vazio.".to_owned(),
     }
 }
 
@@ -96,21 +97,25 @@ mod tests {
     fn formats_parser_errors_for_ui() {
         assert_eq!(
             format_parser_error(TextBookParserError::UnsupportedExtension),
-            "Apenas arquivos .txt sao suportados."
+            "Apenas arquivos .txt e .pdf sao suportados."
         );
         assert_eq!(
             format_parser_error(TextBookParserError::FileNotFound),
-            "Arquivo de texto nao encontrado."
+            "Arquivo de estudo nao encontrado."
         );
         assert_eq!(
             format_parser_error(TextBookParserError::ReadFailed),
-            "Nao foi possivel ler o arquivo de texto."
+            "Nao foi possivel ler o arquivo de estudo."
+        );
+        assert_eq!(
+            format_parser_error(TextBookParserError::PdfReadFailed),
+            "Nao foi possivel extrair texto do PDF."
         );
         assert_eq!(
             format_parser_error(TextBookParserError::InvalidDocument(
                 DocumentError::EmptyContent
             )),
-            "O arquivo de texto esta vazio."
+            "O arquivo de estudo esta vazio."
         );
     }
 

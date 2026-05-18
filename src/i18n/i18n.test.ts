@@ -18,6 +18,18 @@ describe("i18n", () => {
     expect(i18n.getResource("es", "translation", "library.import")).toBe("Importar");
   });
 
+  it("has supported file labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "library.filePathLabel")).toBe(
+      "Caminho do arquivo .txt ou .pdf"
+    );
+    expect(i18n.getResource("en", "translation", "library.filePathLabel")).toBe(
+      "Study file path"
+    );
+    expect(i18n.getResource("es", "translation", "library.filePathLabel")).toBe(
+      "Ruta del archivo .txt o .pdf"
+    );
+  });
+
   it("has chunk count labels in every supported language", () => {
     expect(i18n.getResource("pt", "translation", "library.chunkCount_one")).toBe(
       "{{count}} chunk gerado"

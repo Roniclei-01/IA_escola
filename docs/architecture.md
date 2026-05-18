@@ -79,7 +79,7 @@ Implementa detalhes externos ao dominio.
 Componentes:
 
 - `SQLiteStorage`.
-- `TextBookParser`.
+- `TextBookParser` para `.txt` e `.pdf`.
 - `PdfBookParser` em fase posterior.
 - `EpubBookParser` em fase posterior.
 - `OllamaModelAdapter`.
@@ -171,7 +171,7 @@ Detalhes estao em `docs/testing-strategy.md`.
 
 ### Etapa 2: MVP 0.1
 
-- Importar `.txt`.
+- Importar `.txt` e `.pdf`.
 - Criar chunks.
 - Gerar flashcards com `MockModelAdapter` nos testes.
 - Integrar Ollama.
@@ -180,7 +180,7 @@ Detalhes estao em `docs/testing-strategy.md`.
 
 ### Etapa 3: Conteudo rico
 
-- Adicionar PDF.
+- Melhorar suporte a PDFs com metadados, paginacao e PDFs digitalizados.
 - Adicionar EPUB.
 - Criar resumos e exercicios.
 - Melhorar prompts e validacao de saida da IA.

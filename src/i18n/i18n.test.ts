@@ -76,6 +76,9 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.reviewSaveError")).toBe(
       "Nao foi possivel salvar a revisao do card."
     );
+    expect(i18n.getResource("pt", "translation", "study.reviewSchedule")).toBe(
+      "Proxima revisao: {{nextReviewAt}} | Prioridade: {{priority}}"
+    );
   });
 
   it("has saved document labels in every supported language", () => {

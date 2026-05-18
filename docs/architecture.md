@@ -136,6 +136,7 @@ Tabelas ja iniciadas:
 - `app_settings`.
 
 `documents` guarda tambem `source_type` e `source_path`, permitindo diferenciar TXT/PDF, mostrar origem na UI e preparar filtros futuros.
+`study_reviews` guarda `rating`, `priority` e `next_review_at`, formando a base para revisao espacada e filas de estudo por prioridade.
 
 Tabelas futuras:
 

@@ -11,7 +11,9 @@ const listNoStudyReviews = vi.fn().mockResolvedValue([]);
 const saveStudyReview = vi.fn().mockResolvedValue({
   id: "review-1",
   card_id: "card-1",
-  rating: "easy"
+  rating: "easy",
+  priority: 20,
+  next_review_at: 1700604800
 });
 const selectNoFile = vi.fn().mockResolvedValue(null);
 const saveCards = vi.fn().mockImplementation(async (cards: unknown[]) => cards);
@@ -231,7 +233,9 @@ describe("App", () => {
       {
         id: "review-1",
         card_id: "card-saved",
-        rating: "hard"
+        rating: "hard",
+        priority: 70,
+        next_review_at: 1700086400
       }
     ]);
 
@@ -254,6 +258,7 @@ describe("App", () => {
     expect(await screen.findByText("Pergunta persistida")).toBeInTheDocument();
     expect(screen.getByText("1 card gerado")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dificil" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(/Prioridade: 70/)).toBeInTheDocument();
   });
 
   it("imports a text book from a file path", async () => {
@@ -556,7 +561,9 @@ describe("App", () => {
     const saveStudyReview = vi.fn().mockResolvedValue({
       id: "review-1",
       card_id: "card-1",
-      rating: "easy"
+      rating: "easy",
+      priority: 20,
+      next_review_at: 1700604800
     });
 
     renderApp({
@@ -585,6 +592,9 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Dificil" }));
 
+    await waitFor(() => {
+      expect(saveStudyReview).toHaveBeenCalledWith("card-2", "hard");
+    });
     expect(screen.getByText("Card 2 de 2")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dificil" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Acertos: 1 | Erros: 0 | Dificeis: 1")).toBeInTheDocument();

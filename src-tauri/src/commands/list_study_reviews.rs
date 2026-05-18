@@ -63,5 +63,7 @@ mod tests {
         let response = list_study_reviews_from_storage(document_id, &storage).unwrap();
 
         assert_eq!(response.reviews, vec![review]);
+        assert_eq!(response.reviews[0].priority, 20);
+        assert!(response.reviews[0].next_review_at > 0);
     }
 }

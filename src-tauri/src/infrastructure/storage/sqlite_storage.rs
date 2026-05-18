@@ -59,6 +59,8 @@ pub enum StorageError {
     InvalidStudyReviewCardId(#[source] uuid::Error),
     #[error("stored study review has invalid rating")]
     InvalidStudyReviewRating(String),
+    #[error("stored study review priority is invalid")]
+    InvalidStudyReviewPriority(i64),
     #[error("stored document has invalid language")]
     InvalidLanguage(String),
     #[error("stored document has invalid source type")]
@@ -313,12 +315,15 @@ impl SQLiteStorage {
     pub fn save_study_review(&self, review: &StudyReview) -> Result<(), StorageError> {
         self.connection
             .execute(
-                "INSERT OR REPLACE INTO study_reviews (id, card_id, rating)
-                 VALUES (?1, ?2, ?3)",
+                "INSERT OR REPLACE INTO study_reviews
+                    (id, card_id, rating, priority, next_review_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![
                     review.id.to_string(),
                     review.card_id.to_string(),
                     rating_to_code(&review.rating),
+                    review.priority,
+                    review.next_review_at,
                 ],
             )
             .map_err(StorageError::SaveStudyReviewFailed)?;
@@ -335,7 +340,9 @@ impl SQLiteStorage {
             .prepare(
                 "SELECT study_reviews.id,
                         study_reviews.card_id,
-                        study_reviews.rating
+                        study_reviews.rating,
+                        study_reviews.priority,
+                        study_reviews.next_review_at
                  FROM study_reviews
                  INNER JOIN study_cards ON study_cards.id = study_reviews.card_id
                  INNER JOIN document_chunks ON document_chunks.id = study_cards.chunk_id
@@ -350,6 +357,8 @@ impl SQLiteStorage {
                     id: row.get(0)?,
                     card_id: row.get(1)?,
                     rating: row.get(2)?,
+                    priority: row.get(3)?,
+                    next_review_at: row.get(4)?,
                 })
             })
             .map_err(StorageError::ListStudyReviewsFailed)?;
@@ -432,6 +441,8 @@ impl SQLiteStorage {
                     id TEXT PRIMARY KEY NOT NULL,
                     card_id TEXT NOT NULL,
                     rating TEXT NOT NULL,
+                    priority INTEGER NOT NULL DEFAULT 50,
+                    next_review_at INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -443,7 +454,8 @@ impl SQLiteStorage {
             )
             .map_err(StorageError::MigrationFailed)?;
 
-        self.ensure_documents_metadata_columns()
+        self.ensure_documents_metadata_columns()?;
+        self.ensure_study_review_schedule_columns()
     }
 
     fn ensure_documents_metadata_columns(&self) -> Result<(), StorageError> {
@@ -460,6 +472,28 @@ impl SQLiteStorage {
             self.connection
                 .execute(
                     "ALTER TABLE documents ADD COLUMN source_path TEXT NOT NULL DEFAULT ''",
+                    [],
+                )
+                .map_err(StorageError::MigrationFailed)?;
+        }
+
+        Ok(())
+    }
+
+    fn ensure_study_review_schedule_columns(&self) -> Result<(), StorageError> {
+        if !self.has_column("study_reviews", "priority")? {
+            self.connection
+                .execute(
+                    "ALTER TABLE study_reviews ADD COLUMN priority INTEGER NOT NULL DEFAULT 50",
+                    [],
+                )
+                .map_err(StorageError::MigrationFailed)?;
+        }
+
+        if !self.has_column("study_reviews", "next_review_at")? {
+            self.connection
+                .execute(
+                    "ALTER TABLE study_reviews ADD COLUMN next_review_at INTEGER NOT NULL DEFAULT 0",
                     [],
                 )
                 .map_err(StorageError::MigrationFailed)?;
@@ -518,6 +552,8 @@ struct RawStudyReview {
     id: String,
     card_id: String,
     rating: String,
+    priority: i64,
+    next_review_at: i64,
 }
 
 impl TryFrom<RawDocument> for Document {
@@ -576,11 +612,16 @@ impl TryFrom<RawStudyReview> for StudyReview {
     type Error = StorageError;
 
     fn try_from(raw: RawStudyReview) -> Result<Self, Self::Error> {
+        let priority = u8::try_from(raw.priority)
+            .map_err(|_| StorageError::InvalidStudyReviewPriority(raw.priority))?;
+
         Ok(Self {
             id: Uuid::parse_str(&raw.id).map_err(StorageError::InvalidStudyReviewId)?,
             card_id: Uuid::parse_str(&raw.card_id)
                 .map_err(StorageError::InvalidStudyReviewCardId)?,
             rating: rating_from_code(&raw.rating)?,
+            priority,
+            next_review_at: raw.next_review_at,
         })
     }
 }
@@ -935,6 +976,80 @@ mod tests {
         let reviews = storage.list_study_reviews_by_document(document_id).unwrap();
 
         assert_eq!(reviews, vec![review]);
+    }
+
+    #[test]
+    fn migrates_existing_study_reviews_table_with_schedule_metadata() {
+        let dir = TempDir::new().unwrap();
+        let database_path = dir.path().join("app.db");
+        let review_id = Uuid::new_v4();
+        let card_id = Uuid::new_v4();
+        {
+            let connection = Connection::open(&database_path).unwrap();
+            connection
+                .execute_batch(&format!(
+                    "CREATE TABLE documents (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        book_id TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        language TEXT NOT NULL,
+                        source_type TEXT NOT NULL DEFAULT 'txt',
+                        source_path TEXT NOT NULL DEFAULT '',
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE document_chunks (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        book_id TEXT NOT NULL,
+                        document_id TEXT NOT NULL,
+                        position INTEGER NOT NULL,
+                        content TEXT NOT NULL,
+                        token_estimate INTEGER NOT NULL,
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE study_cards (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        book_id TEXT NOT NULL,
+                        chunk_id TEXT NOT NULL,
+                        front TEXT NOT NULL,
+                        back TEXT NOT NULL,
+                        tags TEXT NOT NULL,
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE study_reviews (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        card_id TEXT NOT NULL,
+                        rating TEXT NOT NULL,
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    INSERT INTO documents (id, book_id, content, language)
+                    VALUES ('{document_id}', '{book_id}', 'Conteudo', 'pt');
+                    INSERT INTO document_chunks (id, book_id, document_id, position, content, token_estimate)
+                    VALUES ('{chunk_id}', '{book_id}', '{document_id}', 0, 'Chunk', 1);
+                    INSERT INTO study_cards (id, book_id, chunk_id, front, back, tags)
+                    VALUES ('{card_id}', '{book_id}', '{chunk_id}', 'Pergunta', 'Resposta', '[]');
+                    INSERT INTO study_reviews (id, card_id, rating)
+                    VALUES ('{review_id}', '{card_id}', 'easy');",
+                    book_id = Uuid::new_v4(),
+                    document_id = Uuid::new_v4(),
+                    chunk_id = Uuid::new_v4(),
+                    card_id = card_id,
+                    review_id = review_id
+                ))
+                .unwrap();
+        }
+
+        let storage = SQLiteStorage::open(&database_path).unwrap();
+
+        let review_count: i64 = storage
+            .connection
+            .query_row("SELECT COUNT(*) FROM study_reviews", [], |row| row.get(0))
+            .unwrap();
+
+        assert_eq!(review_count, 1);
+        assert!(storage.has_column("study_reviews", "priority").unwrap());
+        assert!(storage
+            .has_column("study_reviews", "next_review_at")
+            .unwrap());
     }
 
     #[test]

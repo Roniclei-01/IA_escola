@@ -336,11 +336,16 @@ h1 {
   margin: 8px 0 0;
 }
 
-.review-summary {
+.review-summary,
+.review-schedule {
   margin: 12px 0 0;
   color: #526256;
   font-size: 0.9rem;
   font-weight: 700;
+}
+
+.review-schedule {
+  color: #3b315f;
 }
 
 .card-front {

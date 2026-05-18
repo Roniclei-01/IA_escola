@@ -7,6 +7,7 @@ interface StudyCardViewerProps {
   isAnswerVisible: boolean;
   isNextDisabled: boolean;
   selectedReview: CardReview | null;
+  reviewSchedule: string | null;
   labels: {
     title: string;
     progress: string;
@@ -27,6 +28,7 @@ export function StudyCardViewer({
   isAnswerVisible,
   isNextDisabled,
   selectedReview,
+  reviewSchedule,
   labels,
   onRevealAnswer,
   onNextCard,
@@ -39,6 +41,7 @@ export function StudyCardViewer({
         <span>{labels.progress}</span>
       </div>
       <p className="review-summary">{labels.reviewSummary}</p>
+      {reviewSchedule ? <p className="review-schedule">{reviewSchedule}</p> : null}
       <p className="card-front">{card.front}</p>
       {isAnswerVisible ? <p className="card-back">{card.back}</p> : null}
       <div className="review-actions" aria-label={labels.reviewSummary}>

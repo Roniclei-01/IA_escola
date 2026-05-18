@@ -29,6 +29,7 @@ import {
 import {
   listStudyReviews as defaultListStudyReviews,
   saveStudyReview as defaultSaveStudyReview,
+  type StudyReview,
   type StudyReviewRating
 } from "../infrastructure/tauri/study-reviews";
 import { selectStudyFile as defaultSelectStudyFile } from "../infrastructure/tauri/file-dialog";
@@ -57,10 +58,8 @@ interface AppProps {
   generateCards?: (chunks: ImportedDocumentChunk[]) => Promise<StudyCard[]>;
   saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
   listStudyCards?: (documentId: string) => Promise<StudyCard[]>;
-  saveStudyReview?: (cardId: string, rating: StudyReviewRating) => Promise<unknown>;
-  listStudyReviews?: (
-    documentId: string
-  ) => Promise<Array<{ card_id: string; rating: StudyReviewRating }>>;
+  saveStudyReview?: (cardId: string, rating: StudyReviewRating) => Promise<StudyReview>;
+  listStudyReviews?: (documentId: string) => Promise<StudyReview[]>;
   selectStudyFile?: () => Promise<string | null>;
   testOllamaConnection?: (request: {
     model: string;
@@ -87,6 +86,21 @@ function toCardReviewMap(
   }, {});
 }
 
+function toCardReviewScheduleMap(
+  reviews: StudyReview[]
+): Record<string, { priority: number; nextReviewAt: number }> {
+  return reviews.reduce<Record<string, { priority: number; nextReviewAt: number }>>(
+    (scheduleMap, review) => {
+      scheduleMap[review.card_id] = {
+        priority: review.priority,
+        nextReviewAt: review.next_review_at
+      };
+      return scheduleMap;
+    },
+    {}
+  );
+}
+
 function getSourceTypeLabel(
   sourceType: ImportTextBookResponse["source_type"] | undefined,
   t: ReturnType<typeof useTranslation>["t"]
@@ -96,6 +110,13 @@ function getSourceTypeLabel(
   }
 
   return t("library.sourceTxt");
+}
+
+function formatNextReview(timestampSeconds: number): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date(timestampSeconds * 1000));
 }
 
 export function App({
@@ -128,12 +149,16 @@ export function App({
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
   const [cardReviews, setCardReviews] = useState<Record<string, CardReview>>({});
+  const [cardReviewSchedules, setCardReviewSchedules] = useState<
+    Record<string, { priority: number; nextReviewAt: number }>
+  >({});
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://127.0.0.1:11434");
   const [ollamaModel, setOllamaModel] = useState("llama3.2");
   const [isTestingOllama, setIsTestingOllama] = useState(false);
   const [ollamaStatus, setOllamaStatus] = useState<string | null>(null);
 
   const activeCard = cards[activeCardIndex] ?? null;
+  const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
   const reviewCounts = Object.values(cardReviews).reduce(
     (counts, review) => ({
       ...counts,
@@ -235,6 +260,7 @@ export function App({
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
     setCardReviews({});
+    setCardReviewSchedules({});
 
     try {
       const importedDocument = await importTextBook(trimmedPath);
@@ -252,6 +278,7 @@ export function App({
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
+      setCardReviewSchedules({});
     } catch (unknownError) {
       setDocument(null);
       setChunkCount(null);
@@ -259,6 +286,7 @@ export function App({
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
+      setCardReviewSchedules({});
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
       setIsImporting(false);
@@ -273,6 +301,7 @@ export function App({
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
     setCardReviews({});
+    setCardReviewSchedules({});
     setError(null);
     setWarning(null);
     setOperationStatus("loadingSavedCards");
@@ -287,6 +316,7 @@ export function App({
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
         setCardReviews(toCardReviewMap(persistedReviews));
+        setCardReviewSchedules(toCardReviewScheduleMap(persistedReviews));
         setOperationStatus(null);
         return;
       }
@@ -304,6 +334,7 @@ export function App({
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
+      setCardReviewSchedules({});
       setOperationStatus(null);
     } catch (unknownError) {
       setChunkCount(null);
@@ -311,6 +342,7 @@ export function App({
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
+      setCardReviewSchedules({});
       setOperationStatus(null);
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     }
@@ -377,7 +409,14 @@ export function App({
     }
 
     try {
-      await saveStudyReview(reviewedCard.id, review);
+      const savedReview = await saveStudyReview(reviewedCard.id, review);
+      setCardReviewSchedules((currentSchedules) => ({
+        ...currentSchedules,
+        [reviewedCard.id]: {
+          priority: savedReview.priority,
+          nextReviewAt: savedReview.next_review_at
+        }
+      }));
     } catch {
       setError(t("study.reviewSaveError"));
     }
@@ -485,6 +524,14 @@ export function App({
                 isAnswerVisible={isAnswerVisible}
                 isNextDisabled={activeCardIndex >= cards.length - 1}
                 selectedReview={cardReviews[activeCard.id] ?? null}
+                reviewSchedule={
+                  activeReviewSchedule
+                    ? t("study.reviewSchedule", {
+                        priority: activeReviewSchedule.priority,
+                        nextReviewAt: formatNextReview(activeReviewSchedule.nextReviewAt)
+                      })
+                    : null
+                }
                 labels={{
                   title: t("study.title"),
                   progress: t("study.progress", {

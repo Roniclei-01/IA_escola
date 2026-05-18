@@ -6,6 +6,8 @@ export interface StudyReview {
   id: string;
   card_id: string;
   rating: StudyReviewRating;
+  priority: number;
+  next_review_at: number;
 }
 
 export interface SaveStudyReviewResponse {

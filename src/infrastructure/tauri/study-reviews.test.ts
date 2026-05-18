@@ -18,7 +18,9 @@ describe("study review Tauri bridge", () => {
       review: {
         id: "review-1",
         card_id: "card-1",
-        rating: "easy"
+        rating: "easy",
+        priority: 20,
+        next_review_at: 1700604800
       }
     });
 
@@ -37,9 +39,11 @@ describe("study review Tauri bridge", () => {
     invokeMock.mockResolvedValue({
       reviews: [
         {
-          id: "review-1",
-          card_id: "card-1",
-          rating: "hard"
+        id: "review-1",
+        card_id: "card-1",
+        rating: "hard",
+        priority: 70,
+        next_review_at: 1700086400
         }
       ]
     });

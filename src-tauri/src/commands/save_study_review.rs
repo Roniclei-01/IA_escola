@@ -82,6 +82,8 @@ mod tests {
 
         assert_eq!(response.review.card_id, card.id);
         assert_eq!(response.review.rating, StudyReviewRating::Hard);
+        assert_eq!(response.review.priority, 70);
+        assert!(response.review.next_review_at > 0);
         assert_eq!(
             storage.list_study_reviews_by_document(document_id).unwrap(),
             vec![response.review]

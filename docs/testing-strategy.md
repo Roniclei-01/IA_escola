@@ -63,6 +63,7 @@ Fluxos minimos do MVP:
 - gerar flashcards;
 - estudar primeiro card;
 - marcar card como erro, dificil ou acerto;
+- validar prioridade e proxima revisao calculadas a partir da marcacao;
 - fechar e abrir app mantendo dados salvos.
 
 ## Adaptadores de teste

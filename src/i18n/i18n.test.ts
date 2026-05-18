@@ -127,6 +127,9 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.goalNotificationToggle")).toBe(
       "Ativar lembretes de meta"
     );
+    expect(i18n.getResource("pt", "translation", "study.goalNotificationTimeLabel")).toBe(
+      "Horario do lembrete"
+    );
     expect(i18n.getResource("pt", "translation", "study.sessionTrendTitle")).toBe(
       "Tendencia por sessao"
     );

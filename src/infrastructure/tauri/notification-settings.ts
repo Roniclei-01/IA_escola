@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 export interface NotificationSettings {
   study_goal_reminders_enabled: boolean;
+  study_goal_reminder_time: string;
 }
 
 export async function loadNotificationSettings(): Promise<NotificationSettings> {

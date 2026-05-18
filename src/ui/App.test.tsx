@@ -39,7 +39,8 @@ const loadDefaultOllamaSettings = vi.fn().mockResolvedValue({
 });
 const saveOllamaSettings = vi.fn().mockImplementation(async (settings: unknown) => settings);
 const loadDefaultNotificationSettings = vi.fn().mockResolvedValue({
-  study_goal_reminders_enabled: true
+  study_goal_reminders_enabled: true,
+  study_goal_reminder_time: "08:00"
 });
 const saveNotificationSettings = vi.fn().mockImplementation(async (settings: unknown) => settings);
 const testOcrDependencies = vi.fn().mockResolvedValue({
@@ -1641,7 +1642,8 @@ describe("App", () => {
     expect(notifyStudyGoalReminder).toHaveBeenCalledWith({
       title: "Meta de estudo pendente",
       body: "Faltam 3 revisoes para cumprir a meta de 7 dias.",
-      recurrence: "weekly"
+      recurrence: "weekly",
+      reminderTime: "08:00"
     });
     expect(await screen.findByText("3 de 6 revisoes")).toBeInTheDocument();
     expect(screen.getByText("50% concluido")).toBeInTheDocument();
@@ -1674,7 +1676,8 @@ describe("App", () => {
       }
     ]);
     const saveNotificationSettings = vi.fn().mockResolvedValue({
-      study_goal_reminders_enabled: false
+      study_goal_reminders_enabled: false,
+      study_goal_reminder_time: "08:00"
     });
     const saveStudyGoal = vi.fn().mockResolvedValue({
       document_id: "document-disabled-reminder",
@@ -1703,13 +1706,60 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(saveNotificationSettings).toHaveBeenCalledWith({
-        study_goal_reminders_enabled: false
+        study_goal_reminders_enabled: false,
+        study_goal_reminder_time: "08:00"
       });
     });
     await waitFor(() => {
       expect(saveStudyGoal).toHaveBeenCalledWith("document-disabled-reminder", 4, "weekly");
     });
     expect(notifyStudyGoalReminder).not.toHaveBeenCalled();
+  });
+
+  it("persists the study goal reminder time", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-reminder-time",
+          book_id: "book-reminder-time",
+          content: "Quimica organica.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/quimica.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-reminder-time",
+        bookId: "book-reminder-time",
+        chunkId: "chunk-reminder-time",
+        front: "O que e carbono?",
+        back: "Elemento quimico de numero atomico 6.",
+        tags: ["quimica"]
+      }
+    ]);
+    const saveNotificationSettings = vi
+      .fn()
+      .mockImplementation(async (settings: unknown) => settings);
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      saveNotificationSettings
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Quimica organica/ }));
+    fireEvent.change(await screen.findByLabelText("Horario do lembrete"), {
+      target: { value: "19:30" }
+    });
+
+    await waitFor(() => {
+      expect(saveNotificationSettings).toHaveBeenCalledWith({
+        study_goal_reminders_enabled: true,
+        study_goal_reminder_time: "19:30"
+      });
+    });
   });
 
   it("exports study cards as an Anki TSV deck", async () => {

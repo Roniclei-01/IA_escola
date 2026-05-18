@@ -770,6 +770,32 @@ h1 {
   font-weight: 800;
 }
 
+.study-goal-reminder-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin-top: 10px;
+  color: #526256;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.study-goal-reminder-time input {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid #cbd8ce;
+  border-radius: 6px;
+  color: #1d2a22;
+  background: #ffffff;
+  font: inherit;
+}
+
+.study-goal-reminder-time input:disabled {
+  color: #7a847d;
+  background: #eef1ed;
+}
+
 .study-goal-progress {
   display: flex;
   flex-wrap: wrap;

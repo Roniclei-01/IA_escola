@@ -4,7 +4,6 @@ import {
   isPermissionGranted,
   requestPermission,
   Schedule,
-  ScheduleEvery,
   sendNotification
 } from "@tauri-apps/plugin-notification";
 import {
@@ -152,15 +151,49 @@ interface StudyGoalReminderNotification {
   title: string;
   body: string;
   recurrence: StudyGoalRecurrence;
+  reminderTime: string;
 }
 
-function scheduleForStudyGoalRecurrence(recurrence: StudyGoalRecurrence): Schedule | undefined {
+function parseReminderTime(reminderTime: string): { hour: number; minute: number } | null {
+  const [hourValue, minuteValue] = reminderTime.split(":");
+  const hour = Number(hourValue);
+  const minute = Number(minuteValue);
+
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+
+  return { hour, minute };
+}
+
+function scheduleForStudyGoalRecurrence(
+  recurrence: StudyGoalRecurrence,
+  reminderTime: string
+): Schedule | undefined {
+  const parsedReminderTime = parseReminderTime(reminderTime);
+
+  if (!parsedReminderTime) {
+    return undefined;
+  }
+
   if (recurrence === "daily") {
-    return Schedule.every(ScheduleEvery.Day, 1);
+    return Schedule.interval(parsedReminderTime);
   }
 
   if (recurrence === "weekly") {
-    return Schedule.every(ScheduleEvery.Week, 1);
+    const currentWeekday = new Date().getDay() + 1;
+
+    return Schedule.interval({
+      ...parsedReminderTime,
+      weekday: currentWeekday
+    });
   }
 
   return undefined;
@@ -177,7 +210,10 @@ async function defaultNotifyStudyGoalReminder(
   }
 
   if (permissionGranted) {
-    const schedule = scheduleForStudyGoalRecurrence(notification.recurrence);
+    const schedule = scheduleForStudyGoalRecurrence(
+      notification.recurrence,
+      notification.reminderTime
+    );
 
     sendNotification({
       title: notification.title,
@@ -1006,6 +1042,7 @@ export function App({
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://127.0.0.1:11434");
   const [ollamaModel, setOllamaModel] = useState("llama3.2");
   const [isStudyGoalNotificationEnabled, setIsStudyGoalNotificationEnabled] = useState(true);
+  const [studyGoalReminderTime, setStudyGoalReminderTime] = useState("08:00");
   const [isTestingOllama, setIsTestingOllama] = useState(false);
   const [ollamaStatus, setOllamaStatus] = useState<string | null>(null);
   const [ocrDependencies, setOcrDependencies] = useState<OcrDependencies | null>(null);
@@ -1246,6 +1283,7 @@ export function App({
 
         if (isCurrent) {
           setIsStudyGoalNotificationEnabled(settings.study_goal_reminders_enabled);
+          setStudyGoalReminderTime(settings.study_goal_reminder_time);
         }
       } catch {
         if (isCurrent) {
@@ -1743,9 +1781,30 @@ export function App({
 
     try {
       const settings = await saveNotificationSettings({
-        study_goal_reminders_enabled: enabled
+        study_goal_reminders_enabled: enabled,
+        study_goal_reminder_time: studyGoalReminderTime
       });
       setIsStudyGoalNotificationEnabled(settings.study_goal_reminders_enabled);
+      setStudyGoalReminderTime(settings.study_goal_reminder_time);
+    } catch (unknownError) {
+      setError(
+        unknownError instanceof Error
+          ? unknownError.message
+          : t("settings.notificationSettingsSaveError")
+      );
+    }
+  }
+
+  async function handleStudyGoalReminderTimeChange(reminderTime: string) {
+    setStudyGoalReminderTime(reminderTime);
+
+    try {
+      const settings = await saveNotificationSettings({
+        study_goal_reminders_enabled: isStudyGoalNotificationEnabled,
+        study_goal_reminder_time: reminderTime
+      });
+      setIsStudyGoalNotificationEnabled(settings.study_goal_reminders_enabled);
+      setStudyGoalReminderTime(settings.study_goal_reminder_time);
     } catch (unknownError) {
       setError(
         unknownError instanceof Error
@@ -1802,7 +1861,8 @@ export function App({
           body: t(savedGoalAlertKey, {
             count: savedGoalProgress.remainingReviews
           }),
-          recurrence: savedGoal.recurrence
+          recurrence: savedGoal.recurrence,
+          reminderTime: studyGoalReminderTime
         });
       }
     } catch (unknownError) {
@@ -2261,6 +2321,17 @@ export function App({
                   }}
                 />
                 {t("study.goalNotificationToggle")}
+              </label>
+              <label className="study-goal-reminder-time">
+                {t("study.goalNotificationTimeLabel")}
+                <input
+                  type="time"
+                  value={studyGoalReminderTime}
+                  disabled={!isStudyGoalNotificationEnabled}
+                  onChange={(event) => {
+                    void handleStudyGoalReminderTimeChange(event.target.value);
+                  }}
+                />
               </label>
               {activeStudyGoalProgress ? (
                 <div className="study-goal-progress">

@@ -1,0 +1,212 @@
+@startuml
+' UML modelagem minima do aplicativo de estudo com IA local
+' Stack: Tauri, React, TypeScript, Rust, SQLite e Ollama via adaptador
+
+package "Dominio" {
+  class Book {
+    +id: UUID
+    +title: String
+    +author: String?
+    +language: Language
+    +sourcePath: String
+    +createdAt: DateTime
+  }
+
+  class Document {
+    +id: UUID
+    +bookId: UUID
+    +content: String
+    +language: Language
+  }
+
+  class DocumentChunk {
+    +id: UUID
+    +bookId: UUID
+    +documentId: UUID
+    +position: Int
+    +content: String
+    +tokenEstimate: Int
+  }
+
+  class Category {
+    +id: UUID
+    +name: String
+    +parentId: UUID?
+    +description: String?
+  }
+
+  class StudyCard {
+    +id: UUID
+    +bookId: UUID
+    +chunkId: UUID
+    +front: String
+    +back: String
+    +tags: List<String>
+    +createdAt: DateTime
+  }
+
+  class ModelProfile {
+    +id: UUID
+    +name: String
+    +provider: ModelProvider
+    +modelName: String
+    +endpoint: String?
+    +enabled: Boolean
+  }
+
+  class UserSettings {
+    +uiLanguage: Language
+    +defaultModelId: UUID?
+    +preferredModelByCategory: Map<UUID, UUID>
+  }
+
+  class StudySession {
+    +id: UUID
+    +bookId: UUID
+    +startedAt: DateTime
+    +endedAt: DateTime?
+    +reviewedCards: Int
+  }
+}
+
+package "Aplicacao" {
+  class ImportTextBook {
+    +execute(filePath: String): Book
+  }
+
+  class ChunkDocument {
+    +execute(document: Document): List<DocumentChunk>
+  }
+
+  class GenerateFlashcards {
+    +execute(bookId: UUID, config: FlashcardConfig): List<StudyCard>
+  }
+
+  class StartStudySession {
+    +execute(bookId: UUID): StudySession
+  }
+
+  class UpdateUserSettings {
+    +execute(settings: UserSettings): UserSettings
+  }
+}
+
+package "Portas" {
+  interface ModelAdapter {
+    +generateText(prompt: String, options: GenerationOptions): String
+    +createFlashcards(chunks: List<DocumentChunk>, config: FlashcardConfig): List<StudyCard>
+    +translate(text: String, targetLanguage: Language): String
+    +summarize(text: String): String
+  }
+
+  interface StorageRepository {
+    +saveBook(book: Book): void
+    +saveDocument(document: Document): void
+    +saveChunks(chunks: List<DocumentChunk>): void
+    +saveCards(cards: List<StudyCard>): void
+    +loadBook(id: UUID): Book
+    +loadChunks(bookId: UUID): List<DocumentChunk>
+  }
+
+  interface BookParser {
+    +parse(filePath: String): Document
+  }
+}
+
+package "Infraestrutura" {
+  class TauriCommandGateway {
+    +importBook(path: String): Book
+    +generateCards(bookId: UUID): List<StudyCard>
+    +loadLibrary(): List<Book>
+  }
+
+  class SQLiteStorage {
+    +migrate(): void
+    +connect(path: String): void
+  }
+
+  class TextBookParser {
+    +parse(filePath: String): Document
+  }
+
+  class PdfBookParser {
+    +parse(filePath: String): Document
+  }
+
+  class OllamaModelAdapter {
+    +generateText(prompt: String, options: GenerationOptions): String
+    +createFlashcards(chunks: List<DocumentChunk>, config: FlashcardConfig): List<StudyCard>
+  }
+
+  class LicenseService {
+    +validateLocalLicense(): LicenseStatus
+  }
+}
+
+package "UI React" {
+  class LibraryPage
+  class StudyPage
+  class SettingsPage
+  class LanguageSwitcher
+  class ModelSelector
+}
+
+package "Testes" {
+  class DomainUnitTests
+  class ChunkingTests
+  class FlashcardGenerationTests
+  class StorageIntegrationTests
+  class AppE2ETests
+
+  class MockModelAdapter {
+    +generateText(prompt: String, options: GenerationOptions): String
+    +createFlashcards(chunks: List<DocumentChunk>, config: FlashcardConfig): List<StudyCard>
+    +simulateFailure(): void
+  }
+}
+
+Language ..|> String
+ModelProvider ..|> String
+GenerationOptions ..|> String
+FlashcardConfig ..|> String
+LicenseStatus ..|> String
+
+Book --> Category
+Document --> Book
+DocumentChunk --> Document
+StudyCard --> DocumentChunk
+StudyCard --> Book
+StudySession --> Book
+UserSettings --> ModelProfile
+
+ImportTextBook --> BookParser
+ImportTextBook --> StorageRepository
+ChunkDocument --> Document
+GenerateFlashcards --> ModelAdapter
+GenerateFlashcards --> StorageRepository
+StartStudySession --> StorageRepository
+UpdateUserSettings --> StorageRepository
+
+SQLiteStorage ..|> StorageRepository
+TextBookParser ..|> BookParser
+PdfBookParser ..|> BookParser
+OllamaModelAdapter ..|> ModelAdapter
+MockModelAdapter ..|> ModelAdapter
+
+TauriCommandGateway --> ImportTextBook
+TauriCommandGateway --> GenerateFlashcards
+TauriCommandGateway --> StartStudySession
+
+LibraryPage --> TauriCommandGateway
+StudyPage --> TauriCommandGateway
+SettingsPage --> TauriCommandGateway
+LanguageSwitcher --> UserSettings
+ModelSelector --> ModelProfile
+
+DomainUnitTests --> Book
+ChunkingTests --> ChunkDocument
+FlashcardGenerationTests --> GenerateFlashcards
+FlashcardGenerationTests --> MockModelAdapter
+StorageIntegrationTests --> SQLiteStorage
+AppE2ETests --> LibraryPage
+@enduml

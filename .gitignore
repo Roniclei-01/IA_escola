@@ -1,0 +1,13 @@
+node_modules/
+dist/
+target/
+src-tauri/target/
+.env
+.env.*
+*.log
+test-results/
+data/books/
+data/models/
+data/indexes/
+
+ADAPTA_GABARITO.txt

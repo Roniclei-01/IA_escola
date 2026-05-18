@@ -80,6 +80,9 @@ mod tests {
         };
 
         assert_eq!(summary.session_id, session_id);
-        assert_eq!(summary.again_count + summary.hard_count + summary.easy_count, 6);
+        assert_eq!(
+            summary.again_count + summary.hard_count + summary.easy_count,
+            6
+        );
     }
 }

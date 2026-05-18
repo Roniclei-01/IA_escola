@@ -6,6 +6,7 @@ import {
 } from "../infrastructure/tauri/import-text-book";
 import { archiveImportedDocument as defaultArchiveImportedDocument } from "../infrastructure/tauri/archive-imported-document";
 import {
+  deleteImportedDocument as defaultDeleteImportedDocument,
   listArchivedDocuments as defaultListArchivedDocuments,
   restoreImportedDocument as defaultRestoreImportedDocument,
   type ListArchivedDocumentsResponse
@@ -65,10 +66,14 @@ import { StudySessionHistory } from "./components/StudySessionHistory";
 import { ArchivedDocumentsList } from "./components/ArchivedDocumentsList";
 
 interface AppProps {
-  importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
+  importTextBook?: (
+    filePath: string,
+    options?: { ocrEnabled?: boolean }
+  ) => Promise<ImportTextBookResponse>;
   archiveImportedDocument?: (documentId: string) => Promise<{ document_id: string }>;
   listArchivedDocuments?: () => Promise<ListArchivedDocumentsResponse>;
   restoreImportedDocument?: (documentId: string) => Promise<{ document_id: string }>;
+  deleteImportedDocument?: (documentId: string) => Promise<{ document_id: string }>;
   listImportedDocuments?: () => Promise<ListImportedDocumentsResponse>;
   listDocumentChunks?: (documentId: string) => Promise<ListDocumentChunksResponse>;
   chunkTextDocument?: (
@@ -93,6 +98,7 @@ interface AppProps {
   loadOllamaSettings?: () => Promise<OllamaSettings>;
   saveOllamaSettings?: (settings: OllamaSettings) => Promise<OllamaSettings>;
   downloadTextFile?: (fileName: string, content: string) => void;
+  confirmDelete?: (message: string) => boolean;
   enableDevelopmentFallback?: boolean;
 }
 
@@ -322,6 +328,7 @@ export function App({
   archiveImportedDocument = defaultArchiveImportedDocument,
   listArchivedDocuments = defaultListArchivedDocuments,
   restoreImportedDocument = defaultRestoreImportedDocument,
+  deleteImportedDocument = defaultDeleteImportedDocument,
   listImportedDocuments = defaultListImportedDocuments,
   listDocumentChunks = defaultListDocumentChunks,
   chunkTextDocument = defaultChunkTextDocument,
@@ -337,10 +344,12 @@ export function App({
   loadOllamaSettings = defaultLoadOllamaSettings,
   saveOllamaSettings = defaultSaveOllamaSettings,
   downloadTextFile = defaultDownloadTextFile,
+  confirmDelete = (message: string) => window.confirm(message),
   enableDevelopmentFallback = import.meta.env.DEV
 }: AppProps) {
   const { t } = useTranslation();
   const [filePath, setFilePath] = useState("");
+  const [isOcrEnabled, setIsOcrEnabled] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
@@ -554,7 +563,9 @@ export function App({
     setCardReviewSchedules({});
 
     try {
-      const importedDocument = await importTextBook(trimmedPath);
+      const importedDocument = await importTextBook(trimmedPath, {
+        ocrEnabled: isOcrEnabled
+      });
       setOperationStatus("chunkingDocument");
       const chunkResponse = await chunkTextDocument(toChunkRequest(importedDocument, 180));
       setOperationStatus("generatingCardsWithOllama");
@@ -780,6 +791,28 @@ export function App({
     }
   }
 
+  async function handleDeleteArchivedDocument(documentToDelete: ImportTextBookResponse) {
+    const confirmed = confirmDelete(t("library.deleteConfirmation"));
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setWarning(null);
+
+    try {
+      await deleteImportedDocument(documentToDelete.document_id);
+      setArchivedDocuments((currentDocuments) =>
+        currentDocuments.filter(
+          (archivedDocument) => archivedDocument.document_id !== documentToDelete.document_id
+        )
+      );
+    } catch (unknownError) {
+      setError(unknownError instanceof Error ? unknownError.message : t("library.deleteError"));
+    }
+  }
+
   async function handleReviewCard(review: CardReview) {
     if (!activeCard) {
       return;
@@ -866,15 +899,18 @@ export function App({
 
         <ImportPanel
           filePath={filePath}
+          isOcrEnabled={isOcrEnabled}
           isImporting={isImporting}
           labels={{
             filePathLabel: t("library.filePathLabel"),
             filePathPlaceholder: t("library.filePathPlaceholder"),
+            ocrLabel: t("library.ocrLabel"),
             chooseFile: t("library.chooseFile"),
             import: t("library.import"),
             importing: t("library.importing")
           }}
           onFilePathChange={setFilePath}
+          onOcrEnabledChange={setIsOcrEnabled}
           onChooseFile={() => {
             void handleChooseFile();
           }}
@@ -967,11 +1003,15 @@ export function App({
             loading: t("library.loadingArchivedDocuments"),
             empty: t("library.noArchivedDocuments"),
             restore: t("library.restoreDocument"),
+            deleteForever: t("library.deleteDocumentForever"),
             itemLabel: (index) => t("library.archivedDocumentItem", { number: index + 1 }),
             sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
           }}
           onRestoreDocument={(selectedDocument) => {
             void handleRestoreDocument(selectedDocument);
+          }}
+          onDeleteDocument={(selectedDocument) => {
+            void handleDeleteArchivedDocument(selectedDocument);
           }}
         />
 

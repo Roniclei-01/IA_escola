@@ -55,8 +55,8 @@ mod tests {
         let chunk = DocumentChunk::new(book_id, document_id, 1, "chunk").unwrap();
         let card = StudyCard::new(book_id, chunk.id, "Pergunta", "Resposta", vec![]).unwrap();
         let session = StudySession::new(document_id).unwrap();
-        let review = StudyReview::new_in_session(card.id, session.id, StudyReviewRating::Again)
-            .unwrap();
+        let review =
+            StudyReview::new_in_session(card.id, session.id, StudyReviewRating::Again).unwrap();
 
         storage.save_chunks(&[chunk]).unwrap();
         storage.save_study_cards(&[card]).unwrap();

@@ -46,7 +46,12 @@ impl StudyReview {
         session_id: Uuid,
         rating: StudyReviewRating,
     ) -> Result<Self, StudyReviewError> {
-        Self::new_with_session_at(card_id, Some(session_id), rating, chrono::Utc::now().timestamp())
+        Self::new_with_session_at(
+            card_id,
+            Some(session_id),
+            rating,
+            chrono::Utc::now().timestamp(),
+        )
     }
 
     fn new_with_session_at(

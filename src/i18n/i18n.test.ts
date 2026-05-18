@@ -29,6 +29,9 @@ describe("i18n", () => {
       "Ruta del archivo .txt o .pdf"
     );
     expect(i18n.getResource("pt", "translation", "library.chooseFile")).toBe("Selecionar");
+    expect(i18n.getResource("pt", "translation", "library.ocrLabel")).toBe(
+      "Ativar OCR para PDF digitalizado"
+    );
     expect(i18n.getResource("pt", "translation", "library.sourceType")).toBe("Origem: {{type}}");
     expect(i18n.getResource("pt", "translation", "library.fileDialogError")).toBe(
       "Nao foi possivel abrir o seletor de arquivos."
@@ -120,6 +123,9 @@ describe("i18n", () => {
     );
     expect(i18n.getResource("pt", "translation", "library.archiveDocument")).toBe("Arquivar");
     expect(i18n.getResource("pt", "translation", "library.restoreDocument")).toBe("Restaurar");
+    expect(i18n.getResource("pt", "translation", "library.deleteDocumentForever")).toBe(
+      "Excluir definitivamente"
+    );
   });
 
   it("has Ollama settings labels in every supported language", () => {

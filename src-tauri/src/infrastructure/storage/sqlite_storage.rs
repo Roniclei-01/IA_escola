@@ -25,6 +25,8 @@ pub enum StorageError {
     ArchiveDocumentFailed(#[source] rusqlite::Error),
     #[error("failed to restore document")]
     RestoreDocumentFailed(#[source] rusqlite::Error),
+    #[error("failed to delete document")]
+    DeleteDocumentFailed(#[source] rusqlite::Error),
     #[error("failed to save document chunks")]
     SaveChunksFailed(#[source] rusqlite::Error),
     #[error("failed to list document chunks")]
@@ -216,6 +218,61 @@ impl SQLiteStorage {
                 [document_id.to_string()],
             )
             .map_err(StorageError::RestoreDocumentFailed)?;
+
+        Ok(())
+    }
+
+    pub fn delete_archived_document(&mut self, document_id: Uuid) -> Result<(), StorageError> {
+        let transaction = self
+            .connection
+            .transaction()
+            .map_err(StorageError::DeleteDocumentFailed)?;
+        let document_id = document_id.to_string();
+
+        transaction
+            .execute(
+                "DELETE FROM study_reviews
+                 WHERE card_id IN (
+                    SELECT study_cards.id
+                    FROM study_cards
+                    INNER JOIN document_chunks ON document_chunks.id = study_cards.chunk_id
+                    WHERE document_chunks.document_id = ?1
+                 )",
+                [&document_id],
+            )
+            .map_err(StorageError::DeleteDocumentFailed)?;
+        transaction
+            .execute(
+                "DELETE FROM study_cards
+                 WHERE chunk_id IN (
+                    SELECT id FROM document_chunks WHERE document_id = ?1
+                 )",
+                [&document_id],
+            )
+            .map_err(StorageError::DeleteDocumentFailed)?;
+        transaction
+            .execute(
+                "DELETE FROM document_chunks WHERE document_id = ?1",
+                [&document_id],
+            )
+            .map_err(StorageError::DeleteDocumentFailed)?;
+        transaction
+            .execute(
+                "DELETE FROM study_sessions WHERE document_id = ?1",
+                [&document_id],
+            )
+            .map_err(StorageError::DeleteDocumentFailed)?;
+        transaction
+            .execute(
+                "DELETE FROM documents
+                 WHERE id = ?1 AND archived_at IS NOT NULL",
+                [&document_id],
+            )
+            .map_err(StorageError::DeleteDocumentFailed)?;
+
+        transaction
+            .commit()
+            .map_err(StorageError::DeleteDocumentFailed)?;
 
         Ok(())
     }
@@ -1094,7 +1151,68 @@ mod tests {
         storage.restore_document(document.id).unwrap();
 
         assert_eq!(storage.list_documents().unwrap(), vec![document]);
-        assert_eq!(storage.list_archived_documents().unwrap(), Vec::<Document>::new());
+        assert_eq!(
+            storage.list_archived_documents().unwrap(),
+            Vec::<Document>::new()
+        );
+    }
+
+    #[test]
+    fn deletes_archived_document_with_related_study_data() {
+        let mut storage = SQLiteStorage::open_in_memory().unwrap();
+        let book_id = Uuid::new_v4();
+        let document = Document::new(
+            book_id,
+            "Conteudo para excluir",
+            Language::Pt,
+            DocumentSourceType::Pdf,
+            "/tmp/excluir.pdf",
+        )
+        .unwrap();
+        let chunk = DocumentChunk::new(book_id, document.id, 1, "trecho").unwrap();
+        let card = StudyCard::new(
+            book_id,
+            chunk.id,
+            "Pergunta",
+            "Resposta",
+            vec!["excluir".to_owned()],
+        )
+        .unwrap();
+        let session = StudySession::new_at(document.id, 1_700_000_000).unwrap();
+        let review =
+            StudyReview::new_in_session(card.id, session.id, StudyReviewRating::Easy).unwrap();
+
+        storage.save_document(&document).unwrap();
+        storage.save_chunks(&[chunk]).unwrap();
+        storage.save_study_cards(&[card]).unwrap();
+        storage.save_study_session(&session).unwrap();
+        storage.save_study_review(&review).unwrap();
+        storage.archive_document(document.id).unwrap();
+
+        storage.delete_archived_document(document.id).unwrap();
+
+        assert_eq!(
+            storage.list_archived_documents().unwrap(),
+            Vec::<Document>::new()
+        );
+        assert_eq!(
+            storage.list_chunks_by_document(document.id).unwrap(),
+            Vec::<DocumentChunk>::new()
+        );
+        assert_eq!(
+            storage.list_study_cards_by_document(document.id).unwrap(),
+            Vec::<StudyCard>::new()
+        );
+        assert_eq!(
+            storage.list_study_reviews_by_document(document.id).unwrap(),
+            Vec::<StudyReview>::new()
+        );
+        assert_eq!(
+            storage
+                .list_study_sessions_by_document(document.id)
+                .unwrap(),
+            Vec::<StudySession>::new()
+        );
     }
 
     #[test]
@@ -1296,7 +1414,9 @@ mod tests {
         storage.save_study_session(&session).unwrap();
         storage.save_study_session(&other_session).unwrap();
 
-        let sessions = storage.list_study_sessions_by_document(document_id).unwrap();
+        let sessions = storage
+            .list_study_sessions_by_document(document_id)
+            .unwrap();
 
         assert_eq!(sessions, vec![session]);
     }
@@ -1328,10 +1448,10 @@ mod tests {
         let book_id = Uuid::new_v4();
         let document_id = Uuid::new_v4();
         let chunk = DocumentChunk::new(book_id, document_id, 1, "chunk").unwrap();
-        let first_card = StudyCard::new(book_id, chunk.id, "Pergunta 1", "Resposta 1", vec![])
-            .unwrap();
-        let second_card = StudyCard::new(book_id, chunk.id, "Pergunta 2", "Resposta 2", vec![])
-            .unwrap();
+        let first_card =
+            StudyCard::new(book_id, chunk.id, "Pergunta 1", "Resposta 1", vec![]).unwrap();
+        let second_card =
+            StudyCard::new(book_id, chunk.id, "Pergunta 2", "Resposta 2", vec![]).unwrap();
         let session = StudySession::new_at(document_id, 1_700_000_000).unwrap();
         let easy_review =
             StudyReview::new_in_session(first_card.id, session.id, StudyReviewRating::Easy)

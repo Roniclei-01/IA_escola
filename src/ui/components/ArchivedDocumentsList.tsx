@@ -8,17 +8,20 @@ interface ArchivedDocumentsListProps {
     loading: string;
     empty: string;
     restore: string;
+    deleteForever: string;
     itemLabel: (index: number) => string;
     sourceType: (sourceType: ImportTextBookResponse["source_type"]) => string;
   };
   onRestoreDocument: (document: ImportTextBookResponse) => void;
+  onDeleteDocument: (document: ImportTextBookResponse) => void;
 }
 
 export function ArchivedDocumentsList({
   documents,
   isLoading,
   labels,
-  onRestoreDocument
+  onRestoreDocument,
+  onDeleteDocument
 }: ArchivedDocumentsListProps) {
   return (
     <section className="archived-documents" aria-labelledby="archived-documents-title">
@@ -37,6 +40,13 @@ export function ArchivedDocumentsList({
               </div>
               <button type="button" onClick={() => onRestoreDocument(document)}>
                 {labels.restore}
+              </button>
+              <button
+                type="button"
+                className="archived-document-delete"
+                onClick={() => onDeleteDocument(document)}
+              >
+                {labels.deleteForever}
               </button>
             </li>
           ))}

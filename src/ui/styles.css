@@ -130,6 +130,22 @@ h1 {
   border: 1px solid #c9d6cd;
 }
 
+.ocr-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin-top: 12px;
+  color: #39483f;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.ocr-option input {
+  width: 16px;
+  height: 16px;
+}
+
 .message {
   margin: 18px 0 0;
   padding: 12px 14px;
@@ -261,7 +277,7 @@ h1 {
 .saved-documents li,
 .archived-documents li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
 }
 
@@ -295,6 +311,12 @@ h1 {
   color: #5a302c;
   background: #fffafa;
   text-align: center;
+}
+
+.archived-document-delete {
+  color: #7a201b;
+  border-color: #e4c4bf;
+  background: #fff5f4;
 }
 
 .saved-documents span,

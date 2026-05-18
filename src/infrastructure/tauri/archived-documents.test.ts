@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { listArchivedDocuments, restoreImportedDocument } from "./archived-documents";
+import {
+  deleteImportedDocument,
+  listArchivedDocuments,
+  restoreImportedDocument
+} from "./archived-documents";
 
 const invokeMock = vi.hoisted(() => vi.fn());
 
@@ -34,6 +38,21 @@ describe("archived documents Tauri bridge", () => {
     const response = await restoreImportedDocument("document-1");
 
     expect(invokeMock).toHaveBeenCalledWith("restore_imported_document", {
+      request: {
+        document_id: "document-1"
+      }
+    });
+    expect(response.document_id).toBe("document-1");
+  });
+
+  it("deletes an archived document", async () => {
+    invokeMock.mockResolvedValueOnce({
+      document_id: "document-1"
+    });
+
+    const response = await deleteImportedDocument("document-1");
+
+    expect(invokeMock).toHaveBeenCalledWith("delete_imported_document", {
       request: {
         document_id: "document-1"
       }

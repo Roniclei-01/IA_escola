@@ -2,24 +2,29 @@ import { FormEvent } from "react";
 
 interface ImportPanelProps {
   filePath: string;
+  isOcrEnabled: boolean;
   isImporting: boolean;
   labels: {
     filePathLabel: string;
     filePathPlaceholder: string;
+    ocrLabel: string;
     chooseFile: string;
     import: string;
     importing: string;
   };
   onFilePathChange: (filePath: string) => void;
+  onOcrEnabledChange: (isEnabled: boolean) => void;
   onChooseFile: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
 
 export function ImportPanel({
   filePath,
+  isOcrEnabled,
   isImporting,
   labels,
   onFilePathChange,
+  onOcrEnabledChange,
   onChooseFile,
   onSubmit
 }: ImportPanelProps) {
@@ -41,6 +46,14 @@ export function ImportPanel({
           {isImporting ? labels.importing : labels.import}
         </button>
       </div>
+      <label className="ocr-option">
+        <input
+          type="checkbox"
+          checked={isOcrEnabled}
+          onChange={(event) => onOcrEnabledChange(event.target.checked)}
+        />
+        {labels.ocrLabel}
+      </label>
     </form>
   );
 }

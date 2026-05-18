@@ -15,14 +15,37 @@ pub enum TextBookParserError {
     ReadFailed,
     #[error("failed to extract text from pdf")]
     PdfReadFailed,
+    #[error("pdf appears to need ocr")]
+    PdfNeedsOcr,
+    #[error("ocr engine is not available")]
+    OcrUnavailable,
     #[error(transparent)]
     InvalidDocument(#[from] DocumentError),
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct TextBookParserOptions {
+    pub ocr_enabled: bool,
 }
 
 pub fn parse_text_book(
     book_id: uuid::Uuid,
     file_path: impl AsRef<Path>,
     language: Language,
+) -> Result<Document, TextBookParserError> {
+    parse_text_book_with_options(
+        book_id,
+        file_path,
+        language,
+        TextBookParserOptions::default(),
+    )
+}
+
+pub fn parse_text_book_with_options(
+    book_id: uuid::Uuid,
+    file_path: impl AsRef<Path>,
+    language: Language,
+    options: TextBookParserOptions,
 ) -> Result<Document, TextBookParserError> {
     let path = file_path.as_ref();
 
@@ -40,7 +63,10 @@ pub fn parse_text_book(
             fs::read_to_string(path).map_err(|_| TextBookParserError::ReadFailed)?,
             DocumentSourceType::Txt,
         ),
-        Some("pdf") => (extract_pdf_text(path)?, DocumentSourceType::Pdf),
+        Some("pdf") => (
+            extract_pdf_text(path, options.ocr_enabled)?,
+            DocumentSourceType::Pdf,
+        ),
         _ => return Err(TextBookParserError::UnsupportedExtension),
     };
 
@@ -54,13 +80,23 @@ pub fn parse_text_book(
     .map_err(TextBookParserError::InvalidDocument)
 }
 
-fn extract_pdf_text(path: &Path) -> Result<String, TextBookParserError> {
+fn extract_pdf_text(path: &Path, ocr_enabled: bool) -> Result<String, TextBookParserError> {
     let document = PdfDocument::load(path).map_err(|_| TextBookParserError::PdfReadFailed)?;
     let page_numbers = document.get_pages().keys().copied().collect::<Vec<_>>();
 
-    document
+    let extracted_text = document
         .extract_text(&page_numbers)
-        .map_err(|_| TextBookParserError::PdfReadFailed)
+        .map_err(|_| TextBookParserError::PdfReadFailed)?;
+
+    if extracted_text.trim().is_empty() {
+        if ocr_enabled {
+            return Err(TextBookParserError::OcrUnavailable);
+        }
+
+        return Err(TextBookParserError::PdfNeedsOcr);
+    }
+
+    Ok(extracted_text)
 }
 
 #[cfg(test)]
@@ -74,7 +110,9 @@ mod tests {
     use tempfile::TempDir;
     use uuid::Uuid;
 
-    use super::{parse_text_book, TextBookParserError};
+    use super::{
+        parse_text_book, parse_text_book_with_options, TextBookParserError, TextBookParserOptions,
+    };
     use crate::domain::{DocumentSourceType, Language};
 
     fn write_temp_file(dir: &TempDir, name: &str, content: &str) -> PathBuf {
@@ -148,6 +186,33 @@ mod tests {
         let result = parse_text_book(Uuid::new_v4(), path, Language::Pt);
 
         assert_eq!(result.unwrap_err(), TextBookParserError::PdfReadFailed);
+    }
+
+    #[test]
+    fn asks_for_ocr_when_pdf_has_no_extractable_text() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("scanned.pdf");
+        write_pdf_file(&path, "");
+
+        let result = parse_text_book(Uuid::new_v4(), path, Language::Pt);
+
+        assert_eq!(result.unwrap_err(), TextBookParserError::PdfNeedsOcr);
+    }
+
+    #[test]
+    fn reports_unavailable_ocr_when_enabled_for_scanned_pdf() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("scanned.pdf");
+        write_pdf_file(&path, "");
+
+        let result = parse_text_book_with_options(
+            Uuid::new_v4(),
+            path,
+            Language::Pt,
+            TextBookParserOptions { ocr_enabled: true },
+        );
+
+        assert_eq!(result.unwrap_err(), TextBookParserError::OcrUnavailable);
     }
 
     #[test]

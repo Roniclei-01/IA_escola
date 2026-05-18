@@ -9,8 +9,16 @@ export interface ImportTextBookResponse {
   source_path: string;
 }
 
-export async function importTextBook(filePath: string): Promise<ImportTextBookResponse> {
+export interface ImportTextBookOptions {
+  ocrEnabled?: boolean;
+}
+
+export async function importTextBook(
+  filePath: string,
+  options: ImportTextBookOptions = {}
+): Promise<ImportTextBookResponse> {
   return invoke<ImportTextBookResponse>("import_text_book", {
-    filePath
+    filePath,
+    ocrEnabled: options.ocrEnabled ?? false
   });
 }

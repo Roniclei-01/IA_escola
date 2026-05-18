@@ -26,9 +26,28 @@ describe("importTextBook", () => {
     const result = await importTextBook("/tmp/book.txt");
 
     expect(invokeMock).toHaveBeenCalledWith("import_text_book", {
-      filePath: "/tmp/book.txt"
+      filePath: "/tmp/book.txt",
+      ocrEnabled: false
     });
     expect(result.content).toBe("conteudo");
     expect(result.source_type).toBe("txt");
+  });
+
+  it("passes OCR option to the Tauri command", async () => {
+    invokeMock.mockResolvedValue({
+      document_id: "document-1",
+      book_id: "book-1",
+      content: "conteudo",
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/book.pdf"
+    });
+
+    await importTextBook("/tmp/book.pdf", { ocrEnabled: true });
+
+    expect(invokeMock).toHaveBeenCalledWith("import_text_book", {
+      filePath: "/tmp/book.pdf",
+      ocrEnabled: true
+    });
   });
 });

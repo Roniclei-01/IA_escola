@@ -310,6 +310,74 @@ describe("App", () => {
     expect(screen.getByText("Nenhum documento arquivado.")).toBeInTheDocument();
   });
 
+  it("deletes an archived document after confirmation", async () => {
+    const confirmDelete = vi.fn().mockReturnValue(true);
+    const deleteImportedDocument = vi.fn().mockResolvedValue({
+      document_id: "document-delete"
+    });
+    const listArchivedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-delete",
+          book_id: "book-delete",
+          content: "Documento arquivado para excluir.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/excluir.txt"
+        }
+      ]
+    });
+
+    renderApp({
+      confirmDelete,
+      deleteImportedDocument,
+      listArchivedDocuments
+    });
+
+    expect(await screen.findByText("Documento arquivado para excluir.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Excluir definitivamente" }));
+
+    await waitFor(() => {
+      expect(confirmDelete).toHaveBeenCalledWith(
+        "Excluir definitivamente este documento e todos os dados de estudo relacionados?"
+      );
+      expect(deleteImportedDocument).toHaveBeenCalledWith("document-delete");
+    });
+    expect(screen.queryByText("Documento arquivado para excluir.")).not.toBeInTheDocument();
+    expect(screen.getByText("Nenhum documento arquivado.")).toBeInTheDocument();
+  });
+
+  it("keeps an archived document when deletion is not confirmed", async () => {
+    const confirmDelete = vi.fn().mockReturnValue(false);
+    const deleteImportedDocument = vi.fn();
+    const listArchivedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-keep",
+          book_id: "book-keep",
+          content: "Documento arquivado preservado.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/preservar.txt"
+        }
+      ]
+    });
+
+    renderApp({
+      confirmDelete,
+      deleteImportedDocument,
+      listArchivedDocuments
+    });
+
+    expect(await screen.findByText("Documento arquivado preservado.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Excluir definitivamente" }));
+
+    expect(deleteImportedDocument).not.toHaveBeenCalled();
+    expect(screen.getByText("Documento arquivado preservado.")).toBeInTheDocument();
+  });
+
   it("tests the Ollama connection from settings", async () => {
     const testOllamaConnection = vi.fn().mockResolvedValue({
       ok: true,
@@ -598,7 +666,9 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     await waitFor(() => {
-      expect(importTextBook).toHaveBeenCalledWith("/tmp/book.txt");
+      expect(importTextBook).toHaveBeenCalledWith("/tmp/book.txt", {
+        ocrEnabled: false
+      });
     });
     expect(chunkTextDocument).toHaveBeenCalledWith({
       document_id: "document-1",
@@ -615,6 +685,36 @@ describe("App", () => {
     expect(await screen.findByText("1 card gerado")).toBeInTheDocument();
     expect(screen.getByText("Pergunta 1 sobre o trecho 0")).toBeInTheDocument();
     expect(screen.getAllByText("Conteudo importado para estudo.").length).toBeGreaterThan(0);
+  });
+
+  it("imports with OCR enabled when the OCR option is selected", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-ocr",
+      book_id: "book-ocr",
+      content: "Conteudo OCR.",
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/scanned.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      saveStudyCards: saveCards
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/scanned.pdf" }
+    });
+    fireEvent.click(screen.getByLabelText("Ativar OCR para PDF digitalizado"));
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    await waitFor(() => {
+      expect(importTextBook).toHaveBeenCalledWith("/tmp/scanned.pdf", {
+        ocrEnabled: true
+      });
+    });
   });
 
   it("shows progress while Ollama generates cards", async () => {

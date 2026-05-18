@@ -61,16 +61,16 @@ mod tests {
         let storage = SQLiteStorage::open_in_memory().unwrap();
         let document_id = Uuid::new_v4();
 
-        let response = start_study_session_with_storage(
-            StartStudySessionRequest { document_id },
-            &storage,
-        )
-        .unwrap();
+        let response =
+            start_study_session_with_storage(StartStudySessionRequest { document_id }, &storage)
+                .unwrap();
 
         assert_eq!(response.session.document_id, document_id);
         assert!(response.session.started_at > 0);
         assert_eq!(
-            storage.list_study_sessions_by_document(document_id).unwrap(),
+            storage
+                .list_study_sessions_by_document(document_id)
+                .unwrap(),
             vec![response.session]
         );
     }

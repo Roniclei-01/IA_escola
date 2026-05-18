@@ -80,6 +80,7 @@ import {
   testOcrDependencies as defaultTestOcrDependencies,
   type OcrDependencies
 } from "../infrastructure/tauri/ocr-dependencies";
+import { exportTextFile as defaultExportTextFile } from "../infrastructure/tauri/export-text-file";
 import { ImportPanel } from "./components/ImportPanel";
 import { DocumentSummary } from "./components/DocumentSummary";
 import { StudyCardViewer, type CardReview } from "./components/StudyCardViewer";
@@ -135,7 +136,7 @@ interface AppProps {
   loadNotificationSettings?: () => Promise<NotificationSettings>;
   saveNotificationSettings?: (settings: NotificationSettings) => Promise<NotificationSettings>;
   testOcrDependencies?: () => Promise<OcrDependencies>;
-  downloadTextFile?: (fileName: string, content: string) => void;
+  downloadTextFile?: (fileName: string, content: string) => Promise<void> | void;
   printStudySessionReport?: (fileName: string, html: string) => void;
   notifyStudyGoalReminder?: (notification: StudyGoalReminderNotification) => Promise<void> | void;
   cancelStudyGoalReminder?: () => Promise<void> | void;
@@ -621,7 +622,20 @@ function incrementSessionSummaryReview(
   };
 }
 
-function defaultDownloadTextFile(fileName: string, content: string) {
+function isRunningInsideTauri(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const tauriWindow = window as unknown as {
+    __TAURI__?: unknown;
+    __TAURI_INTERNALS__?: unknown;
+  };
+
+  return Boolean(tauriWindow.__TAURI__ || tauriWindow.__TAURI_INTERNALS__);
+}
+
+function browserDownloadTextFile(fileName: string, content: string) {
   const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -632,11 +646,20 @@ function defaultDownloadTextFile(fileName: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
+async function defaultDownloadTextFile(fileName: string, content: string) {
+  if (isRunningInsideTauri()) {
+    await defaultExportTextFile(fileName, content);
+    return;
+  }
+
+  browserDownloadTextFile(fileName, content);
+}
+
 function defaultPrintStudySessionReport(fileName: string, html: string) {
   const printWindow = window.open("", "_blank", "noopener,noreferrer");
 
   if (!printWindow) {
-    defaultDownloadTextFile(fileName.replace(/\.pdf$/, ".html"), html);
+    void defaultDownloadTextFile(fileName.replace(/\.pdf$/, ".html"), html);
     return;
   }
 
@@ -2272,13 +2295,19 @@ export function App({
     }
   }
 
-  function handleExportStudySessionReport() {
+  async function handleExportStudySessionReport() {
     if (!document || studySessionSummaries.length === 0) {
       return;
     }
 
     const fileName = `relatorio-estudo-${sanitizeReportFileName(document.document_id)}.md`;
-    downloadTextFile(fileName, buildStudySessionReport(document, studySessionSummaries));
+
+    try {
+      setError(null);
+      await downloadTextFile(fileName, buildStudySessionReport(document, studySessionSummaries));
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("study.exportFileError")));
+    }
   }
 
   function handlePreviewPrintableStudySessionReport() {
@@ -2301,13 +2330,19 @@ export function App({
     );
   }
 
-  function handleExportAnkiDeck() {
+  async function handleExportAnkiDeck() {
     if (!document || cards.length === 0) {
       return;
     }
 
     const fileName = `anki-${sanitizeReportFileName(document.document_id)}.tsv`;
-    downloadTextFile(fileName, buildAnkiTsv(cards, document));
+
+    try {
+      setError(null);
+      await downloadTextFile(fileName, buildAnkiTsv(cards, document));
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("study.exportFileError")));
+    }
   }
 
   return (

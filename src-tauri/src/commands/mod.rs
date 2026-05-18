@@ -3,6 +3,7 @@ pub mod app_storage;
 pub mod archive_imported_document;
 pub mod chunk_text_document;
 pub mod delete_imported_document;
+pub mod export_text_file;
 pub mod generate_study_cards;
 pub mod import_text_book;
 pub mod list_archived_documents;
@@ -27,6 +28,8 @@ pub use archive_imported_document::archive_imported_document;
 pub use chunk_text_document::chunk_text_document;
 #[cfg(feature = "tauri-app")]
 pub use delete_imported_document::delete_imported_document;
+#[cfg(feature = "tauri-app")]
+pub use export_text_file::export_text_file;
 #[cfg(feature = "tauri-app")]
 pub use generate_study_cards::generate_study_cards;
 #[cfg(feature = "tauri-app")]
@@ -73,6 +76,7 @@ pub use delete_imported_document::{
     delete_imported_document_with_storage, DeleteImportedDocumentRequest,
     DeleteImportedDocumentResponse,
 };
+pub use export_text_file::{export_text_file_to_path, ExportTextFileResponse};
 pub use generate_study_cards::{
     generate_study_cards_with_adapter, GenerateStudyCardsRequest, GenerateStudyCardsResponse,
 };

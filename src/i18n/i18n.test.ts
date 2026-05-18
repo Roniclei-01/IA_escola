@@ -108,6 +108,9 @@ describe("i18n", () => {
       "Previa PDF"
     );
     expect(i18n.getResource("pt", "translation", "study.exportAnki")).toBe("Exportar Anki");
+    expect(i18n.getResource("pt", "translation", "study.exportFileError")).toBe(
+      "Nao foi possivel exportar o arquivo."
+    );
     expect(i18n.getResource("pt", "translation", "progress.title")).toBe(
       "Progresso por documento"
     );

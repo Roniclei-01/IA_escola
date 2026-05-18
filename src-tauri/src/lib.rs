@@ -38,7 +38,8 @@ pub fn run() {
             commands::study_goals::load_study_goal,
             commands::study_goals::save_study_goal,
             commands::restore_imported_document::restore_imported_document,
-            commands::generate_study_cards::generate_study_cards
+            commands::generate_study_cards::generate_study_cards,
+            commands::export_text_file::export_text_file
         ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");

@@ -16,6 +16,7 @@ pub mod restore_imported_document;
 pub mod save_study_cards;
 pub mod save_study_review;
 pub mod start_study_session;
+pub mod study_goals;
 pub mod test_ocr_dependencies;
 pub mod test_ollama_connection;
 
@@ -51,6 +52,8 @@ pub use save_study_cards::save_study_cards;
 pub use save_study_review::save_study_review;
 #[cfg(feature = "tauri-app")]
 pub use start_study_session::start_study_session;
+#[cfg(feature = "tauri-app")]
+pub use study_goals::{load_study_goal, save_study_goal};
 #[cfg(feature = "tauri-app")]
 pub use test_ocr_dependencies::test_ocr_dependencies;
 #[cfg(feature = "tauri-app")]
@@ -99,6 +102,10 @@ pub use save_study_review::{
 };
 pub use start_study_session::{
     start_study_session_with_storage, StartStudySessionRequest, StartStudySessionResponse,
+};
+pub use study_goals::{
+    load_study_goal_from_storage, save_study_goal_with_storage, SaveStudyGoalRequest,
+    StudyGoalResponse,
 };
 pub use test_ocr_dependencies::{test_ocr_dependencies_with_checker, TestOcrDependenciesResponse};
 pub use test_ollama_connection::{

@@ -564,6 +564,7 @@ h1 {
 .due-study-queue,
 .retention-metrics,
 .study-metric-period,
+.study-goal,
 .session-trend,
 .hard-card-trend,
 .session-history {
@@ -578,6 +579,7 @@ h1 {
 .due-study-queue h3,
 .retention-metrics h3,
 .study-metric-period h3,
+.study-goal h3,
 .session-trend h3,
 .hard-card-trend h3,
 .session-history h3 {
@@ -722,6 +724,59 @@ h1 {
   font-weight: 800;
 }
 
+.study-goal-header {
+  display: grid;
+  grid-template-columns: 1fr auto minmax(92px, 120px) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.study-goal-header label {
+  color: #526256;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.study-goal-header input {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #cbd8ce;
+  border-radius: 6px;
+  color: #1d2a22;
+  background: #ffffff;
+  font: inherit;
+}
+
+.study-goal-header button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #c9d6cd;
+  border-radius: 6px;
+  color: #23352b;
+  background: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.study-goal-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.study-goal .study-goal-progress strong,
+.study-goal .study-goal-progress span {
+  width: fit-content;
+  padding: 6px 10px;
+  border: 1px solid #b7d8c0;
+  border-radius: 6px;
+  color: #1f4e35;
+  background: #e6f4eb;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
 .session-history-header {
   display: flex;
   align-items: center;
@@ -756,6 +811,7 @@ h1 {
 .due-study-queue p,
 .retention-metrics p,
 .study-metric-period p,
+.study-goal p,
 .session-trend p,
 .hard-card-trend p,
 .session-history p {
@@ -766,6 +822,7 @@ h1 {
 .due-study-queue ul,
 .retention-metrics ul,
 .study-metric-period ul,
+.study-goal ul,
 .session-trend ul,
 .hard-card-trend ul,
 .session-history ul {
@@ -779,6 +836,7 @@ h1 {
 .review-history li,
 .retention-metrics li,
 .study-metric-period li,
+.study-goal li,
 .session-trend li,
 .hard-card-trend li,
 .session-history li {
@@ -811,6 +869,7 @@ h1 {
 .due-study-queue span,
 .retention-metrics span,
 .study-metric-period span,
+.study-goal span,
 .session-trend span,
 .hard-card-trend span,
 .session-history span {
@@ -824,6 +883,7 @@ h1 {
 .due-study-queue strong,
 .retention-metrics strong,
 .study-metric-period strong,
+.study-goal strong,
 .session-trend strong,
 .hard-card-trend strong,
 .session-history strong {

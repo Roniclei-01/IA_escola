@@ -10,6 +10,11 @@ const listNoArchivedDocuments = vi.fn().mockResolvedValue({ documents: [] });
 const listNoStudyCards = vi.fn().mockResolvedValue([]);
 const listNoStudyReviews = vi.fn().mockResolvedValue([]);
 const listNoStudySessionSummaries = vi.fn().mockResolvedValue([]);
+const loadNoStudyGoal = vi.fn().mockResolvedValue(null);
+const saveStudyGoal = vi.fn().mockImplementation(async (documentId: string, targetReviews: number) => ({
+  document_id: documentId,
+  target_reviews: targetReviews
+}));
 const saveStudyReview = vi.fn().mockResolvedValue({
   id: "review-1",
   card_id: "card-1",
@@ -42,6 +47,8 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       listArchivedDocuments={listNoArchivedDocuments}
       listStudyReviews={listNoStudyReviews}
       listStudySessionSummaries={listNoStudySessionSummaries}
+      loadStudyGoal={loadNoStudyGoal}
+      saveStudyGoal={saveStudyGoal}
       saveStudyReview={saveStudyReview}
       startStudySession={startStudySession}
       selectStudyFile={selectNoFile}
@@ -1403,6 +1410,123 @@ describe("App", () => {
     expect(screen.getByText("1 sessao no periodo")).toBeInTheDocument();
     expect(screen.getByText("5 revisoes no periodo")).toBeInTheDocument();
     expect(screen.queryByText("9 revisoes no periodo")).not.toBeInTheDocument();
+  });
+
+  it("tracks a review goal for the active document", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-goal",
+          book_id: "book-goal",
+          content: "Literatura brasileira.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/literatura.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-goal",
+        bookId: "book-goal",
+        chunkId: "chunk-goal",
+        front: "Quem escreveu Dom Casmurro?",
+        back: "Machado de Assis.",
+        tags: ["literatura"]
+      }
+    ]);
+    const listStudySessionSummaries = vi.fn().mockResolvedValue([
+      {
+        session_id: "session-goal",
+        document_id: "document-goal",
+        started_at: 1700000000,
+        again_count: 1,
+        hard_count: 0,
+        easy_count: 2
+      }
+    ]);
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listStudySessionSummaries
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Literatura brasileira/ }));
+    fireEvent.change(await screen.findByLabelText("Meta de revisoes"), {
+      target: { value: "5" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar meta" }));
+
+    expect(screen.getByText("Meta do documento")).toBeInTheDocument();
+    expect(await screen.findByText("3 de 5 revisoes")).toBeInTheDocument();
+    expect(screen.getByText("60% concluido")).toBeInTheDocument();
+  });
+
+  it("loads and saves a persisted review goal for the active document", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-persisted-goal",
+          book_id: "book-persisted-goal",
+          content: "Arte moderna.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/arte.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-persisted-goal",
+        bookId: "book-persisted-goal",
+        chunkId: "chunk-persisted-goal",
+        front: "O que e modernismo?",
+        back: "Movimento artistico e cultural.",
+        tags: ["arte"]
+      }
+    ]);
+    const listStudySessionSummaries = vi.fn().mockResolvedValue([
+      {
+        session_id: "session-persisted-goal",
+        document_id: "document-persisted-goal",
+        started_at: 1700000000,
+        again_count: 0,
+        hard_count: 1,
+        easy_count: 2
+      }
+    ]);
+    const loadStudyGoal = vi.fn().mockResolvedValue({
+      document_id: "document-persisted-goal",
+      target_reviews: 6
+    });
+    const saveStudyGoal = vi.fn().mockResolvedValue({
+      document_id: "document-persisted-goal",
+      target_reviews: 4
+    });
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listStudySessionSummaries,
+      loadStudyGoal,
+      saveStudyGoal
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Arte moderna/ }));
+
+    expect(await screen.findByText("3 de 6 revisoes")).toBeInTheDocument();
+    expect(loadStudyGoal).toHaveBeenCalledWith("document-persisted-goal");
+
+    fireEvent.change(screen.getByLabelText("Meta de revisoes"), {
+      target: { value: "4" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar meta" }));
+
+    await waitFor(() => {
+      expect(saveStudyGoal).toHaveBeenCalledWith("document-persisted-goal", 4);
+    });
+    expect(await screen.findByText("3 de 4 revisoes")).toBeInTheDocument();
   });
 
   it("exports study cards as an Anki TSV deck", async () => {

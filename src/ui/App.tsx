@@ -45,6 +45,11 @@ import {
   type StudySession,
   type StudySessionSummary
 } from "../infrastructure/tauri/study-sessions";
+import {
+  loadStudyGoal as defaultLoadStudyGoal,
+  saveStudyGoal as defaultSaveStudyGoal,
+  type StudyGoal
+} from "../infrastructure/tauri/study-goals";
 import { selectStudyFile as defaultSelectStudyFile } from "../infrastructure/tauri/file-dialog";
 import {
   testOllamaConnection as defaultTestOllamaConnection,
@@ -95,6 +100,8 @@ interface AppProps {
   listStudyReviews?: (documentId: string) => Promise<StudyReview[]>;
   startStudySession?: (documentId: string) => Promise<StudySession>;
   listStudySessionSummaries?: (documentId: string) => Promise<StudySessionSummary[]>;
+  loadStudyGoal?: (documentId: string) => Promise<StudyGoal | null>;
+  saveStudyGoal?: (documentId: string, targetReviews: number) => Promise<StudyGoal>;
   selectStudyFile?: () => Promise<string | null>;
   testOllamaConnection?: (request: {
     model: string;
@@ -160,6 +167,12 @@ interface StudyMetricPeriodSummary {
   reviewCount: number;
   easyCount: number;
   difficultCount: number;
+}
+
+interface StudyGoalProgress {
+  completedReviews: number;
+  targetReviews: number;
+  percent: number;
 }
 
 function toCardReviewMap(
@@ -335,6 +348,31 @@ function buildStudyMetricPeriodSummary(
     reviewCount: easyCount + difficultCount,
     easyCount,
     difficultCount
+  };
+}
+
+function totalReviewsFromSummaries(summaries: StudySessionSummary[]): number {
+  return completedStudySessionSummaries(summaries).reduce(
+    (total, summary) =>
+      total + summary.easy_count + summary.hard_count + summary.again_count,
+    0
+  );
+}
+
+function buildStudyGoalProgress(
+  summaries: StudySessionSummary[],
+  targetReviews: number | undefined
+): StudyGoalProgress | null {
+  if (!targetReviews || targetReviews <= 0) {
+    return null;
+  }
+
+  const completedReviews = totalReviewsFromSummaries(summaries);
+
+  return {
+    completedReviews,
+    targetReviews,
+    percent: Math.min(100, Math.round((completedReviews / targetReviews) * 100))
   };
 }
 
@@ -717,6 +755,8 @@ export function App({
   listStudyReviews = defaultListStudyReviews,
   startStudySession = defaultStartStudySession,
   listStudySessionSummaries = defaultListStudySessionSummaries,
+  loadStudyGoal = defaultLoadStudyGoal,
+  saveStudyGoal = defaultSaveStudyGoal,
   selectStudyFile = defaultSelectStudyFile,
   testOllamaConnection = defaultTestOllamaConnection,
   loadOllamaSettings = defaultLoadOllamaSettings,
@@ -761,6 +801,12 @@ export function App({
   const [activeStudySession, setActiveStudySession] = useState<StudySession | null>(null);
   const [studySessionReviewCount, setStudySessionReviewCount] = useState(0);
   const [studySessionSummaries, setStudySessionSummaries] = useState<StudySessionSummary[]>([]);
+  const [studyReviewGoalsByDocumentId, setStudyReviewGoalsByDocumentId] = useState<
+    Record<string, number>
+  >({});
+  const [studyReviewGoalInputsByDocumentId, setStudyReviewGoalInputsByDocumentId] = useState<
+    Record<string, string>
+  >({});
   const [cardReviewSchedules, setCardReviewSchedules] = useState<
     Record<string, { priority: number; nextReviewAt: number }>
   >({});
@@ -794,6 +840,18 @@ export function App({
   const studyMetricPeriodSummary = buildStudyMetricPeriodSummary(filteredMetricSessionSummaries);
   const sessionTrend = buildSessionTrend(filteredMetricSessionSummaries);
   const hardCardPeriodTrend = buildHardCardPeriodTrend(filteredMetricSessionSummaries);
+  const activeStudyReviewGoal = document
+    ? studyReviewGoalsByDocumentId[document.document_id]
+    : undefined;
+  const activeStudyReviewGoalInput = document
+    ? studyReviewGoalInputsByDocumentId[document.document_id] ??
+      activeStudyReviewGoal?.toString() ??
+      ""
+    : "";
+  const activeStudyGoalProgress = buildStudyGoalProgress(
+    studySessionSummaries,
+    activeStudyReviewGoal
+  );
   const reviewCounts = Object.values(cardReviews).reduce(
     (counts, review) => ({
       ...counts,
@@ -1105,6 +1163,18 @@ export function App({
     setOperationStatus("loadingSavedCards");
 
     try {
+      const persistedStudyGoal = await loadStudyGoal(selectedDocument.document_id);
+      if (persistedStudyGoal) {
+        setStudyReviewGoalsByDocumentId((currentGoals) => ({
+          ...currentGoals,
+          [selectedDocument.document_id]: persistedStudyGoal.target_reviews
+        }));
+        setStudyReviewGoalInputsByDocumentId((currentInputs) => ({
+          ...currentInputs,
+          [selectedDocument.document_id]: persistedStudyGoal.target_reviews.toString()
+        }));
+      }
+
       const persistedCards = await listStudyCards(selectedDocument.document_id);
 
       if (persistedCards.length > 0) {
@@ -1412,6 +1482,44 @@ export function App({
     if (cardIndex >= 0) {
       setActiveCardIndex(cardIndex);
       setIsAnswerVisible(false);
+    }
+  }
+
+  function handleStudyGoalInputChange(value: string) {
+    if (!document) {
+      return;
+    }
+
+    setStudyReviewGoalInputsByDocumentId((currentInputs) => ({
+      ...currentInputs,
+      [document.document_id]: value
+    }));
+  }
+
+  async function handleSaveStudyReviewGoal() {
+    if (!document) {
+      return;
+    }
+
+    const targetReviews = Number.parseInt(activeStudyReviewGoalInput, 10);
+
+    if (!Number.isFinite(targetReviews) || targetReviews <= 0) {
+      return;
+    }
+
+    try {
+      const savedGoal = await saveStudyGoal(document.document_id, targetReviews);
+
+      setStudyReviewGoalsByDocumentId((currentGoals) => ({
+        ...currentGoals,
+        [document.document_id]: savedGoal.target_reviews
+      }));
+      setStudyReviewGoalInputsByDocumentId((currentInputs) => ({
+        ...currentInputs,
+        [document.document_id]: savedGoal.target_reviews.toString()
+      }));
+    } catch (unknownError) {
+      setError(unknownError instanceof Error ? unknownError.message : t("study.goalSaveError"));
     }
   }
 
@@ -1815,6 +1923,44 @@ export function App({
                 </dl>
               </section>
             ) : null}
+            <section className="study-goal" aria-labelledby="study-goal-title">
+              <div className="study-goal-header">
+                <h3 id="study-goal-title">{t("study.goalTitle")}</h3>
+                <label htmlFor="study-review-goal">{t("study.goalInputLabel")}</label>
+                <input
+                  id="study-review-goal"
+                  type="number"
+                  min="1"
+                  value={activeStudyReviewGoalInput}
+                  onChange={(event) => handleStudyGoalInputChange(event.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleSaveStudyReviewGoal();
+                  }}
+                >
+                  {t("study.saveGoal")}
+                </button>
+              </div>
+              {activeStudyGoalProgress ? (
+                <div className="study-goal-progress">
+                  <strong>
+                    {t("study.goalProgress", {
+                      completed: activeStudyGoalProgress.completedReviews,
+                      target: activeStudyGoalProgress.targetReviews
+                    })}
+                  </strong>
+                  <span>
+                    {t("study.goalPercent", {
+                      percent: activeStudyGoalProgress.percent
+                    })}
+                  </span>
+                </div>
+              ) : (
+                <p>{t("study.goalEmpty")}</p>
+              )}
+            </section>
             {sessionTrend ? (
               <section className="session-trend" aria-labelledby="session-trend-title">
                 <h3 id="session-trend-title">{t("study.sessionTrendTitle")}</h3>

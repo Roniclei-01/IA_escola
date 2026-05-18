@@ -83,6 +83,8 @@ pub enum StorageError {
     InvalidStudySessionDocumentId(#[source] uuid::Error),
     #[error("stored study session summary count is invalid")]
     InvalidStudySessionSummaryCount(i64),
+    #[error("stored study goal target is invalid")]
+    InvalidStudyGoalTarget(String),
     #[error("stored document has invalid language")]
     InvalidLanguage(String),
     #[error("stored document has invalid source type")]
@@ -640,6 +642,28 @@ impl SQLiteStorage {
         Ok(None)
     }
 
+    pub fn save_study_goal(
+        &self,
+        document_id: Uuid,
+        target_reviews: u32,
+    ) -> Result<(), StorageError> {
+        self.save_setting(
+            &study_goal_setting_key(document_id),
+            &target_reviews.to_string(),
+        )
+    }
+
+    pub fn load_study_goal(&self, document_id: Uuid) -> Result<Option<u32>, StorageError> {
+        let Some(value) = self.load_setting(&study_goal_setting_key(document_id))? else {
+            return Ok(None);
+        };
+
+        value
+            .parse::<u32>()
+            .map(Some)
+            .map_err(|_| StorageError::InvalidStudyGoalTarget(value))
+    }
+
     fn migrate(&self) -> Result<(), StorageError> {
         self.connection
             .execute_batch(
@@ -985,6 +1009,10 @@ fn rating_from_code(code: &str) -> Result<StudyReviewRating, StorageError> {
         "easy" => Ok(StudyReviewRating::Easy),
         value => Err(StorageError::InvalidStudyReviewRating(value.to_owned())),
     }
+}
+
+fn study_goal_setting_key(document_id: Uuid) -> String {
+    format!("study_goal.{document_id}.target_reviews")
 }
 
 #[cfg(test)]

@@ -138,7 +138,8 @@ Tabelas ja iniciadas:
 `documents` guarda tambem `source_type`, `source_path` e `archived_at`, permitindo diferenciar TXT/PDF, mostrar origem na UI, retirar documentos da biblioteca ativa sem apagar dados imediatamente, restaurar itens arquivados e excluir definitivamente documentos arquivados com limpeza dos dados de estudo relacionados.
 `study_reviews` guarda `rating`, `priority`, `next_review_at` e `session_id`, formando a base para revisao espacada, filas de estudo por prioridade, metricas de retencao, cards mais dificeis, filtros de periodo, tendencia por sessao, evolucao semanal de dificuldade e agrupamento de rodadas.
 `study_sessions` registra o documento estudado e o inicio da rodada.
-A UI usa esses dados para exibir historico visual por documento, uma fila de cards vencidos, filtros, busca textual, ordenacao da biblioteca, comparativo de progresso entre documentos, resumo filtravel de metricas por periodo, resumo de desempenho por sessao, tendencia temporal de retencao, evolucao de cards dificeis por periodo, exportacao local de relatorio Markdown, relatorio imprimivel em PDF e exportacao de cards para Anki em TSV.
+`app_settings` guarda configuracoes locais e metas de revisao por documento.
+A UI usa esses dados para exibir historico visual por documento, uma fila de cards vencidos, filtros, busca textual, ordenacao da biblioteca, comparativo de progresso entre documentos, resumo filtravel de metricas por periodo, metas persistidas de revisao por documento, resumo de desempenho por sessao, tendencia temporal de retencao, evolucao de cards dificeis por periodo, exportacao local de relatorio Markdown, relatorio imprimivel em PDF e exportacao de cards para Anki em TSV.
 
 Tabelas futuras:
 

@@ -916,6 +916,82 @@ describe("App", () => {
     expect(screen.getByText("1 card gerado")).toBeInTheDocument();
   });
 
+  it("keeps partially saved retry cards when generation fails later", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-retry-partial",
+          book_id: "book-retry-partial",
+          content: "Conteudo importado para retry parcial.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/retry-partial.pdf"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([]);
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+    const chunkTextDocument = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-retry-partial",
+          book_id: "book-retry-partial",
+          document_id: "document-retry-partial",
+          position: 1,
+          content: "Conteudo importado para retry parcial.",
+          token_estimate: 4
+        }
+      ]
+    });
+    const partialCard = {
+      id: "card-retry-partial",
+      bookId: "book-retry-partial",
+      chunkId: "chunk-retry-partial",
+      front: "Pergunta retry parcial",
+      back: "Resposta retry parcial",
+      tags: ["retry"]
+    };
+    const saveStudyCards = vi.fn().mockImplementation(async (cards: StudyCard[]) => cards);
+    const generateCards = vi.fn(
+      async (
+        _chunks: Array<{
+          id: string;
+          book_id: string;
+          document_id: string;
+          position: number;
+          content: string;
+          token_estimate: number;
+        }>,
+        options?: GenerateStudyCardsOptions
+      ) => {
+        await options?.onChunkCards?.([partialCard], { current: 1, total: 2 });
+        throw new Error("Falha depois do retry parcial.");
+      }
+    );
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listDocumentChunks,
+      chunkTextDocument,
+      generateCards,
+      saveStudyCards,
+      enableDevelopmentFallback: false
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
+
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "A geracao parou, mas 1 card ja foi salvo."
+    );
+    expect(screen.getByText("1 card gerado")).toBeInTheDocument();
+    expect(screen.getByText("Pergunta retry parcial")).toBeInTheDocument();
+    expect(screen.queryByText("Falha depois do retry parcial.")).not.toBeInTheDocument();
+  });
+
   it("disables card generation retry while it is running", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [

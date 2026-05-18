@@ -99,6 +99,63 @@ O MVP 0.1 so deve ser considerado pronto quando:
 - dados do usuario permanecerem locais;
 - documentacao refletir o comportamento implementado.
 
+## Checklist manual de aceite do MVP 0.1
+
+Execute este roteiro no app desktop com `npm run tauri dev` antes de declarar o MVP estavel para uso real.
+
+### Preparacao
+
+- Confirmar que o Ollama esta ativo.
+- Confirmar que `ollama list` mostra `llama3.2:1b`.
+- Abrir o app e testar a conexao na secao Ollama com URL `http://127.0.0.1:11434` e modelo `llama3.2:1b`.
+- Rodar `npm run check`, `npm run build` e `npm run test:e2e`.
+
+### Fluxo principal com TXT
+
+1. Importar um arquivo `.txt` pequeno.
+2. Confirmar que a previa do documento aparece.
+3. Confirmar que a quantidade de chunks aparece.
+4. Confirmar que pelo menos 1 card e gerado.
+5. Revelar a resposta do primeiro card.
+6. Marcar o card como `Acertei`.
+7. Confirmar que o resumo muda para `Acertos: 1`.
+8. Fechar e abrir o app.
+9. Confirmar que o documento e os cards continuam na biblioteca.
+
+### Fluxo principal com PDF
+
+1. Importar um PDF com texto extraivel.
+2. Confirmar que a origem aparece como `PDF`.
+3. Confirmar que o app limita a geracao inicial aos primeiros chunks em documentos grandes.
+4. Usar `Gerar mais cards`.
+5. Confirmar que novos cards sao adicionados sem remover os anteriores.
+
+### OCR
+
+1. Verificar se a tela mostra `pdftoppm disponivel` e `tesseract disponivel`.
+2. Importar um PDF digitalizado com `Ativar OCR para PDF digitalizado`.
+3. Testar pelo menos os idiomas `Portugues` e `Ingles` quando houver arquivos adequados.
+4. Confirmar que erro de OCR ausente mostra instrucao de instalacao.
+
+### Falhas esperadas
+
+1. Testar importacao com caminho inexistente.
+2. Testar com Ollama parado.
+3. Testar com modelo inexistente.
+4. Testar cancelar uma operacao longa.
+5. Confirmar que a UI mostra mensagem clara e nao perde documentos ja salvos.
+
+### Exportacoes
+
+1. Exportar relatorio Markdown.
+2. Abrir previa PDF do relatorio.
+3. Exportar deck Anki TSV.
+4. Confirmar que os arquivos gerados nao contem dados de outro documento.
+
+### Criterio de aprovacao manual
+
+O MVP 0.1 passa no aceite manual quando todos os fluxos acima sao executados sem travamento, perda de dados ou mensagem generica sem acao clara.
+
 ## Riscos que os testes devem reduzir
 
 - IA retornando JSON invalido ou texto fora do formato.

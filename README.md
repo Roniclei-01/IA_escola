@@ -211,10 +211,11 @@ docs/
 
 ## Proximos passos
 
-1. Adicionar cancelamento explicito de operacoes longas de IA e importacao.
-2. Evoluir a geracao de cards para fila em background com progresso por chunk.
-3. Evoluir exportacao Anki para pacote `.apkg`.
-4. Adicionar cancelamento explicito de lembretes recorrentes ao desativar notificacoes.
+1. Executar o checklist manual de aceite do MVP 0.1 em `docs/testing-strategy.md`.
+2. Testar o app empacotado fora de `tauri dev`.
+3. Evoluir a geracao de cards para fila em background com progresso por chunk.
+4. Evoluir exportacao Anki para pacote `.apkg`.
+5. Adicionar cancelamento explicito de lembretes recorrentes ao desativar notificacoes.
 
 ## Comandos de desenvolvimento
 

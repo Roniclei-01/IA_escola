@@ -701,6 +701,46 @@ describe("App", () => {
     expect(screen.getByText("1 card gerado")).toBeInTheDocument();
   });
 
+  it("collapses long imported document previews until requested", async () => {
+    const longContent = `${"Conteudo extenso do PDF. ".repeat(
+      60
+    )}TRECHO FINAL IMPORTANTE DO DOCUMENTO.`;
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-long-preview",
+          book_id: "book-long-preview",
+          content: longContent,
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/longo.pdf"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([]);
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listDocumentChunks
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Conteudo extenso do PDF/).length).toBeGreaterThan(1);
+    });
+    expect(screen.queryByText(/TRECHO FINAL IMPORTANTE DO DOCUMENTO/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar previa completa" }));
+
+    expect(screen.getByText(/TRECHO FINAL IMPORTANTE DO DOCUMENTO/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Recolher previa" }));
+
+    expect(screen.queryByText(/TRECHO FINAL IMPORTANTE DO DOCUMENTO/)).not.toBeInTheDocument();
+  });
+
   it("uses persisted cards when selecting a saved document", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [
@@ -969,6 +1009,72 @@ describe("App", () => {
     ]);
 
     expect(await screen.findByText("Pergunta gerada")).toBeInTheDocument();
+  });
+
+  it("limits initial Ollama generation to the first chunks of a large document", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-large",
+      book_id: "book-large",
+      content: "Conteudo grande para estudo.",
+      language: "Pt"
+    });
+    const chunks = Array.from({ length: 5 }, (_, index) => ({
+      id: `chunk-${index + 1}`,
+      book_id: "book-large",
+      document_id: "document-large",
+      position: index,
+      content: `Chunk ${index + 1}.`,
+      token_estimate: 2
+    }));
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks });
+    const generateCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-1",
+        bookId: "book-large",
+        chunkId: "chunk-1",
+        front: "Pergunta 1",
+        back: "Resposta 1",
+        tags: ["large"]
+      },
+      {
+        id: "card-2",
+        bookId: "book-large",
+        chunkId: "chunk-2",
+        front: "Pergunta 2",
+        back: "Resposta 2",
+        tags: ["large"]
+      },
+      {
+        id: "card-3",
+        bookId: "book-large",
+        chunkId: "chunk-3",
+        front: "Pergunta 3",
+        back: "Resposta 3",
+        tags: ["large"]
+      }
+    ]);
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      generateCards,
+      saveStudyCards: saveCards,
+      enableDevelopmentFallback: false
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/large.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    await waitFor(() => {
+      expect(generateCards).toHaveBeenCalledWith(chunks.slice(0, 3));
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Para evitar travamentos, foram gerados cards dos 3 primeiros chunks de 5."
+    );
+    expect(screen.getByText("5 chunks gerados")).toBeInTheDocument();
+    expect(screen.getByText("3 cards gerados")).toBeInTheDocument();
   });
 
   it("uses mock cards as a development fallback when Ollama generation fails", async () => {

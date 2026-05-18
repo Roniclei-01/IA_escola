@@ -1,5 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { ImportTextBookResponse } from "../../infrastructure/tauri/import-text-book";
+
+const COLLAPSED_PREVIEW_LENGTH = 900;
 
 interface DocumentSummaryProps {
   document: ImportTextBookResponse;
@@ -13,6 +15,8 @@ interface DocumentSummaryProps {
     chunkCount: string | null;
     cardCount: string;
     generateCards: string;
+    expandPreview: string;
+    collapsePreview: string;
   };
   onGenerateCards?: () => void;
   children?: ReactNode;
@@ -26,6 +30,13 @@ export function DocumentSummary({
   onGenerateCards,
   children
 }: DocumentSummaryProps) {
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const shouldCollapsePreview = document.content.length > COLLAPSED_PREVIEW_LENGTH;
+  const previewContent =
+    shouldCollapsePreview && !isPreviewExpanded
+      ? `${document.content.slice(0, COLLAPSED_PREVIEW_LENGTH).trimEnd()}...`
+      : document.content;
+
   return (
     <section className="document-preview" aria-labelledby="document-title">
       <div>
@@ -47,7 +58,16 @@ export function DocumentSummary({
           </button>
         </div>
       ) : null}
-      <p>{document.content}</p>
+      <p className="document-content-preview">{previewContent}</p>
+      {shouldCollapsePreview ? (
+        <button
+          className="document-preview-toggle"
+          type="button"
+          onClick={() => setIsPreviewExpanded((currentValue) => !currentValue)}
+        >
+          {isPreviewExpanded ? labels.collapsePreview : labels.expandPreview}
+        </button>
+      ) : null}
       {cardCount > 0 ? children : null}
     </section>
   );

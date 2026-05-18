@@ -73,7 +73,11 @@ export const resources = {
         chunkCount_other: "{{count}} chunks gerados",
         cardCount_one: "{{count}} card gerado",
         cardCount_other: "{{count}} cards gerados",
+        cardGenerationLimited:
+          "Para evitar travamentos, foram gerados cards dos {{count}} primeiros chunks de {{total}}.",
         generateCards: "Gerar cards",
+        expandPreview: "Mostrar previa completa",
+        collapsePreview: "Recolher previa",
         emptyState: "Nenhum documento importado nesta sessao.",
         emptyStateLabel: "Estado vazio da biblioteca"
       },
@@ -267,7 +271,11 @@ export const resources = {
         chunkCount_other: "{{count}} chunks generated",
         cardCount_one: "{{count}} card generated",
         cardCount_other: "{{count}} cards generated",
+        cardGenerationLimited:
+          "To avoid freezes, cards were generated from the first {{count}} chunks out of {{total}}.",
         generateCards: "Generate cards",
+        expandPreview: "Show full preview",
+        collapsePreview: "Collapse preview",
         emptyState: "No document imported in this session.",
         emptyStateLabel: "Empty library state"
       },
@@ -461,7 +469,11 @@ export const resources = {
         chunkCount_other: "{{count}} chunks generados",
         cardCount_one: "{{count}} card generado",
         cardCount_other: "{{count}} cards generados",
+        cardGenerationLimited:
+          "Para evitar bloqueos, se generaron cards de los primeros {{count}} chunks de {{total}}.",
         generateCards: "Generar cards",
+        expandPreview: "Mostrar vista previa completa",
+        collapsePreview: "Recolher vista previa",
         emptyState: "Ningun documento importado en esta sesion.",
         emptyStateLabel: "Estado vacio de la biblioteca"
       },

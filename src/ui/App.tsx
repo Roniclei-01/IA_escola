@@ -146,6 +146,7 @@ type ReviewStatusFilter = "all" | "reviewed" | "pending";
 type LibrarySortMode = "oldest" | "newest" | "type" | "status";
 type MetricPeriodFilter = "all" | "last7" | "last30";
 type StudyGoalRecurrence = StudyGoal["recurrence"];
+const INITIAL_CARD_GENERATION_CHUNK_LIMIT = 3;
 
 interface StudyGoalReminderNotification {
   title: string;
@@ -1100,15 +1101,26 @@ export function App({
   );
 
   async function generateCardsWithFallback(chunks: ImportedDocumentChunk[]): Promise<StudyCard[]> {
+    const chunksForGeneration = chunks.slice(0, INITIAL_CARD_GENERATION_CHUNK_LIMIT);
+
+    if (chunks.length > INITIAL_CARD_GENERATION_CHUNK_LIMIT) {
+      setWarning(
+        t("library.cardGenerationLimited", {
+          count: INITIAL_CARD_GENERATION_CHUNK_LIMIT,
+          total: chunks.length
+        })
+      );
+    }
+
     try {
-      return await generateCards(chunks);
+      return await generateCards(chunksForGeneration);
     } catch (unknownError) {
       if (!enableDevelopmentFallback) {
         throw unknownError;
       }
 
       const fallbackCards = await generateStudyCards(
-        chunks,
+        chunksForGeneration,
         { cardsPerChunk: 1, language: "pt" },
         new MockModelAdapter()
       );
@@ -2147,7 +2159,9 @@ export function App({
               }),
               chunkCount: chunkCount !== null ? t("library.chunkCount", { count: chunkCount }) : null,
               cardCount: t("library.cardCount", { count: cards.length }),
-              generateCards: t("library.generateCards")
+              generateCards: t("library.generateCards"),
+              expandPreview: t("library.expandPreview"),
+              collapsePreview: t("library.collapsePreview")
             }}
             onGenerateCards={() => {
               void handleGenerateCardsForActiveDocument();

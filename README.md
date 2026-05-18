@@ -55,6 +55,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - parser de `.txt` no backend Tauri;
 - comando Tauri `import_text_book`;
 - ponte TypeScript `importTextBook`;
+- UI minima para informar o caminho de um `.txt`, importar e exibir previa;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase

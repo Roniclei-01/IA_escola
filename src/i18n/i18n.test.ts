@@ -11,4 +11,10 @@ describe("i18n", () => {
     expect(i18n.getResource("en", "translation", "app.title")).toBe("Local AI Study");
     expect(i18n.getResource("es", "translation", "app.title")).toBe("Estudio IA Local");
   });
+
+  it("has import labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "library.import")).toBe("Importar");
+    expect(i18n.getResource("en", "translation", "library.import")).toBe("Import");
+    expect(i18n.getResource("es", "translation", "library.import")).toBe("Importar");
+  });
 });

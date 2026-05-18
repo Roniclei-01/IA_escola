@@ -27,16 +27,24 @@ select {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  place-items: center;
+  align-items: start;
+  justify-items: center;
   padding: 32px;
 }
 
 .workspace {
-  width: min(760px, 100%);
+  width: min(920px, 100%);
   padding: 40px;
   border: 1px solid #d8ddd4;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.workspace-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
 }
 
 .eyebrow {
@@ -59,4 +67,113 @@ h1 {
   color: #425049;
   font-size: 1rem;
   line-height: 1.6;
+}
+
+.status-pill {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid #bed0c3;
+  border-radius: 999px;
+  color: #284234;
+  background: #eef6f0;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.import-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 32px;
+}
+
+.import-panel label {
+  color: #2d3932;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.import-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.import-row input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #cfd7d1;
+  border-radius: 6px;
+  color: #18201c;
+  background: #fbfcfa;
+}
+
+.import-row button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #276f4e;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.import-row button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.message {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.message.error {
+  color: #6b1f1a;
+  background: #fae5e2;
+}
+
+.document-preview,
+.empty-state {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid #e1e5df;
+}
+
+.document-preview h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.document-preview p,
+.empty-state p {
+  margin: 14px 0 0;
+  color: #425049;
+  line-height: 1.6;
+}
+
+@media (max-width: 680px) {
+  .app-shell {
+    padding: 16px;
+  }
+
+  .workspace {
+    padding: 24px;
+  }
+
+  .workspace-header,
+  .import-row {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-header {
+    display: grid;
+  }
+
+  .status-pill {
+    width: fit-content;
+  }
 }

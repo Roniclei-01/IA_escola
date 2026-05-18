@@ -47,6 +47,10 @@ export function App({
   const [document, setDocument] = useState<ImportTextBookResponse | null>(null);
   const [chunkCount, setChunkCount] = useState<number | null>(null);
   const [cards, setCards] = useState<StudyCard[]>([]);
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const [isAnswerVisible, setIsAnswerVisible] = useState(false);
+
+  const activeCard = cards[activeCardIndex] ?? null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,6 +66,8 @@ export function App({
     setError(null);
     setChunkCount(null);
     setCards([]);
+    setActiveCardIndex(0);
+    setIsAnswerVisible(false);
 
     try {
       const importedDocument = await importTextBook(trimmedPath);
@@ -70,10 +76,14 @@ export function App({
       setDocument(importedDocument);
       setChunkCount(chunkResponse.chunks.length);
       setCards(generatedCards);
+      setActiveCardIndex(0);
+      setIsAnswerVisible(false);
     } catch (unknownError) {
       setDocument(null);
       setChunkCount(null);
       setCards([]);
+      setActiveCardIndex(0);
+      setIsAnswerVisible(false);
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
       setIsImporting(false);
@@ -126,11 +136,31 @@ export function App({
             ) : null}
             <p className="card-count">{t("library.cardCount", { count: cards.length })}</p>
             <p>{document.content}</p>
-            {cards[0] ? (
+            {activeCard ? (
               <article className="card-preview" aria-labelledby="card-preview-title">
-                <h3 id="card-preview-title">{t("library.firstCard")}</h3>
-                <p className="card-front">{cards[0].front}</p>
-                <p className="card-back">{cards[0].back}</p>
+                <div className="study-header">
+                  <h3 id="card-preview-title">{t("study.title")}</h3>
+                  <span>{t("study.progress", { current: activeCardIndex + 1, total: cards.length })}</span>
+                </div>
+                <p className="card-front">{activeCard.front}</p>
+                {isAnswerVisible ? <p className="card-back">{activeCard.back}</p> : null}
+                <div className="study-actions">
+                  <button type="button" onClick={() => setIsAnswerVisible(true)}>
+                    {t("study.revealAnswer")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveCardIndex((currentIndex) =>
+                        Math.min(currentIndex + 1, cards.length - 1)
+                      );
+                      setIsAnswerVisible(false);
+                    }}
+                    disabled={activeCardIndex >= cards.length - 1}
+                  >
+                    {t("study.nextCard")}
+                  </button>
+                </div>
               </article>
             ) : null}
           </section>

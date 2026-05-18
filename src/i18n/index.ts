@@ -23,9 +23,14 @@ export const resources = {
         chunkCount_other: "{{count}} chunks gerados",
         cardCount_one: "{{count}} card gerado",
         cardCount_other: "{{count}} cards gerados",
-        firstCard: "Primeiro card",
         emptyState: "Nenhum documento importado nesta sessao.",
         emptyStateLabel: "Estado vazio da biblioteca"
+      },
+      study: {
+        title: "Estudo",
+        progress: "Card {{current}} de {{total}}",
+        revealAnswer: "Revelar resposta",
+        nextCard: "Proximo card"
       }
     }
   },
@@ -50,9 +55,14 @@ export const resources = {
         chunkCount_other: "{{count}} chunks generated",
         cardCount_one: "{{count}} card generated",
         cardCount_other: "{{count}} cards generated",
-        firstCard: "First card",
         emptyState: "No document imported in this session.",
         emptyStateLabel: "Empty library state"
+      },
+      study: {
+        title: "Study",
+        progress: "Card {{current}} of {{total}}",
+        revealAnswer: "Reveal answer",
+        nextCard: "Next card"
       }
     }
   },
@@ -77,9 +87,14 @@ export const resources = {
         chunkCount_other: "{{count}} chunks generados",
         cardCount_one: "{{count}} card generado",
         cardCount_other: "{{count}} cards generados",
-        firstCard: "Primer card",
         emptyState: "Ningun documento importado en esta sesion.",
         emptyStateLabel: "Estado vacio de la biblioteca"
+      },
+      study: {
+        title: "Estudio",
+        progress: "Card {{current}} de {{total}}",
+        revealAnswer: "Revelar respuesta",
+        nextCard: "Siguiente card"
       }
     }
   }

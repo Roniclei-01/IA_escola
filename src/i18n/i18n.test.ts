@@ -41,4 +41,14 @@ describe("i18n", () => {
       "{{count}} card generado"
     );
   });
+
+  it("has study controls in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "study.revealAnswer")).toBe(
+      "Revelar resposta"
+    );
+    expect(i18n.getResource("en", "translation", "study.revealAnswer")).toBe("Reveal answer");
+    expect(i18n.getResource("es", "translation", "study.revealAnswer")).toBe(
+      "Revelar respuesta"
+    );
+  });
 });

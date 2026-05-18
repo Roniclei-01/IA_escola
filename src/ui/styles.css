@@ -185,8 +185,21 @@ h1 {
 }
 
 .card-preview h3 {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 1rem;
+}
+
+.study-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.study-header span {
+  color: #526256;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .card-preview .card-front,
@@ -197,6 +210,35 @@ h1 {
 .card-front {
   color: #18201c;
   font-weight: 700;
+}
+
+.study-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.study-actions button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #c9d6cd;
+  border-radius: 6px;
+  color: #23352b;
+  background: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.study-actions button:first-child {
+  color: #ffffff;
+  background: #276f4e;
+  border-color: #276f4e;
+}
+
+.study-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 @media (max-width: 680px) {

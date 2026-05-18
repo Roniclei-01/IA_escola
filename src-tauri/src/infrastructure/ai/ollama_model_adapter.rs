@@ -190,7 +190,57 @@ fn parse_http_generate_response(
         return Err(OllamaClientError::HttpStatus(status));
     }
 
-    serde_json::from_str(body).map_err(|_| OllamaClientError::InvalidResponse)
+    let body = if has_chunked_transfer_encoding(head) {
+        decode_chunked_body(body)?
+    } else {
+        body.to_owned()
+    };
+
+    serde_json::from_str(&body).map_err(|_| OllamaClientError::InvalidResponse)
+}
+
+fn has_chunked_transfer_encoding(head: &str) -> bool {
+    head.lines().any(|line| {
+        line.split_once(':')
+            .map(|(name, value)| {
+                name.eq_ignore_ascii_case("transfer-encoding")
+                    && value
+                        .split(',')
+                        .any(|encoding| encoding.trim().eq_ignore_ascii_case("chunked"))
+            })
+            .unwrap_or(false)
+    })
+}
+
+fn decode_chunked_body(body: &str) -> Result<String, OllamaClientError> {
+    let mut remaining = body;
+    let mut decoded = String::new();
+
+    loop {
+        let (size_line, rest) = remaining
+            .split_once("\r\n")
+            .ok_or(OllamaClientError::InvalidResponse)?;
+        let size_hex = size_line.split_once(';').map(|(size, _)| size).unwrap_or(size_line);
+        let size = usize::from_str_radix(size_hex.trim(), 16)
+            .map_err(|_| OllamaClientError::InvalidResponse)?;
+
+        if size == 0 {
+            return Ok(decoded);
+        }
+
+        if rest.len() < size + 2 {
+            return Err(OllamaClientError::InvalidResponse);
+        }
+
+        let (chunk, rest) = rest.split_at(size);
+        decoded.push_str(chunk);
+
+        if !rest.starts_with("\r\n") {
+            return Err(OllamaClientError::InvalidResponse);
+        }
+
+        remaining = &rest[2..];
+    }
 }
 
 pub struct OllamaModelAdapter<C> {
@@ -726,6 +776,15 @@ mod tests {
     fn parses_ollama_http_success_response() {
         let response =
             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"response\":\"ok\"}";
+
+        let response = parse_http_generate_response(response).unwrap();
+
+        assert_eq!(response.response, "ok");
+    }
+
+    #[test]
+    fn parses_chunked_ollama_http_success_response() {
+        let response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n11\r\n{\"response\":\"ok\"}\r\n0\r\n\r\n";
 
         let response = parse_http_generate_response(response).unwrap();
 

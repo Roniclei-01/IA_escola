@@ -1576,6 +1576,98 @@ describe("App", () => {
     expect(saveStudyCards).toHaveBeenLastCalledWith([incrementalCard]);
   });
 
+  it("keeps partially saved additional cards when generation fails later", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-more-partial",
+      book_id: "book-more-partial",
+      content: "Conteudo grande para falha parcial adicional.",
+      language: "Pt"
+    });
+    const chunks = Array.from({ length: 4 }, (_, index) => ({
+      id: `chunk-${index + 1}`,
+      book_id: "book-more-partial",
+      document_id: "document-more-partial",
+      position: index,
+      content: `Chunk ${index + 1}.`,
+      token_estimate: 2
+    }));
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks });
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks });
+    const partialAdditionalCard = {
+      id: "card-4",
+      bookId: "book-more-partial",
+      chunkId: "chunk-4",
+      front: "Pergunta adicional parcial",
+      back: "Resposta adicional parcial",
+      tags: ["more"]
+    };
+    const saveStudyCards = vi.fn().mockImplementation(async (cards: StudyCard[]) => cards);
+    const generateCards = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          id: "card-1",
+          bookId: "book-more-partial",
+          chunkId: "chunk-1",
+          front: "Pergunta 1",
+          back: "Resposta 1",
+          tags: ["more"]
+        },
+        {
+          id: "card-2",
+          bookId: "book-more-partial",
+          chunkId: "chunk-2",
+          front: "Pergunta 2",
+          back: "Resposta 2",
+          tags: ["more"]
+        },
+        {
+          id: "card-3",
+          bookId: "book-more-partial",
+          chunkId: "chunk-3",
+          front: "Pergunta 3",
+          back: "Resposta 3",
+          tags: ["more"]
+        }
+      ])
+      .mockImplementationOnce(
+        async (
+          _chunks: typeof chunks,
+          options?: GenerateStudyCardsOptions
+        ) => {
+          await options?.onChunkCards?.([partialAdditionalCard], { current: 1, total: 1 });
+          throw new Error("Falha depois do card adicional.");
+        }
+      );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      listDocumentChunks,
+      generateCards,
+      saveStudyCards,
+      enableDevelopmentFallback: false
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/more-partial.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByText("3 cards gerados")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar mais cards" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "A geracao parou, mas 1 card ja foi salvo."
+    );
+    expect(screen.getByText("4 cards gerados")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Proximo card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Proximo card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Proximo card" }));
+    expect(screen.getByText("Pergunta adicional parcial")).toBeInTheDocument();
+    expect(screen.queryByText("Falha depois do card adicional.")).not.toBeInTheDocument();
+  });
+
   it("cancels pending additional card generation and ignores late results", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-more-cancel",

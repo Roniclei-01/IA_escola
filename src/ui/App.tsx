@@ -1749,6 +1749,7 @@ export function App({
     setOperationStatus("chunkingDocument");
     setCardGenerationProgress(null);
     const operationToken = startCancellableOperation();
+    const partiallySavedCards: StudyCard[] = [];
 
     try {
       const chunkResponse = await chunkTextDocument(toChunkRequest(document, 180));
@@ -1813,6 +1814,7 @@ export function App({
     setOperationStatus("chunkingDocument");
     setCardGenerationProgress(null);
     const operationToken = startCancellableOperation();
+    const partiallySavedCards: StudyCard[] = [];
 
     try {
       const chunkResponse = await listDocumentChunks(document.document_id);
@@ -1835,6 +1837,7 @@ export function App({
                   operationToken,
                   incrementallySavedCardIds,
                   (savedChunkCards) => {
+                    partiallySavedCards.push(...savedChunkCards);
                     setCards((currentCards) => [...currentCards, ...savedChunkCards]);
 
                     if (!activeCard && savedChunkCards.length > 0) {
@@ -1880,7 +1883,11 @@ export function App({
       if (!isCurrentOperation(operationToken)) {
         return;
       }
-      setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+      if (partiallySavedCards.length > 0) {
+        setWarning(t("library.partialCardsSaved", { count: partiallySavedCards.length }));
+      } else {
+        setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+      }
     } finally {
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);

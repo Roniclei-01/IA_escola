@@ -5,6 +5,8 @@ export interface ImportTextBookResponse {
   book_id: string;
   content: string;
   language: "Pt" | "En" | "Es";
+  source_type: "txt" | "pdf";
+  source_path: string;
 }
 
 export async function importTextBook(filePath: string): Promise<ImportTextBookResponse> {

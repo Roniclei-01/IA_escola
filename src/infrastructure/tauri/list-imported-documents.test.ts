@@ -20,7 +20,9 @@ describe("listImportedDocuments", () => {
           document_id: "document-1",
           book_id: "book-1",
           content: "conteudo salvo",
-          language: "Pt"
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/book.pdf"
         }
       ]
     });
@@ -30,5 +32,6 @@ describe("listImportedDocuments", () => {
     expect(invokeMock).toHaveBeenCalledWith("list_imported_documents");
     expect(result.documents).toHaveLength(1);
     expect(result.documents[0].content).toBe("conteudo salvo");
+    expect(result.documents[0].source_type).toBe("pdf");
   });
 });

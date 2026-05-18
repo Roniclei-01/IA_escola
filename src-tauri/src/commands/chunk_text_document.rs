@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::{
     app::{chunk_document, ChunkDocumentConfig, ChunkDocumentError},
-    domain::{Document, DocumentChunk, Language},
+    domain::{Document, DocumentChunk, DocumentSourceType, Language},
     infrastructure::storage::{SQLiteStorage, StorageError},
 };
 
@@ -47,6 +47,8 @@ fn chunk_text_document_response(
         book_id: request.book_id,
         content: request.content,
         language: request.language,
+        source_type: DocumentSourceType::Txt,
+        source_path: String::new(),
     };
 
     chunk_document(

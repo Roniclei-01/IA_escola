@@ -50,7 +50,7 @@ pub fn chunk_document(
 #[cfg(test)]
 mod tests {
     use super::{chunk_document, ChunkDocumentConfig, ChunkDocumentError};
-    use crate::domain::{Document, Language};
+    use crate::domain::{Document, DocumentSourceType, Language};
     use uuid::Uuid;
 
     #[test]
@@ -59,6 +59,8 @@ mod tests {
             Uuid::new_v4(),
             "um dois tres quatro cinco seis sete",
             Language::Pt,
+            DocumentSourceType::Txt,
+            "/tmp/livro.txt",
         )
         .unwrap();
 
@@ -81,7 +83,14 @@ mod tests {
 
     #[test]
     fn rejects_zero_chunk_size() {
-        let document = Document::new(Uuid::new_v4(), "conteudo", Language::Pt).unwrap();
+        let document = Document::new(
+            Uuid::new_v4(),
+            "conteudo",
+            Language::Pt,
+            DocumentSourceType::Txt,
+            "/tmp/livro.txt",
+        )
+        .unwrap();
         let result = chunk_document(
             &document,
             ChunkDocumentConfig {

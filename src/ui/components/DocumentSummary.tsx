@@ -8,6 +8,8 @@ interface DocumentSummaryProps {
   labels: {
     importedDocument: string;
     documentTitle: string;
+    sourceType: string;
+    sourcePath: string;
     chunkCount: string | null;
     cardCount: string;
   };
@@ -26,6 +28,10 @@ export function DocumentSummary({
       <div>
         <p className="eyebrow">{labels.importedDocument}</p>
         <h2 id="document-title">{labels.documentTitle}</h2>
+      </div>
+      <div className="document-metadata">
+        <span>{labels.sourceType}</span>
+        {document.source_path ? <span>{labels.sourcePath}</span> : null}
       </div>
       {chunkCount !== null && labels.chunkCount ? (
         <p className="chunk-count">{labels.chunkCount}</p>

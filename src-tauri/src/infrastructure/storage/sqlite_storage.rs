@@ -4,7 +4,10 @@ use rusqlite::{params, Connection};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::domain::{Document, DocumentChunk, Language, StudyCard, StudyReview, StudyReviewRating};
+use crate::domain::{
+    Document, DocumentChunk, DocumentSourceType, Language, StudyCard, StudyReview,
+    StudyReviewRating,
+};
 
 #[derive(Debug, Error)]
 pub enum StorageError {
@@ -58,6 +61,8 @@ pub enum StorageError {
     InvalidStudyReviewRating(String),
     #[error("stored document has invalid language")]
     InvalidLanguage(String),
+    #[error("stored document has invalid source type")]
+    InvalidDocumentSourceType(String),
 }
 
 pub struct SQLiteStorage {
@@ -82,13 +87,16 @@ impl SQLiteStorage {
     pub fn save_document(&self, document: &Document) -> Result<(), StorageError> {
         self.connection
             .execute(
-                "INSERT OR REPLACE INTO documents (id, book_id, content, language)
-                 VALUES (?1, ?2, ?3, ?4)",
+                "INSERT OR REPLACE INTO documents
+                    (id, book_id, content, language, source_type, source_path)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
                     document.id.to_string(),
                     document.book_id.to_string(),
                     document.content,
                     language_to_code(&document.language),
+                    source_type_to_code(&document.source_type),
+                    document.source_path,
                 ],
             )
             .map_err(StorageError::SaveDocumentFailed)?;
@@ -99,7 +107,11 @@ impl SQLiteStorage {
     pub fn list_documents(&self) -> Result<Vec<Document>, StorageError> {
         let mut statement = self
             .connection
-            .prepare("SELECT id, book_id, content, language FROM documents ORDER BY created_at ASC")
+            .prepare(
+                "SELECT id, book_id, content, language, source_type, source_path
+                 FROM documents
+                 ORDER BY created_at ASC",
+            )
             .map_err(StorageError::ListDocumentsFailed)?;
 
         let rows = statement
@@ -109,6 +121,8 @@ impl SQLiteStorage {
                     book_id: row.get(1)?,
                     content: row.get(2)?,
                     language: row.get(3)?,
+                    source_type: row.get(4)?,
+                    source_path: row.get(5)?,
                 })
             })
             .map_err(StorageError::ListDocumentsFailed)?;
@@ -389,6 +403,8 @@ impl SQLiteStorage {
                     book_id TEXT NOT NULL,
                     content TEXT NOT NULL,
                     language TEXT NOT NULL,
+                    source_type TEXT NOT NULL DEFAULT 'txt',
+                    source_path TEXT NOT NULL DEFAULT '',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -425,7 +441,49 @@ impl SQLiteStorage {
                     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );",
             )
-            .map_err(StorageError::MigrationFailed)
+            .map_err(StorageError::MigrationFailed)?;
+
+        self.ensure_documents_metadata_columns()
+    }
+
+    fn ensure_documents_metadata_columns(&self) -> Result<(), StorageError> {
+        if !self.has_column("documents", "source_type")? {
+            self.connection
+                .execute(
+                    "ALTER TABLE documents ADD COLUMN source_type TEXT NOT NULL DEFAULT 'txt'",
+                    [],
+                )
+                .map_err(StorageError::MigrationFailed)?;
+        }
+
+        if !self.has_column("documents", "source_path")? {
+            self.connection
+                .execute(
+                    "ALTER TABLE documents ADD COLUMN source_path TEXT NOT NULL DEFAULT ''",
+                    [],
+                )
+                .map_err(StorageError::MigrationFailed)?;
+        }
+
+        Ok(())
+    }
+
+    fn has_column(&self, table: &str, column: &str) -> Result<bool, StorageError> {
+        let mut statement = self
+            .connection
+            .prepare(&format!("PRAGMA table_info({table})"))
+            .map_err(StorageError::MigrationFailed)?;
+        let rows = statement
+            .query_map([], |row| row.get::<_, String>(1))
+            .map_err(StorageError::MigrationFailed)?;
+
+        for row in rows {
+            if row.map_err(StorageError::MigrationFailed)? == column {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 }
 
@@ -434,6 +492,8 @@ struct RawDocument {
     book_id: String,
     content: String,
     language: String,
+    source_type: String,
+    source_path: String,
 }
 
 struct RawDocumentChunk {
@@ -469,6 +529,8 @@ impl TryFrom<RawDocument> for Document {
             book_id: Uuid::parse_str(&raw.book_id).map_err(StorageError::InvalidBookId)?,
             content: raw.content,
             language: language_from_code(&raw.language)?,
+            source_type: source_type_from_code(&raw.source_type)?,
+            source_path: raw.source_path,
         })
     }
 }
@@ -540,6 +602,21 @@ fn language_from_code(code: &str) -> Result<Language, StorageError> {
     }
 }
 
+fn source_type_to_code(source_type: &DocumentSourceType) -> &'static str {
+    match source_type {
+        DocumentSourceType::Txt => "txt",
+        DocumentSourceType::Pdf => "pdf",
+    }
+}
+
+fn source_type_from_code(code: &str) -> Result<DocumentSourceType, StorageError> {
+    match code {
+        "txt" => Ok(DocumentSourceType::Txt),
+        "pdf" => Ok(DocumentSourceType::Pdf),
+        value => Err(StorageError::InvalidDocumentSourceType(value.to_owned())),
+    }
+}
+
 fn rating_to_code(rating: &StudyReviewRating) -> &'static str {
     match rating {
         StudyReviewRating::Again => "again",
@@ -559,11 +636,14 @@ fn rating_from_code(code: &str) -> Result<StudyReviewRating, StorageError> {
 
 #[cfg(test)]
 mod tests {
+    use rusqlite::Connection;
+    use tempfile::TempDir;
     use uuid::Uuid;
 
     use super::SQLiteStorage;
     use crate::domain::{
-        Document, DocumentChunk, Language, StudyCard, StudyReview, StudyReviewRating,
+        Document, DocumentChunk, DocumentSourceType, Language, StudyCard, StudyReview,
+        StudyReviewRating,
     };
 
     #[test]
@@ -571,6 +651,41 @@ mod tests {
         let storage = SQLiteStorage::open_in_memory().unwrap();
 
         assert_eq!(storage.list_documents().unwrap(), Vec::<Document>::new());
+    }
+
+    #[test]
+    fn migrates_existing_documents_table_with_source_metadata() {
+        let dir = TempDir::new().unwrap();
+        let database_path = dir.path().join("app.db");
+        {
+            let connection = Connection::open(&database_path).unwrap();
+            connection
+                .execute_batch(
+                    "CREATE TABLE documents (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        book_id TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        language TEXT NOT NULL,
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );",
+                )
+                .unwrap();
+        }
+
+        let storage = SQLiteStorage::open(&database_path).unwrap();
+        let book_id = Uuid::new_v4();
+        let document = Document::new(
+            book_id,
+            "Conteudo migrado",
+            Language::Pt,
+            DocumentSourceType::Pdf,
+            "/tmp/livro.pdf",
+        )
+        .unwrap();
+
+        storage.save_document(&document).unwrap();
+
+        assert_eq!(storage.list_documents().unwrap(), vec![document]);
     }
 
     #[test]
@@ -618,7 +733,14 @@ mod tests {
     fn saves_and_lists_documents() {
         let storage = SQLiteStorage::open_in_memory().unwrap();
         let book_id = Uuid::new_v4();
-        let document = Document::new(book_id, "Conteudo persistido", Language::Pt).unwrap();
+        let document = Document::new(
+            book_id,
+            "Conteudo persistido",
+            Language::Pt,
+            DocumentSourceType::Txt,
+            "/tmp/livro.txt",
+        )
+        .unwrap();
 
         storage.save_document(&document).unwrap();
 
@@ -631,7 +753,14 @@ mod tests {
     fn replaces_existing_document() {
         let storage = SQLiteStorage::open_in_memory().unwrap();
         let book_id = Uuid::new_v4();
-        let mut document = Document::new(book_id, "Versao inicial", Language::Pt).unwrap();
+        let mut document = Document::new(
+            book_id,
+            "Versao inicial",
+            Language::Pt,
+            DocumentSourceType::Pdf,
+            "/tmp/livro.pdf",
+        )
+        .unwrap();
 
         storage.save_document(&document).unwrap();
         document.content = "Versao atualizada".to_owned();

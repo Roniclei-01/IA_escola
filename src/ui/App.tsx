@@ -87,6 +87,17 @@ function toCardReviewMap(
   }, {});
 }
 
+function getSourceTypeLabel(
+  sourceType: ImportTextBookResponse["source_type"] | undefined,
+  t: ReturnType<typeof useTranslation>["t"]
+): string {
+  if (sourceType === "pdf") {
+    return t("library.sourcePdf");
+  }
+
+  return t("library.sourceTxt");
+}
+
 export function App({
   importTextBook = defaultImportTextBook,
   listImportedDocuments = defaultListImportedDocuments,
@@ -442,7 +453,8 @@ export function App({
             title: t("library.savedDocuments"),
             loading: t("library.loadingSavedDocuments"),
             empty: t("library.noSavedDocuments"),
-            itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 })
+            itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 }),
+            sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
           }}
           onSelectDocument={(selectedDocument) => {
             void handleSelectSavedDocument(selectedDocument);
@@ -457,6 +469,12 @@ export function App({
             labels={{
               importedDocument: t("library.importedDocument"),
               documentTitle: t("library.documentTitle"),
+              sourceType: t("library.sourceType", {
+                type: getSourceTypeLabel(document.source_type, t)
+              }),
+              sourcePath: t("library.sourcePath", {
+                path: document.source_path
+              }),
               chunkCount: chunkCount !== null ? t("library.chunkCount", { count: chunkCount }) : null,
               cardCount: t("library.cardCount", { count: cards.length })
             }}

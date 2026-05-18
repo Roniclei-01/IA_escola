@@ -18,7 +18,9 @@ describe("importTextBook", () => {
       document_id: "document-1",
       book_id: "book-1",
       content: "conteudo",
-      language: "Pt"
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/book.txt"
     });
 
     const result = await importTextBook("/tmp/book.txt");
@@ -27,5 +29,6 @@ describe("importTextBook", () => {
       filePath: "/tmp/book.txt"
     });
     expect(result.content).toBe("conteudo");
+    expect(result.source_type).toBe("txt");
   });
 });

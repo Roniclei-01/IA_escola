@@ -44,14 +44,21 @@ mod tests {
 
     use super::list_imported_documents_from_storage;
     use crate::{
-        domain::{Document, Language},
+        domain::{Document, DocumentSourceType, Language},
         infrastructure::storage::SQLiteStorage,
     };
 
     #[test]
     fn lists_persisted_documents() {
         let storage = SQLiteStorage::open_in_memory().unwrap();
-        let document = Document::new(Uuid::new_v4(), "Documento salvo", Language::Pt).unwrap();
+        let document = Document::new(
+            Uuid::new_v4(),
+            "Documento salvo",
+            Language::Pt,
+            DocumentSourceType::Pdf,
+            "/tmp/documento.pdf",
+        )
+        .unwrap();
         storage.save_document(&document).unwrap();
 
         let response = list_imported_documents_from_storage(&storage).unwrap();
@@ -59,5 +66,7 @@ mod tests {
         assert_eq!(response.documents.len(), 1);
         assert_eq!(response.documents[0].document_id, document.id);
         assert_eq!(response.documents[0].content, "Documento salvo");
+        assert_eq!(response.documents[0].source_type, DocumentSourceType::Pdf);
+        assert_eq!(response.documents[0].source_path, "/tmp/documento.pdf");
     }
 }

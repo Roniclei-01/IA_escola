@@ -2,7 +2,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{
-    domain::Language,
+    domain::{DocumentSourceType, Language},
     infrastructure::parsers::{parse_text_book, TextBookParserError},
     infrastructure::storage::{SQLiteStorage, StorageError},
 };
@@ -13,6 +13,8 @@ pub struct ImportTextBookResponse {
     pub book_id: Uuid,
     pub content: String,
     pub language: Language,
+    pub source_type: DocumentSourceType,
+    pub source_path: String,
 }
 
 impl From<crate::domain::Document> for ImportTextBookResponse {
@@ -22,6 +24,8 @@ impl From<crate::domain::Document> for ImportTextBookResponse {
             book_id: document.book_id,
             content: document.content,
             language: document.language,
+            source_type: document.source_type,
+            source_path: document.source_path,
         }
     }
 }
@@ -132,5 +136,7 @@ mod tests {
         assert_eq!(documents.len(), 1);
         assert_eq!(documents[0].id, response.document_id);
         assert_eq!(documents[0].content, "Conteudo persistido no SQLite.");
+        assert_eq!(response.source_type, crate::domain::DocumentSourceType::Txt);
+        assert_eq!(response.source_path, path.to_string_lossy());
     }
 }

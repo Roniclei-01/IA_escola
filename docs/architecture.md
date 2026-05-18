@@ -135,6 +135,8 @@ Tabelas ja iniciadas:
 - `study_reviews`.
 - `app_settings`.
 
+`documents` guarda tambem `source_type` e `source_path`, permitindo diferenciar TXT/PDF, mostrar origem na UI e preparar filtros futuros.
+
 Tabelas futuras:
 
 - `study_sessions` para agrupar revisoes por sessao.

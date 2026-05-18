@@ -261,7 +261,9 @@ describe("App", () => {
       document_id: "document-1",
       book_id: "book-1",
       content: "Conteudo importado para estudo.",
-      language: "Pt"
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/book.txt"
     });
     const chunkTextDocument = vi.fn().mockResolvedValue({
       chunks: [
@@ -310,6 +312,8 @@ describe("App", () => {
       max_words_per_chunk: 180
     });
     expect(await screen.findByText("Documento importado")).toBeInTheDocument();
+    expect(screen.getByText("Origem: TXT")).toBeInTheDocument();
+    expect(screen.getByText("Arquivo: /tmp/book.txt")).toBeInTheDocument();
     expect(screen.getAllByText("Conteudo importado para estudo.").length).toBeGreaterThan(0);
     expect(screen.getByText("1 chunk gerado")).toBeInTheDocument();
     expect(await screen.findByText("1 card gerado")).toBeInTheDocument();

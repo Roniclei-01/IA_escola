@@ -3,7 +3,7 @@ use std::{fs, path::Path};
 use lopdf::Document as PdfDocument;
 use thiserror::Error;
 
-use crate::domain::{Document, DocumentError, Language};
+use crate::domain::{Document, DocumentError, DocumentSourceType, Language};
 
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum TextBookParserError {
@@ -35,13 +35,23 @@ pub fn parse_text_book(
         .and_then(|value| value.to_str())
         .map(str::to_ascii_lowercase);
 
-    let content = match extension.as_deref() {
-        Some("txt") => fs::read_to_string(path).map_err(|_| TextBookParserError::ReadFailed)?,
-        Some("pdf") => extract_pdf_text(path)?,
+    let (content, source_type) = match extension.as_deref() {
+        Some("txt") => (
+            fs::read_to_string(path).map_err(|_| TextBookParserError::ReadFailed)?,
+            DocumentSourceType::Txt,
+        ),
+        Some("pdf") => (extract_pdf_text(path)?, DocumentSourceType::Pdf),
         _ => return Err(TextBookParserError::UnsupportedExtension),
     };
 
-    Document::new(book_id, content, language).map_err(TextBookParserError::InvalidDocument)
+    Document::new(
+        book_id,
+        content,
+        language,
+        source_type,
+        path.to_string_lossy(),
+    )
+    .map_err(TextBookParserError::InvalidDocument)
 }
 
 fn extract_pdf_text(path: &Path) -> Result<String, TextBookParserError> {
@@ -65,7 +75,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::{parse_text_book, TextBookParserError};
-    use crate::domain::Language;
+    use crate::domain::{DocumentSourceType, Language};
 
     fn write_temp_file(dir: &TempDir, name: &str, content: &str) -> PathBuf {
         let path = dir.path().join(name);
@@ -79,11 +89,13 @@ mod tests {
         let path = write_temp_file(&dir, "book.txt", "Conteudo importado para estudo.");
         let book_id = Uuid::new_v4();
 
-        let document = parse_text_book(book_id, path, Language::Pt).unwrap();
+        let document = parse_text_book(book_id, &path, Language::Pt).unwrap();
 
         assert_eq!(document.book_id, book_id);
         assert_eq!(document.content, "Conteudo importado para estudo.");
         assert_eq!(document.language, Language::Pt);
+        assert_eq!(document.source_type, DocumentSourceType::Txt);
+        assert_eq!(document.source_path, path.to_string_lossy());
     }
 
     #[test]
@@ -93,11 +105,13 @@ mod tests {
         write_pdf_file(&path, "Conteudo PDF importado.");
         let book_id = Uuid::new_v4();
 
-        let document = parse_text_book(book_id, path, Language::Pt).unwrap();
+        let document = parse_text_book(book_id, &path, Language::Pt).unwrap();
 
         assert_eq!(document.book_id, book_id);
         assert!(document.content.contains("Conteudo PDF importado."));
         assert_eq!(document.language, Language::Pt);
+        assert_eq!(document.source_type, DocumentSourceType::Pdf);
+        assert_eq!(document.source_path, path.to_string_lossy());
     }
 
     #[test]

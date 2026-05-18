@@ -19,7 +19,9 @@ describe("chunkTextDocument", () => {
         document_id: "document-1",
         book_id: "book-1",
         content: "conteudo",
-        language: "Pt"
+        language: "Pt",
+        source_type: "txt",
+        source_path: "/tmp/book.txt"
       },
       120
     );

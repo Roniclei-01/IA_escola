@@ -49,6 +49,7 @@ PDF, EPUB, tutor, traducao completa, exportacao e calendario entram depois que e
 Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes automatizados. A primeira fatia do pipeline tambem foi iniciada com desenvolvimento test-first:
 
 - entidade `Document`;
+- metadados de origem do documento com tipo (`txt`/`pdf`) e caminho local;
 - servico de aplicacao `chunk_document`;
 - contrato `ModelAdapter`;
 - caso de uso `generate_flashcards`;
@@ -65,6 +66,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - area de estudo para revelar resposta, avaliar cards e avancar entre cards;
 - UI separada em componentes `ImportPanel`, `DocumentSummary` e `StudyCardViewer`;
 - persistencia SQLite inicial para documentos importados;
+- migracao SQLite para armazenar metadados de origem em documentos existentes;
 - comando `import_text_book` persistindo documentos no SQLite;
 - comando `list_imported_documents` para recuperar documentos salvos;
 - UI carregando documentos salvos ao iniciar e exibindo lista de biblioteca;
@@ -91,6 +93,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - fallback de desenvolvimento para gerar cards mockados quando o Ollama falhar;
 - revisao com marcacao de acerto, erro e dificuldade;
 - dialog nativo do Tauri para selecionar arquivos `.txt` e `.pdf`;
+- exibicao do tipo e caminho de origem na biblioteca e na previa do documento;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -165,9 +168,9 @@ docs/
 
 ## Proximos passos
 
-1. Adicionar metadados de origem para diferenciar livros TXT e PDF.
-2. Evoluir revisao espacada com agenda e prioridade dos cards.
-3. Criar historico visual de revisoes por documento.
+1. Evoluir revisao espacada com agenda e prioridade dos cards.
+2. Criar historico visual de revisoes por documento.
+3. Melhorar suporte a PDFs digitalizados com OCR opcional.
 
 ## Comandos de desenvolvimento
 

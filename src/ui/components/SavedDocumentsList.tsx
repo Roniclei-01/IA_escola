@@ -8,6 +8,7 @@ interface SavedDocumentsListProps {
     loading: string;
     empty: string;
     itemLabel: (index: number) => string;
+    sourceType: (sourceType: ImportTextBookResponse["source_type"]) => string;
   };
   onSelectDocument: (document: ImportTextBookResponse) => void;
 }
@@ -28,7 +29,9 @@ export function SavedDocumentsList({
           {documents.map((document, index) => (
             <li key={document.document_id}>
               <button type="button" onClick={() => onSelectDocument(document)}>
-                <span>{labels.itemLabel(index)}</span>
+                <span>
+                  {labels.itemLabel(index)} | {labels.sourceType(document.source_type)}
+                </span>
                 <strong>{document.content.slice(0, 80)}</strong>
               </button>
             </li>

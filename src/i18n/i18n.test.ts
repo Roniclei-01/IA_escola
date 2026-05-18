@@ -29,6 +29,7 @@ describe("i18n", () => {
       "Ruta del archivo .txt o .pdf"
     );
     expect(i18n.getResource("pt", "translation", "library.chooseFile")).toBe("Selecionar");
+    expect(i18n.getResource("pt", "translation", "library.sourceType")).toBe("Origem: {{type}}");
     expect(i18n.getResource("pt", "translation", "library.fileDialogError")).toBe(
       "Nao foi possivel abrir o seletor de arquivos."
     );

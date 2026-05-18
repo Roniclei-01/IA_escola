@@ -202,6 +202,27 @@ h1 {
   background: #e6f4eb;
 }
 
+.operation-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.operation-status .message {
+  flex: 1;
+}
+
+.operation-status button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #c9d6cd;
+  border-radius: 6px;
+  color: #23352b;
+  background: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .document-preview,
 .empty-state,
 .progress-comparison,

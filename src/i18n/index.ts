@@ -26,6 +26,8 @@ export const resources = {
         generatingCardsWithOllama: "Gerando cards com Ollama.",
         savingStudyCards: "Salvando cards de estudo.",
         loadingSavedCards: "Carregando cards salvos.",
+        cancelOperation: "Cancelar operacao",
+        operationCanceled: "Operacao cancelada.",
         mockGenerationFallback:
           "Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento.",
         emptyPath: "Informe o caminho do arquivo .txt ou .pdf.",
@@ -225,6 +227,8 @@ export const resources = {
         generatingCardsWithOllama: "Generating cards with Ollama.",
         savingStudyCards: "Saving study cards.",
         loadingSavedCards: "Loading saved cards.",
+        cancelOperation: "Cancel operation",
+        operationCanceled: "Operation canceled.",
         mockGenerationFallback:
           "Ollama failed. Mock cards were generated for development only.",
         emptyPath: "Enter a .txt or .pdf file path.",
@@ -424,6 +428,8 @@ export const resources = {
         generatingCardsWithOllama: "Generando cards con Ollama.",
         savingStudyCards: "Guardando cards de estudio.",
         loadingSavedCards: "Cargando cards guardados.",
+        cancelOperation: "Cancelar operacion",
+        operationCanceled: "Operacion cancelada.",
         mockGenerationFallback:
           "Ollama fallo. Se generaron cards mockados solo para desarrollo.",
         emptyPath: "Informe la ruta del archivo .txt o .pdf.",

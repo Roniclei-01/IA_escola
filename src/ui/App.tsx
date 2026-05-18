@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   isPermissionGranted,
   requestPermission,
@@ -995,6 +995,7 @@ export function App({
   enableDevelopmentFallback = import.meta.env.DEV
 }: AppProps) {
   const { t } = useTranslation();
+  const operationTokenRef = useRef(0);
   const [filePath, setFilePath] = useState("");
   const [isOcrEnabled, setIsOcrEnabled] = useState(false);
   const [ocrLanguage, setOcrLanguage] = useState<"por" | "eng" | "spa">("por");
@@ -1110,6 +1111,23 @@ export function App({
     }),
     { again: 0, hard: 0, easy: 0 } satisfies Record<CardReview, number>
   );
+
+  function startCancellableOperation() {
+    operationTokenRef.current += 1;
+
+    return operationTokenRef.current;
+  }
+
+  function isCurrentOperation(operationToken: number) {
+    return operationTokenRef.current === operationToken;
+  }
+
+  function handleCancelOperation() {
+    operationTokenRef.current += 1;
+    setIsImporting(false);
+    setOperationStatus(null);
+    setWarning(t("library.operationCanceled"));
+  }
 
   async function generateCardsWithFallback(chunks: ImportedDocumentChunk[]): Promise<StudyCard[]> {
     const chunksForGeneration = chunks.slice(0, INITIAL_CARD_GENERATION_CHUNK_LIMIT);
@@ -1377,19 +1395,32 @@ export function App({
     setStudySessionSummaries([]);
     setPrintableReportPreviewHtml(null);
     setCardReviewSchedules({});
+    const operationToken = startCancellableOperation();
 
     try {
       const importedDocument = await importTextBook(trimmedPath, {
         ocrEnabled: isOcrEnabled,
         ocrLanguage
       });
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setOperationStatus("chunkingDocument");
       const chunkResponse = await chunkTextDocument(toChunkRequest(importedDocument, 180));
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setOperationStatus("generatingCardsWithOllama");
       const generatedCards = await generateCardsWithFallback(chunkResponse.chunks);
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setOperationStatus("savingStudyCards");
       const persistedCards =
         generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setDocument(importedDocument);
       setSavedDocuments((currentDocuments) => [...currentDocuments, importedDocument]);
       setDocumentReviewCounts((currentCounts) => ({
@@ -1414,8 +1445,14 @@ export function App({
       setReviewHistory([]);
       setStudySessionSummaries([]);
       await beginStudySession(importedDocument.document_id);
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setCardReviewSchedules({});
     } catch (unknownError) {
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setDocument(null);
       setChunkCount(null);
       setCards([]);
@@ -1429,8 +1466,10 @@ export function App({
       setCardReviewSchedules({});
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
-      setIsImporting(false);
-      setOperationStatus(null);
+      if (isCurrentOperation(operationToken)) {
+        setIsImporting(false);
+        setOperationStatus(null);
+      }
     }
   }
 
@@ -2063,9 +2102,14 @@ export function App({
         ) : null}
 
         {operationStatus ? (
-          <p className="message info" role="status">
-            {t(`library.${operationStatus}`)}
-          </p>
+          <div className="operation-status">
+            <p className="message info" role="status">
+              {t(`library.${operationStatus}`)}
+            </p>
+            <button type="button" onClick={handleCancelOperation}>
+              {t("library.cancelOperation")}
+            </button>
+          </div>
         ) : null}
 
         <OllamaSettingsPanel

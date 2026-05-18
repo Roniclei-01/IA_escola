@@ -583,6 +583,59 @@ describe("App", () => {
     expect(listDocumentChunks).not.toHaveBeenCalled();
   });
 
+  it("cancels a pending import flow and ignores late results", async () => {
+    let resolveImport: (document: {
+      document_id: string;
+      book_id: string;
+      content: string;
+      language: "Pt";
+      source_type: "txt";
+      source_path: string;
+    }) => void = () => {};
+    const importTextBook = vi.fn(
+      () =>
+        new Promise<{
+          document_id: string;
+          book_id: string;
+          content: string;
+          language: "Pt";
+          source_type: "txt";
+          source_path: string;
+        }>((resolve) => {
+          resolveImport = resolve;
+        })
+    );
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/cancelado.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Importando documento.");
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar operacao" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Operacao cancelada.");
+    resolveImport({
+      document_id: "document-canceled",
+      book_id: "book-canceled",
+      content: "Documento cancelado nao deve aparecer.",
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/cancelado.txt"
+    });
+
+    await waitFor(() => {
+      expect(chunkTextDocument).not.toHaveBeenCalled();
+    });
+    expect(screen.queryByText("Documento cancelado nao deve aparecer.")).not.toBeInTheDocument();
+  });
+
   it("shows an error when the native file picker fails", async () => {
     const selectStudyFile = vi.fn().mockRejectedValue(new Error("dialog failed"));
 

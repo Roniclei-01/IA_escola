@@ -18,6 +18,11 @@ export interface ListStudyCardsResponse {
   cards: PersistedStudyCard[];
 }
 
+export interface DeleteStudyCardsResponse {
+  document_id: string;
+  deleted_cards: number;
+}
+
 export function toPersistedStudyCard(card: StudyCard): PersistedStudyCard {
   return {
     id: card.id,
@@ -54,4 +59,10 @@ export async function listStudyCards(documentId: string): Promise<StudyCard[]> {
   });
 
   return response.cards.map(toStudyCard);
+}
+
+export async function deleteStudyCards(documentId: string): Promise<DeleteStudyCardsResponse> {
+  return invoke<DeleteStudyCardsResponse>("delete_study_cards", {
+    documentId
+  });
 }

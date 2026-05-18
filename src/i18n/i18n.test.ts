@@ -111,6 +111,7 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.exportFileError")).toBe(
       "Nao foi possivel exportar o arquivo."
     );
+    expect(i18n.getResource("pt", "translation", "study.deleteCards")).toBe("Excluir cards");
     expect(i18n.getResource("pt", "translation", "progress.title")).toBe(
       "Progresso por documento"
     );

@@ -123,6 +123,10 @@ export const resources = {
         pdfPreviewFrameTitle: "Previa do relatorio PDF",
         exportAnki: "Exportar Anki",
         exportFileError: "Nao foi possivel exportar o arquivo.",
+        deleteCards: "Excluir cards",
+        deleteCardsConfirmation:
+          "Excluir todos os cards e revisoes deste documento? O texto importado sera mantido.",
+        deleteCardsError: "Nao foi possivel excluir os cards de estudo.",
         generateMoreCards: "Gerar mais cards",
         sessionHistoryItem: "Sessao {{number}} | Inicio: {{startedAt}}",
         sessionHistoryCounts: "Acertos: {{easy}} | Erros: {{again}} | Dificeis: {{hard}}",
@@ -338,6 +342,10 @@ export const resources = {
         pdfPreviewFrameTitle: "PDF report preview",
         exportAnki: "Export Anki",
         exportFileError: "Could not export the file.",
+        deleteCards: "Delete cards",
+        deleteCardsConfirmation:
+          "Delete all cards and reviews from this document? The imported text will be kept.",
+        deleteCardsError: "Could not delete study cards.",
         generateMoreCards: "Generate more cards",
         sessionHistoryItem: "Session {{number}} | Started: {{startedAt}}",
         sessionHistoryCounts: "Correct: {{easy}} | Missed: {{again}} | Hard: {{hard}}",
@@ -553,6 +561,10 @@ export const resources = {
         pdfPreviewFrameTitle: "Vista previa del informe PDF",
         exportAnki: "Exportar Anki",
         exportFileError: "No fue posible exportar el archivo.",
+        deleteCards: "Eliminar cards",
+        deleteCardsConfirmation:
+          "Eliminar todos los cards y revisiones de este documento? El texto importado se mantendra.",
+        deleteCardsError: "No fue posible eliminar los cards de estudio.",
         generateMoreCards: "Generar mas cards",
         sessionHistoryItem: "Sesion {{number}} | Inicio: {{startedAt}}",
         sessionHistoryCounts: "Aciertos: {{easy}} | Errores: {{again}} | Dificiles: {{hard}}",

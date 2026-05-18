@@ -60,6 +60,7 @@ export function DocumentSummary({
           </button>
         </div>
       ) : null}
+      {cardCount > 0 ? children : null}
       <p className="document-content-preview">{previewContent}</p>
       {shouldCollapsePreview ? (
         <button
@@ -70,7 +71,6 @@ export function DocumentSummary({
           {isPreviewExpanded ? labels.collapsePreview : labels.expandPreview}
         </button>
       ) : null}
-      {cardCount > 0 ? children : null}
     </section>
   );
 }

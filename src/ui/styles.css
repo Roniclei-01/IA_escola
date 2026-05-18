@@ -597,6 +597,17 @@ h1 {
   cursor: pointer;
 }
 
+.document-actions .danger-button {
+  border-color: #e4b2ad;
+  color: #7b1b12;
+  background: #fff7f5;
+}
+
+.document-actions .danger-button:hover {
+  border-color: #c76055;
+  background: #fde9e6;
+}
+
 .document-metadata span {
   max-width: 100%;
   padding: 6px 10px;

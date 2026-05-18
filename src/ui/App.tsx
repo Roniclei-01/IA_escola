@@ -41,6 +41,7 @@ import {
   type GenerateStudyCardsProgress
 } from "../infrastructure/tauri/generate-study-cards";
 import {
+  deleteStudyCards as defaultDeleteStudyCards,
   listStudyCards as defaultListStudyCards,
   saveStudyCards as defaultSaveStudyCards
 } from "../infrastructure/tauri/study-cards";
@@ -111,6 +112,7 @@ interface AppProps {
     options?: GenerateStudyCardsOptions
   ) => Promise<StudyCard[]>;
   saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
+  deleteStudyCards?: (documentId: string) => Promise<{ document_id: string; deleted_cards: number }>;
   listStudyCards?: (documentId: string) => Promise<StudyCard[]>;
   saveStudyReview?: (
     cardId: string,
@@ -1028,6 +1030,7 @@ export function App({
   chunkTextDocument = defaultChunkTextDocument,
   generateCards = generateStudyCardsWithOllama,
   saveStudyCards = defaultSaveStudyCards,
+  deleteStudyCards = defaultDeleteStudyCards,
   listStudyCards = defaultListStudyCards,
   saveStudyReview = defaultSaveStudyReview,
   listStudyReviews = defaultListStudyReviews,
@@ -2081,6 +2084,51 @@ export function App({
     }
   }
 
+  async function handleDeleteStudyCards() {
+    if (!document || cards.length === 0) {
+      return;
+    }
+
+    const documentId = document.document_id;
+    const confirmed = confirmDelete(t("study.deleteCardsConfirmation"));
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setWarning(null);
+
+    try {
+      await deleteStudyCards(documentId);
+      setCards([]);
+      setActiveCardIndex(0);
+      setIsAnswerVisible(false);
+      setCardReviews({});
+      setReviewHistory([]);
+      setActiveStudySession(null);
+      setStudySessionReviewCount(0);
+      setStudySessionSummaries([]);
+      setCardReviewSchedules({});
+      setDocumentReviewCounts((currentCounts) => ({
+        ...currentCounts,
+        [documentId]: 0
+      }));
+      setDocumentSessionSummariesById((currentSummariesByDocument) => ({
+        ...currentSummariesByDocument,
+        [documentId]: []
+      }));
+      setDocumentProgressSummaries(
+        buildDocumentProgressSummaries(savedDocuments, {
+          ...documentSessionSummariesById,
+          [documentId]: []
+        })
+      );
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("study.deleteCardsError")));
+    }
+  }
+
   async function handleReviewCard(review: CardReview) {
     if (!activeCard) {
       return;
@@ -2570,6 +2618,16 @@ export function App({
             <div className="document-actions">
               <button type="button" onClick={handleExportAnkiDeck}>
                 {t("study.exportAnki")}
+              </button>
+              <button
+                className="danger-button"
+                type="button"
+                disabled={isWorkspaceBusy}
+                onClick={() => {
+                  void handleDeleteStudyCards();
+                }}
+              >
+                {t("study.deleteCards")}
               </button>
               {canGenerateMoreCards ? (
                 <button

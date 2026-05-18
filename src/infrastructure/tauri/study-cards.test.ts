@@ -1,6 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { listStudyCards, saveStudyCards, toPersistedStudyCard, toStudyCard } from "./study-cards";
+import {
+  deleteStudyCards,
+  listStudyCards,
+  saveStudyCards,
+  toPersistedStudyCard,
+  toStudyCard
+} from "./study-cards";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn()
@@ -96,5 +102,19 @@ describe("study card persistence", () => {
       documentId: "document-1"
     });
     expect(result[0].chunkId).toBe("chunk-1");
+  });
+
+  it("invokes the Tauri delete_study_cards command", async () => {
+    invokeMock.mockResolvedValue({
+      document_id: "document-1",
+      deleted_cards: 3
+    });
+
+    const response = await deleteStudyCards("document-1");
+
+    expect(invokeMock).toHaveBeenCalledWith("delete_study_cards", {
+      documentId: "document-1"
+    });
+    expect(response.deleted_cards).toBe(3);
   });
 });

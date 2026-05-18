@@ -35,6 +35,8 @@ pub enum StorageError {
     SaveStudyCardsFailed(#[source] rusqlite::Error),
     #[error("failed to list study cards")]
     ListStudyCardsFailed(#[source] rusqlite::Error),
+    #[error("failed to delete study cards")]
+    DeleteStudyCardsFailed(#[source] rusqlite::Error),
     #[error("failed to save study review")]
     SaveStudyReviewFailed(#[source] rusqlite::Error),
     #[error("failed to list study reviews")]
@@ -452,6 +454,51 @@ impl SQLiteStorage {
         }
 
         Ok(cards)
+    }
+
+    pub fn delete_study_cards_by_document(
+        &mut self,
+        document_id: Uuid,
+    ) -> Result<usize, StorageError> {
+        let transaction = self
+            .connection
+            .transaction()
+            .map_err(StorageError::DeleteStudyCardsFailed)?;
+        let document_id = document_id.to_string();
+
+        transaction
+            .execute(
+                "DELETE FROM study_reviews
+                 WHERE card_id IN (
+                    SELECT study_cards.id
+                    FROM study_cards
+                    INNER JOIN document_chunks ON document_chunks.id = study_cards.chunk_id
+                    WHERE document_chunks.document_id = ?1
+                 )",
+                [&document_id],
+            )
+            .map_err(StorageError::DeleteStudyCardsFailed)?;
+        transaction
+            .execute(
+                "DELETE FROM study_sessions WHERE document_id = ?1",
+                [&document_id],
+            )
+            .map_err(StorageError::DeleteStudyCardsFailed)?;
+        let deleted_cards = transaction
+            .execute(
+                "DELETE FROM study_cards
+                 WHERE chunk_id IN (
+                    SELECT id FROM document_chunks WHERE document_id = ?1
+                 )",
+                [&document_id],
+            )
+            .map_err(StorageError::DeleteStudyCardsFailed)?;
+
+        transaction
+            .commit()
+            .map_err(StorageError::DeleteStudyCardsFailed)?;
+
+        Ok(deleted_cards)
     }
 
     pub fn save_study_review(&self, review: &StudyReview) -> Result<(), StorageError> {

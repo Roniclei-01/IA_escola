@@ -24,6 +24,7 @@ pub fn run() {
             commands::list_imported_documents::list_imported_documents,
             commands::list_document_chunks::list_document_chunks,
             commands::save_study_cards::save_study_cards,
+            commands::delete_study_cards::delete_study_cards,
             commands::list_study_cards::list_study_cards,
             commands::save_study_review::save_study_review,
             commands::start_study_session::start_study_session,

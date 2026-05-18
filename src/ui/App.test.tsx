@@ -2845,6 +2845,149 @@ describe("App", () => {
     );
   });
 
+  it("deletes generated cards from the active document after confirmation", async () => {
+    const confirmDelete = vi.fn().mockReturnValue(true);
+    const deleteStudyCards = vi.fn().mockResolvedValue({
+      document_id: "document-delete-cards",
+      deleted_cards: 1
+    });
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-delete-cards",
+          book_id: "book-delete-cards",
+          content: "Documento com cards para excluir.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/cards.txt"
+        }
+      ]
+    });
+    const listDocumentChunks = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-delete-cards",
+          book_id: "book-delete-cards",
+          document_id: "document-delete-cards",
+          position: 0,
+          content: "Documento com cards para excluir.",
+          token_estimate: 6
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-delete",
+        bookId: "book-delete-cards",
+        chunkId: "chunk-delete-cards",
+        front: "Pergunta para excluir",
+        back: "Resposta para excluir.",
+        tags: ["teste"]
+      }
+    ]);
+    const listStudyReviews = vi.fn().mockResolvedValue([
+      {
+        id: "review-delete",
+        card_id: "card-delete",
+        session_id: "session-delete",
+        rating: "easy",
+        priority: 20,
+        next_review_at: 1700604800
+      }
+    ]);
+    const listStudySessionSummaries = vi.fn().mockResolvedValue([
+      {
+        session_id: "session-delete",
+        document_id: "document-delete-cards",
+        started_at: 1700000000,
+        again_count: 0,
+        hard_count: 0,
+        easy_count: 1
+      }
+    ]);
+
+    renderApp({
+      confirmDelete,
+      deleteStudyCards,
+      listImportedDocuments,
+      listDocumentChunks,
+      listStudyCards,
+      listStudyReviews,
+      listStudySessionSummaries
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento com cards/ }));
+    expect((await screen.findAllByText("Pergunta para excluir")).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Excluir cards" }));
+
+    await waitFor(() => {
+      expect(confirmDelete).toHaveBeenCalledWith(
+        "Excluir todos os cards e revisoes deste documento? O texto importado sera mantido."
+      );
+      expect(deleteStudyCards).toHaveBeenCalledWith("document-delete-cards");
+    });
+    expect(screen.queryAllByText("Pergunta para excluir")).toHaveLength(0);
+    expect(screen.getByText(/0 card/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gerar cards" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Exportar Anki" })).not.toBeInTheDocument();
+  });
+
+  it("keeps generated cards when deletion is not confirmed", async () => {
+    const confirmDelete = vi.fn().mockReturnValue(false);
+    const deleteStudyCards = vi.fn();
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-keep-cards",
+          book_id: "book-keep-cards",
+          content: "Documento com cards preservados.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/cards.txt"
+        }
+      ]
+    });
+    const listDocumentChunks = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-keep-cards",
+          book_id: "book-keep-cards",
+          document_id: "document-keep-cards",
+          position: 0,
+          content: "Documento com cards preservados.",
+          token_estimate: 6
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-keep",
+        bookId: "book-keep-cards",
+        chunkId: "chunk-keep-cards",
+        front: "Pergunta preservada",
+        back: "Resposta preservada.",
+        tags: ["teste"]
+      }
+    ]);
+
+    renderApp({
+      confirmDelete,
+      deleteStudyCards,
+      listImportedDocuments,
+      listDocumentChunks,
+      listStudyCards
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento com cards/ }));
+    expect(await screen.findByText("Pergunta preservada")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Excluir cards" }));
+
+    expect(deleteStudyCards).not.toHaveBeenCalled();
+    expect(screen.getByText("Pergunta preservada")).toBeInTheDocument();
+  });
+
   it("shows an error when import fails", async () => {
     const importTextBook = vi.fn().mockRejectedValue("Arquivo de estudo nao encontrado.");
 

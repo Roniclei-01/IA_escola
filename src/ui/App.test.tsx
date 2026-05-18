@@ -17,8 +17,20 @@ describe("App", () => {
       content: "Conteudo importado para estudo.",
       language: "Pt"
     });
+    const chunkTextDocument = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-1",
+          book_id: "book-1",
+          document_id: "document-1",
+          position: 0,
+          content: "Conteudo importado para estudo.",
+          token_estimate: 4
+        }
+      ]
+    });
 
-    render(<App importTextBook={importTextBook} />);
+    render(<App importTextBook={importTextBook} chunkTextDocument={chunkTextDocument} />);
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
       target: { value: "/tmp/book.txt" }
@@ -28,8 +40,16 @@ describe("App", () => {
     await waitFor(() => {
       expect(importTextBook).toHaveBeenCalledWith("/tmp/book.txt");
     });
+    expect(chunkTextDocument).toHaveBeenCalledWith({
+      document_id: "document-1",
+      book_id: "book-1",
+      content: "Conteudo importado para estudo.",
+      language: "Pt",
+      max_words_per_chunk: 180
+    });
     expect(await screen.findByText("Documento importado")).toBeInTheDocument();
     expect(screen.getByText("Conteudo importado para estudo.")).toBeInTheDocument();
+    expect(screen.getByText("1 chunk gerado")).toBeInTheDocument();
   });
 
   it("shows an error when import fails", async () => {
@@ -43,5 +63,24 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Arquivo de texto nao encontrado.");
+  });
+
+  it("shows chunking errors after a successful import", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-1",
+      book_id: "book-1",
+      content: "Conteudo importado para estudo.",
+      language: "Pt"
+    });
+    const chunkTextDocument = vi.fn().mockRejectedValue(new Error("Falha ao gerar chunks."));
+
+    render(<App importTextBook={importTextBook} chunkTextDocument={chunkTextDocument} />);
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+      target: { value: "/tmp/book.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Falha ao gerar chunks.");
   });
 });

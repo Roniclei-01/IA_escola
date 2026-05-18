@@ -17,4 +17,16 @@ describe("i18n", () => {
     expect(i18n.getResource("en", "translation", "library.import")).toBe("Import");
     expect(i18n.getResource("es", "translation", "library.import")).toBe("Importar");
   });
+
+  it("has chunk count labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "library.chunkCount_one")).toBe(
+      "{{count}} chunk gerado"
+    );
+    expect(i18n.getResource("en", "translation", "library.chunkCount_one")).toBe(
+      "{{count}} chunk generated"
+    );
+    expect(i18n.getResource("es", "translation", "library.chunkCount_one")).toBe(
+      "{{count}} chunk generado"
+    );
+  });
 });

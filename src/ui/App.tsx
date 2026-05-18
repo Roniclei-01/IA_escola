@@ -4,17 +4,29 @@ import {
   importTextBook as defaultImportTextBook,
   type ImportTextBookResponse
 } from "../infrastructure/tauri/import-text-book";
+import {
+  chunkTextDocument as defaultChunkTextDocument,
+  toChunkRequest,
+  type ChunkTextDocumentResponse
+} from "../infrastructure/tauri/chunk-text-document";
 
 interface AppProps {
   importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
+  chunkTextDocument?: (
+    request: ReturnType<typeof toChunkRequest>
+  ) => Promise<ChunkTextDocumentResponse>;
 }
 
-export function App({ importTextBook = defaultImportTextBook }: AppProps) {
+export function App({
+  importTextBook = defaultImportTextBook,
+  chunkTextDocument = defaultChunkTextDocument
+}: AppProps) {
   const { t } = useTranslation();
   const [filePath, setFilePath] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [document, setDocument] = useState<ImportTextBookResponse | null>(null);
+  const [chunkCount, setChunkCount] = useState<number | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -28,12 +40,16 @@ export function App({ importTextBook = defaultImportTextBook }: AppProps) {
 
     setIsImporting(true);
     setError(null);
+    setChunkCount(null);
 
     try {
       const importedDocument = await importTextBook(trimmedPath);
+      const chunkResponse = await chunkTextDocument(toChunkRequest(importedDocument, 180));
       setDocument(importedDocument);
+      setChunkCount(chunkResponse.chunks.length);
     } catch (unknownError) {
       setDocument(null);
+      setChunkCount(null);
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
       setIsImporting(false);
@@ -79,6 +95,11 @@ export function App({ importTextBook = defaultImportTextBook }: AppProps) {
               <p className="eyebrow">{t("library.importedDocument")}</p>
               <h2 id="document-title">{t("library.documentTitle")}</h2>
             </div>
+            {chunkCount !== null ? (
+              <p className="chunk-count">
+                {t("library.chunkCount", { count: chunkCount })}
+              </p>
+            ) : null}
             <p>{document.content}</p>
           </section>
         ) : (

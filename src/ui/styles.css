@@ -148,6 +148,19 @@ h1 {
   font-size: 1.25rem;
 }
 
+.chunk-count {
+  display: inline-flex;
+  width: fit-content;
+  margin: 16px 0 0;
+  padding: 6px 10px;
+  border: 1px solid #d2ddd4;
+  border-radius: 6px;
+  color: #274232;
+  background: #f1f7f2;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .document-preview p,
 .empty-state p {
   margin: 14px 0 0;

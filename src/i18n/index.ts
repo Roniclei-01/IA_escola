@@ -19,6 +19,8 @@ export const resources = {
         unknownError: "Nao foi possivel importar o arquivo.",
         importedDocument: "Documento importado",
         documentTitle: "Previa do conteudo",
+        chunkCount_one: "{{count}} chunk gerado",
+        chunkCount_other: "{{count}} chunks gerados",
         emptyState: "Nenhum documento importado nesta sessao.",
         emptyStateLabel: "Estado vazio da biblioteca"
       }
@@ -41,6 +43,8 @@ export const resources = {
         unknownError: "Could not import the file.",
         importedDocument: "Imported document",
         documentTitle: "Content preview",
+        chunkCount_one: "{{count}} chunk generated",
+        chunkCount_other: "{{count}} chunks generated",
         emptyState: "No document imported in this session.",
         emptyStateLabel: "Empty library state"
       }
@@ -63,6 +67,8 @@ export const resources = {
         unknownError: "No fue posible importar el archivo.",
         importedDocument: "Documento importado",
         documentTitle: "Vista previa del contenido",
+        chunkCount_one: "{{count}} chunk generado",
+        chunkCount_other: "{{count}} chunks generados",
         emptyState: "Ningun documento importado en esta sesion.",
         emptyStateLabel: "Estado vacio de la biblioteca"
       }

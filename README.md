@@ -56,6 +56,9 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - comando Tauri `import_text_book`;
 - ponte TypeScript `importTextBook`;
 - UI minima para informar o caminho de um `.txt`, importar e exibir previa;
+- comando Tauri `chunk_text_document`;
+- ponte TypeScript `chunkTextDocument`;
+- exibicao da quantidade de chunks gerados apos importacao;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase

@@ -1164,6 +1164,72 @@ describe("App", () => {
     expect(downloadTextFile.mock.calls[0][1]).toContain("## Sessao 1");
   });
 
+  it("shows retention trend across study sessions", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-trend",
+          book_id: "book-trend",
+          content: "Quimica organica.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/quimica.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-trend",
+        bookId: "book-trend",
+        chunkId: "chunk-trend",
+        front: "O que e carbono?",
+        back: "Elemento quimico.",
+        tags: ["quimica"]
+      }
+    ]);
+    const listStudyReviews = vi.fn().mockResolvedValue([
+      {
+        id: "review-trend",
+        card_id: "card-trend",
+        session_id: "session-latest",
+        rating: "easy",
+        priority: 20,
+        next_review_at: 1700604800
+      }
+    ]);
+    const listStudySessionSummaries = vi.fn().mockResolvedValue([
+      {
+        session_id: "session-old",
+        document_id: "document-trend",
+        started_at: 1700000000,
+        again_count: 2,
+        hard_count: 0,
+        easy_count: 1
+      },
+      {
+        session_id: "session-latest",
+        document_id: "document-trend",
+        started_at: 1700086400,
+        again_count: 0,
+        hard_count: 1,
+        easy_count: 3
+      }
+    ]);
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listStudyReviews,
+      listStudySessionSummaries
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Quimica organica/ }));
+
+    expect(await screen.findByText("Tendencia por sessao")).toBeInTheDocument();
+    expect(screen.getByText("Melhorando")).toBeInTheDocument();
+    expect(screen.getByText("33% para 75%")).toBeInTheDocument();
+  });
+
   it("exports study cards as an Anki TSV deck", async () => {
     const downloadTextFile = vi.fn();
     const listImportedDocuments = vi.fn().mockResolvedValue({

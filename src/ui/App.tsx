@@ -139,6 +139,12 @@ interface RetentionMetrics {
   }>;
 }
 
+interface SessionTrend {
+  firstRetentionPercent: number;
+  latestRetentionPercent: number;
+  status: "improving" | "stable" | "declining";
+}
+
 function toCardReviewMap(
   reviews: Array<{ card_id: string; rating: StudyReviewRating }>
 ): Record<string, CardReview> {
@@ -231,6 +237,39 @@ function buildRetentionMetrics(cards: StudyCard[], reviews: StudyReview[]): Rete
       }))
       .sort((firstCard, secondCard) => secondCard.priority - firstCard.priority)
       .slice(0, 3)
+  };
+}
+
+function sessionRetentionPercent(summary: StudySessionSummary): number {
+  const totalReviews = summary.easy_count + summary.hard_count + summary.again_count;
+  return totalReviews > 0 ? Math.round((summary.easy_count / totalReviews) * 100) : 0;
+}
+
+function buildSessionTrend(summaries: StudySessionSummary[]): SessionTrend | null {
+  const completedSummaries = summaries.filter(
+    (summary) => summary.easy_count + summary.hard_count + summary.again_count > 0
+  );
+
+  if (completedSummaries.length < 2) {
+    return null;
+  }
+
+  const firstRetentionPercent = sessionRetentionPercent(completedSummaries[0]);
+  const latestRetentionPercent = sessionRetentionPercent(
+    completedSummaries[completedSummaries.length - 1]
+  );
+
+  let status: SessionTrend["status"] = "stable";
+  if (latestRetentionPercent > firstRetentionPercent) {
+    status = "improving";
+  } else if (latestRetentionPercent < firstRetentionPercent) {
+    status = "declining";
+  }
+
+  return {
+    firstRetentionPercent,
+    latestRetentionPercent,
+    status
   };
 }
 
@@ -542,6 +581,7 @@ export function App({
     Math.floor(Date.now() / 1000)
   );
   const retentionMetrics = buildRetentionMetrics(cards, reviewHistory);
+  const sessionTrend = buildSessionTrend(studySessionSummaries);
   const reviewCounts = Object.values(cardReviews).reduce(
     (counts, review) => ({
       ...counts,
@@ -1494,6 +1534,26 @@ export function App({
                 ) : (
                   <p>{t("study.noHardCards")}</p>
                 )}
+              </section>
+            ) : null}
+            {sessionTrend ? (
+              <section className="session-trend" aria-labelledby="session-trend-title">
+                <h3 id="session-trend-title">{t("study.sessionTrendTitle")}</h3>
+                <div className={`session-trend-summary ${sessionTrend.status}`}>
+                  <strong>
+                    {sessionTrend.status === "improving"
+                      ? t("study.sessionTrendImproving")
+                      : sessionTrend.status === "declining"
+                        ? t("study.sessionTrendDeclining")
+                        : t("study.sessionTrendStable")}
+                  </strong>
+                  <span>
+                    {t("study.sessionTrendRange", {
+                      first: sessionTrend.firstRetentionPercent,
+                      latest: sessionTrend.latestRetentionPercent
+                    })}
+                  </span>
+                </div>
               </section>
             ) : null}
             <StudySessionHistory

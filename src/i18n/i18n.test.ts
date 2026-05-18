@@ -103,6 +103,9 @@ describe("i18n", () => {
       "Progresso por documento"
     );
     expect(i18n.getResource("pt", "translation", "study.retentionTitle")).toBe("Retencao");
+    expect(i18n.getResource("pt", "translation", "study.sessionTrendTitle")).toBe(
+      "Tendencia por sessao"
+    );
   });
 
   it("has saved document labels in every supported language", () => {

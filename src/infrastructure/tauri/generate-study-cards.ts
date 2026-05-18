@@ -26,15 +26,21 @@ export async function generateStudyCardsWithOllama(
   }
 
   const timeoutMs = options.timeoutMs ?? DEFAULT_CARD_GENERATION_TIMEOUT_MS;
-  const response = await withTimeout(invoke<GenerateStudyCardsResponse>("generate_study_cards", {
-    request: {
-      chunks,
-      cards_per_chunk: 1,
-      language: "Pt"
-    } satisfies GenerateStudyCardsRequest
-  }), timeoutMs);
+  const cards: StudyCard[] = [];
 
-  return response.cards.map(toStudyCard);
+  for (const chunk of chunks) {
+    const response = await withTimeout(invoke<GenerateStudyCardsResponse>("generate_study_cards", {
+      request: {
+        chunks: [chunk],
+        cards_per_chunk: 1,
+        language: "Pt"
+      } satisfies GenerateStudyCardsRequest
+    }), timeoutMs);
+
+    cards.push(...response.cards.map(toStudyCard));
+  }
+
+  return cards;
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {

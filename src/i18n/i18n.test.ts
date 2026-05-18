@@ -29,4 +29,16 @@ describe("i18n", () => {
       "{{count}} chunk generado"
     );
   });
+
+  it("has card count labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "library.cardCount_one")).toBe(
+      "{{count}} card gerado"
+    );
+    expect(i18n.getResource("en", "translation", "library.cardCount_one")).toBe(
+      "{{count}} card generated"
+    );
+    expect(i18n.getResource("es", "translation", "library.cardCount_one")).toBe(
+      "{{count}} card generado"
+    );
+  });
 });

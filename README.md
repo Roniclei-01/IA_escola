@@ -59,6 +59,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - comando Tauri `chunk_text_document`;
 - ponte TypeScript `chunkTextDocument`;
 - exibicao da quantidade de chunks gerados apos importacao;
+- geracao de flashcards com `MockModelAdapter`;
+- exibicao da quantidade de cards gerados e previa do primeiro card;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase

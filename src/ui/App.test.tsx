@@ -50,6 +50,8 @@ describe("App", () => {
     expect(await screen.findByText("Documento importado")).toBeInTheDocument();
     expect(screen.getByText("Conteudo importado para estudo.")).toBeInTheDocument();
     expect(screen.getByText("1 chunk gerado")).toBeInTheDocument();
+    expect(await screen.findByText("1 card gerado")).toBeInTheDocument();
+    expect(screen.getByText("Pergunta 1 sobre o trecho 0")).toBeInTheDocument();
   });
 
   it("shows an error when import fails", async () => {
@@ -82,5 +84,42 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Falha ao gerar chunks.");
+  });
+
+  it("shows card generation errors after chunking", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-1",
+      book_id: "book-1",
+      content: "Conteudo importado para estudo.",
+      language: "Pt"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-1",
+          book_id: "book-1",
+          document_id: "document-1",
+          position: 0,
+          content: "Conteudo importado para estudo.",
+          token_estimate: 4
+        }
+      ]
+    });
+    const generateCards = vi.fn().mockRejectedValue(new Error("Falha ao gerar cards."));
+
+    render(
+      <App
+        importTextBook={importTextBook}
+        chunkTextDocument={chunkTextDocument}
+        generateCards={generateCards}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+      target: { value: "/tmp/book.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Falha ao gerar cards.");
   });
 });

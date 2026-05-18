@@ -21,6 +21,9 @@ export const resources = {
         documentTitle: "Previa do conteudo",
         chunkCount_one: "{{count}} chunk gerado",
         chunkCount_other: "{{count}} chunks gerados",
+        cardCount_one: "{{count}} card gerado",
+        cardCount_other: "{{count}} cards gerados",
+        firstCard: "Primeiro card",
         emptyState: "Nenhum documento importado nesta sessao.",
         emptyStateLabel: "Estado vazio da biblioteca"
       }
@@ -45,6 +48,9 @@ export const resources = {
         documentTitle: "Content preview",
         chunkCount_one: "{{count}} chunk generated",
         chunkCount_other: "{{count}} chunks generated",
+        cardCount_one: "{{count}} card generated",
+        cardCount_other: "{{count}} cards generated",
+        firstCard: "First card",
         emptyState: "No document imported in this session.",
         emptyStateLabel: "Empty library state"
       }
@@ -69,6 +75,9 @@ export const resources = {
         documentTitle: "Vista previa del contenido",
         chunkCount_one: "{{count}} chunk generado",
         chunkCount_other: "{{count}} chunks generados",
+        cardCount_one: "{{count}} card generado",
+        cardCount_other: "{{count}} cards generados",
+        firstCard: "Primer card",
         emptyState: "Ningun documento importado en esta sesion.",
         emptyStateLabel: "Estado vacio de la biblioteca"
       }

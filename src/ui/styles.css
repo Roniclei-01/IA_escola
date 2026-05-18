@@ -148,7 +148,8 @@ h1 {
   font-size: 1.25rem;
 }
 
-.chunk-count {
+.chunk-count,
+.card-count {
   display: inline-flex;
   width: fit-content;
   margin: 16px 0 0;
@@ -161,11 +162,41 @@ h1 {
   font-weight: 700;
 }
 
+.card-count {
+  margin-left: 8px;
+  color: #3b315f;
+  background: #f1eff8;
+  border-color: #d7d0ec;
+}
+
 .document-preview p,
 .empty-state p {
   margin: 14px 0 0;
   color: #425049;
   line-height: 1.6;
+}
+
+.card-preview {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #dce2dc;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.card-preview h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.card-preview .card-front,
+.card-preview .card-back {
+  margin: 8px 0 0;
+}
+
+.card-front {
+  color: #18201c;
+  font-weight: 700;
 }
 
 @media (max-width: 680px) {

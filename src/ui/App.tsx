@@ -7,19 +7,38 @@ import {
 import {
   chunkTextDocument as defaultChunkTextDocument,
   toChunkRequest,
+  type ImportedDocumentChunk,
   type ChunkTextDocumentResponse
 } from "../infrastructure/tauri/chunk-text-document";
+import { MockModelAdapter } from "../domain/mock-model-adapter";
+import type { StudyCard } from "../domain/model-adapter";
+import { generateStudyCards } from "../app/generate-study-cards";
 
 interface AppProps {
   importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
   chunkTextDocument?: (
     request: ReturnType<typeof toChunkRequest>
   ) => Promise<ChunkTextDocumentResponse>;
+  generateCards?: (chunks: ImportedDocumentChunk[]) => Promise<StudyCard[]>;
+}
+
+const mockModelAdapter = new MockModelAdapter();
+
+async function defaultGenerateCards(chunks: ImportedDocumentChunk[]) {
+  return generateStudyCards(
+    chunks,
+    {
+      cardsPerChunk: 1,
+      language: "pt"
+    },
+    mockModelAdapter
+  );
 }
 
 export function App({
   importTextBook = defaultImportTextBook,
-  chunkTextDocument = defaultChunkTextDocument
+  chunkTextDocument = defaultChunkTextDocument,
+  generateCards = defaultGenerateCards
 }: AppProps) {
   const { t } = useTranslation();
   const [filePath, setFilePath] = useState("");
@@ -27,6 +46,7 @@ export function App({
   const [error, setError] = useState<string | null>(null);
   const [document, setDocument] = useState<ImportTextBookResponse | null>(null);
   const [chunkCount, setChunkCount] = useState<number | null>(null);
+  const [cards, setCards] = useState<StudyCard[]>([]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,15 +61,19 @@ export function App({
     setIsImporting(true);
     setError(null);
     setChunkCount(null);
+    setCards([]);
 
     try {
       const importedDocument = await importTextBook(trimmedPath);
       const chunkResponse = await chunkTextDocument(toChunkRequest(importedDocument, 180));
+      const generatedCards = await generateCards(chunkResponse.chunks);
       setDocument(importedDocument);
       setChunkCount(chunkResponse.chunks.length);
+      setCards(generatedCards);
     } catch (unknownError) {
       setDocument(null);
       setChunkCount(null);
+      setCards([]);
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
       setIsImporting(false);
@@ -100,7 +124,15 @@ export function App({
                 {t("library.chunkCount", { count: chunkCount })}
               </p>
             ) : null}
+            <p className="card-count">{t("library.cardCount", { count: cards.length })}</p>
             <p>{document.content}</p>
+            {cards[0] ? (
+              <article className="card-preview" aria-labelledby="card-preview-title">
+                <h3 id="card-preview-title">{t("library.firstCard")}</h3>
+                <p className="card-front">{cards[0].front}</p>
+                <p className="card-back">{cards[0].back}</p>
+              </article>
+            ) : null}
           </section>
         ) : (
           <section className="empty-state" aria-label={t("library.emptyStateLabel")}>

@@ -65,6 +65,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - area de estudo para revelar resposta e avancar entre cards;
 - UI separada em componentes `ImportPanel`, `DocumentSummary` e `StudyCardViewer`;
 - persistencia SQLite inicial para documentos importados;
+- comando `import_text_book` persistindo documentos no SQLite;
+- comando `list_imported_documents` para recuperar documentos salvos;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase

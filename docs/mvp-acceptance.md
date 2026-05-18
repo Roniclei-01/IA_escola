@@ -49,11 +49,10 @@ Artefatos esperados:
 Smoke test recomendado com AppImage:
 
 ```bash
-chmod +x "src-tauri/target/release/bundle/appimage/Estudo IA Local_0.1.0_amd64.AppImage"
-"src-tauri/target/release/bundle/appimage/Estudo IA Local_0.1.0_amd64.AppImage"
+npm run check:mvp:appimage
 ```
 
-Se o sistema retornar erro de FUSE ao montar o AppImage, use o modo sem FUSE:
+Esse comando tenta abrir o AppImage diretamente. Se o sistema retornar erro de FUSE ao montar o AppImage, ele tenta automaticamente o modo sem FUSE:
 
 ```bash
 APPIMAGE_EXTRACT_AND_RUN=1 "src-tauri/target/release/bundle/appimage/Estudo IA Local_0.1.0_amd64.AppImage"
@@ -62,6 +61,7 @@ APPIMAGE_EXTRACT_AND_RUN=1 "src-tauri/target/release/bundle/appimage/Estudo IA L
 Resultado esperado:
 
 - [ ] O app abre fora do `tauri dev`.
+- [ ] O smoke test finaliza com `[ok]`.
 - [ ] A biblioteca carrega sem erro.
 - [ ] A secao Ollama testa o modelo `llama3.2:1b`.
 - [ ] A secao OCR mostra `pdftoppm` e `tesseract` quando instalados.

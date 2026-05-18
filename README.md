@@ -228,6 +228,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
 npm run test:e2e
 npm run check:mvp
 npm run check:mvp:env
+npm run check:mvp:appimage
 npm run build
 ```
 

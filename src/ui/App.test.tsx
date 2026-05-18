@@ -1302,6 +1302,97 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "Gerar mais cards" })).not.toBeInTheDocument();
   });
 
+  it("cancels pending additional card generation and ignores late results", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-more-cancel",
+      book_id: "book-more-cancel",
+      content: "Conteudo grande para cancelar geracao adicional.",
+      language: "Pt"
+    });
+    const chunks = Array.from({ length: 4 }, (_, index) => ({
+      id: `chunk-${index + 1}`,
+      book_id: "book-more-cancel",
+      document_id: "document-more-cancel",
+      position: index,
+      content: `Chunk ${index + 1}.`,
+      token_estimate: 2
+    }));
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks });
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks });
+    let resolveAdditionalCards: (cards: StudyCard[]) => void = () => {};
+    const generateCards = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          id: "card-1",
+          bookId: "book-more-cancel",
+          chunkId: "chunk-1",
+          front: "Pergunta 1",
+          back: "Resposta 1",
+          tags: ["more"]
+        },
+        {
+          id: "card-2",
+          bookId: "book-more-cancel",
+          chunkId: "chunk-2",
+          front: "Pergunta 2",
+          back: "Resposta 2",
+          tags: ["more"]
+        },
+        {
+          id: "card-3",
+          bookId: "book-more-cancel",
+          chunkId: "chunk-3",
+          front: "Pergunta 3",
+          back: "Resposta 3",
+          tags: ["more"]
+        }
+      ])
+      .mockImplementationOnce(
+        () =>
+          new Promise<StudyCard[]>((resolve) => {
+            resolveAdditionalCards = resolve;
+          })
+      );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      listDocumentChunks,
+      generateCards,
+      saveStudyCards: saveCards,
+      enableDevelopmentFallback: false
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/more-cancel.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByText("3 cards gerados")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar mais cards" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar operacao" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Operacao cancelada.");
+    resolveAdditionalCards([
+      {
+        id: "card-4",
+        bookId: "book-more-cancel",
+        chunkId: "chunk-4",
+        front: "Pergunta 4",
+        back: "Resposta 4",
+        tags: ["more"]
+      }
+    ]);
+
+    await waitFor(() => {
+      expect(screen.getByText("3 cards gerados")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Pergunta 4")).not.toBeInTheDocument();
+  });
+
   it("uses mock cards as a development fallback when Ollama generation fails", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-1",

@@ -1488,9 +1488,13 @@ export function App({
     setError(null);
     setWarning(null);
     setOperationStatus("loadingSavedCards");
+    const operationToken = startCancellableOperation();
 
     try {
       const persistedStudyGoal = await loadStudyGoal(selectedDocument.document_id);
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       if (persistedStudyGoal) {
         setStudyReviewGoalsByDocumentId((currentGoals) => ({
           ...currentGoals,
@@ -1507,12 +1511,21 @@ export function App({
       }
 
       const persistedCards = await listStudyCards(selectedDocument.document_id);
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
 
       if (persistedCards.length > 0) {
         const persistedReviews = await listStudyReviews(selectedDocument.document_id);
+        if (!isCurrentOperation(operationToken)) {
+          return;
+        }
         const persistedSessionSummaries = await listStudySessionSummaries(
           selectedDocument.document_id
         );
+        if (!isCurrentOperation(operationToken)) {
+          return;
+        }
         setChunkCount(new Set(persistedCards.map((card) => card.chunkId)).size);
         setCards(persistedCards);
         setActiveCardIndex(0);
@@ -1521,6 +1534,9 @@ export function App({
         setReviewHistory(persistedReviews);
         setStudySessionSummaries(persistedSessionSummaries);
         await beginStudySession(selectedDocument.document_id);
+        if (!isCurrentOperation(operationToken)) {
+          return;
+        }
         setDocumentReviewCounts((currentCounts) => ({
           ...currentCounts,
           [selectedDocument.document_id]: persistedReviews.length
@@ -1532,11 +1548,20 @@ export function App({
 
       setOperationStatus("chunkingDocument");
       const chunkResponse = await listDocumentChunks(selectedDocument.document_id);
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setOperationStatus("generatingCardsWithOllama");
       const generatedCards =
         chunkResponse.chunks.length > 0 ? await generateCardsWithFallback(chunkResponse.chunks) : [];
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setOperationStatus("savingStudyCards");
       const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
 
       setChunkCount(chunkResponse.chunks.length);
       setCards(savedCards);
@@ -1546,9 +1571,15 @@ export function App({
       setReviewHistory([]);
       setStudySessionSummaries([]);
       await beginStudySession(selectedDocument.document_id);
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setCardReviewSchedules({});
       setOperationStatus(null);
     } catch (unknownError) {
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setChunkCount(null);
       setCards([]);
       setActiveCardIndex(0);
@@ -1561,6 +1592,10 @@ export function App({
       setCardReviewSchedules({});
       setOperationStatus(null);
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+    } finally {
+      if (isCurrentOperation(operationToken)) {
+        setOperationStatus(null);
+      }
     }
   }
 
@@ -1615,13 +1650,23 @@ export function App({
     setError(null);
     setWarning(null);
     setOperationStatus("chunkingDocument");
+    const operationToken = startCancellableOperation();
 
     try {
       const chunkResponse = await chunkTextDocument(toChunkRequest(document, 180));
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setOperationStatus("generatingCardsWithOllama");
       const generatedCards = await generateCardsWithFallback(chunkResponse.chunks);
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setOperationStatus("savingStudyCards");
       const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
 
       setChunkCount(chunkResponse.chunks.length);
       setCards(savedCards);
@@ -1631,8 +1676,14 @@ export function App({
       setReviewHistory([]);
       setStudySessionSummaries([]);
       await beginStudySession(document.document_id);
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setCardReviewSchedules({});
     } catch (unknownError) {
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setChunkCount(null);
       setCards([]);
       setActiveCardIndex(0);
@@ -1645,7 +1696,9 @@ export function App({
       setCardReviewSchedules({});
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
-      setOperationStatus(null);
+      if (isCurrentOperation(operationToken)) {
+        setOperationStatus(null);
+      }
     }
   }
 
@@ -1657,9 +1710,13 @@ export function App({
     setError(null);
     setWarning(null);
     setOperationStatus("chunkingDocument");
+    const operationToken = startCancellableOperation();
 
     try {
       const chunkResponse = await listDocumentChunks(document.document_id);
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       const currentChunkIds = new Set(cards.map((card) => card.chunkId));
       const remainingChunks = chunkResponse.chunks.filter(
         (chunk) => !currentChunkIds.has(chunk.id)
@@ -1668,8 +1725,14 @@ export function App({
       setOperationStatus("generatingCardsWithOllama");
       const generatedCards =
         remainingChunks.length > 0 ? await generateCardsWithFallback(remainingChunks) : [];
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setOperationStatus("savingStudyCards");
       const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
 
       setChunkCount(chunkResponse.chunks.length);
       setCards((currentCards) => [...currentCards, ...savedCards]);
@@ -1681,11 +1744,19 @@ export function App({
 
       if (!activeStudySession) {
         await beginStudySession(document.document_id);
+        if (!isCurrentOperation(operationToken)) {
+          return;
+        }
       }
     } catch (unknownError) {
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
-      setOperationStatus(null);
+      if (isCurrentOperation(operationToken)) {
+        setOperationStatus(null);
+      }
     }
   }
 

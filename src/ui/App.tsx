@@ -1059,6 +1059,9 @@ export function App({
     documentReviewCounts
   );
   const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
+  const generatedCardChunkIds = new Set(cards.map((card) => card.chunkId));
+  const canGenerateMoreCards =
+    Boolean(document) && chunkCount !== null && cards.length > 0 && generatedCardChunkIds.size < chunkCount;
   const dueStudyQueue = buildDueStudyQueue(
     cards,
     cardReviewSchedules,
@@ -1593,6 +1596,46 @@ export function App({
       setStudySessionReviewCount(0);
       setStudySessionSummaries([]);
       setCardReviewSchedules({});
+      setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+    } finally {
+      setOperationStatus(null);
+    }
+  }
+
+  async function handleGenerateMoreCardsForActiveDocument() {
+    if (!document) {
+      return;
+    }
+
+    setError(null);
+    setWarning(null);
+    setOperationStatus("chunkingDocument");
+
+    try {
+      const chunkResponse = await listDocumentChunks(document.document_id);
+      const currentChunkIds = new Set(cards.map((card) => card.chunkId));
+      const remainingChunks = chunkResponse.chunks.filter(
+        (chunk) => !currentChunkIds.has(chunk.id)
+      );
+
+      setOperationStatus("generatingCardsWithOllama");
+      const generatedCards =
+        remainingChunks.length > 0 ? await generateCardsWithFallback(remainingChunks) : [];
+      setOperationStatus("savingStudyCards");
+      const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
+
+      setChunkCount(chunkResponse.chunks.length);
+      setCards((currentCards) => [...currentCards, ...savedCards]);
+
+      if (!activeCard && savedCards.length > 0) {
+        setActiveCardIndex(0);
+        setIsAnswerVisible(false);
+      }
+
+      if (!activeStudySession) {
+        await beginStudySession(document.document_id);
+      }
+    } catch (unknownError) {
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
       setOperationStatus(null);
@@ -2171,6 +2214,16 @@ export function App({
               <button type="button" onClick={handleExportAnkiDeck}>
                 {t("study.exportAnki")}
               </button>
+              {canGenerateMoreCards ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleGenerateMoreCardsForActiveDocument();
+                  }}
+                >
+                  {t("study.generateMoreCards")}
+                </button>
+              ) : null}
             </div>
             {activeCard ? (
               <StudyCardViewer

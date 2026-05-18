@@ -105,7 +105,7 @@ interface AppProps {
   ) => Promise<ChunkTextDocumentResponse>;
   generateCards?: (
     chunks: ImportedDocumentChunk[],
-    options?: { onProgress?: (progress: GenerateStudyCardsProgress) => void }
+    options?: { onProgress?: (progress: GenerateStudyCardsProgress) => void; signal?: AbortSignal }
   ) => Promise<StudyCard[]>;
   saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
   listStudyCards?: (documentId: string) => Promise<StudyCard[]>;
@@ -1002,6 +1002,7 @@ export function App({
 }: AppProps) {
   const { t } = useTranslation();
   const operationTokenRef = useRef(0);
+  const operationAbortControllerRef = useRef<AbortController | null>(null);
   const [filePath, setFilePath] = useState("");
   const [isOcrEnabled, setIsOcrEnabled] = useState(false);
   const [ocrLanguage, setOcrLanguage] = useState<"por" | "eng" | "spa">("por");
@@ -1121,6 +1122,8 @@ export function App({
   );
 
   function startCancellableOperation() {
+    operationAbortControllerRef.current?.abort();
+    operationAbortControllerRef.current = new AbortController();
     operationTokenRef.current += 1;
 
     return operationTokenRef.current;
@@ -1131,6 +1134,8 @@ export function App({
   }
 
   function handleCancelOperation() {
+    operationAbortControllerRef.current?.abort();
+    operationAbortControllerRef.current = null;
     operationTokenRef.current += 1;
     setIsImporting(false);
     setOperationStatus(null);
@@ -1160,7 +1165,8 @@ export function App({
           if (isCurrentOperation(operationToken)) {
             setCardGenerationProgress(progress);
           }
-        }
+        },
+        signal: operationAbortControllerRef.current?.signal
       });
     } catch (unknownError) {
       if (!enableDevelopmentFallback) {
@@ -1492,6 +1498,7 @@ export function App({
         setIsImporting(false);
         setOperationStatus(null);
         setCardGenerationProgress(null);
+        operationAbortControllerRef.current = null;
       }
     }
   }
@@ -1623,6 +1630,7 @@ export function App({
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
         setCardGenerationProgress(null);
+        operationAbortControllerRef.current = null;
       }
     }
   }
@@ -1729,6 +1737,7 @@ export function App({
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
         setCardGenerationProgress(null);
+        operationAbortControllerRef.current = null;
       }
     }
   }
@@ -1792,6 +1801,7 @@ export function App({
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
         setCardGenerationProgress(null);
+        operationAbortControllerRef.current = null;
       }
     }
   }

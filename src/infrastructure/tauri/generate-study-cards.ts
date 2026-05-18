@@ -24,7 +24,11 @@ export interface GenerateStudyCardsProgress {
 
 export async function generateStudyCardsWithOllama(
   chunks: ImportedDocumentChunk[],
-  options: { timeoutMs?: number; onProgress?: (progress: GenerateStudyCardsProgress) => void } = {}
+  options: {
+    timeoutMs?: number;
+    onProgress?: (progress: GenerateStudyCardsProgress) => void;
+    signal?: AbortSignal;
+  } = {}
 ): Promise<StudyCard[]> {
   if (chunks.length === 0) {
     return [];
@@ -34,6 +38,8 @@ export async function generateStudyCardsWithOllama(
   const cards: StudyCard[] = [];
 
   for (const [index, chunk] of chunks.entries()) {
+    throwIfAborted(options.signal);
+
     options.onProgress?.({
       current: index + 1,
       total: chunks.length
@@ -46,11 +52,18 @@ export async function generateStudyCardsWithOllama(
         language: "Pt"
       } satisfies GenerateStudyCardsRequest
     }), timeoutMs);
+    throwIfAborted(options.signal);
 
     cards.push(...response.cards.map(toStudyCard));
   }
 
   return cards;
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new Error("Operacao cancelada.");
+  }
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {

@@ -683,6 +683,66 @@ describe("App", () => {
     );
   });
 
+  it("aborts the active card generation request when canceling", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-abort",
+      book_id: "book-abort",
+      content: "Conteudo para abortar geracao.",
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/abortar.txt"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-abort",
+          book_id: "book-abort",
+          document_id: "document-abort",
+          position: 1,
+          content: "Chunk para abortar.",
+          token_estimate: 2
+        }
+      ]
+    });
+    let capturedSignal: AbortSignal | undefined;
+    const generateCards = vi.fn(
+      (
+        _chunks: Array<{
+          id: string;
+          book_id: string;
+          document_id: string;
+          position: number;
+          content: string;
+          token_estimate: number;
+        }>,
+        options?: { signal?: AbortSignal }
+      ) => {
+        capturedSignal = options?.signal;
+
+        return new Promise<StudyCard[]>(() => {
+          // Keep generation pending until the user cancels.
+        });
+      }
+    );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      generateCards,
+      enableDevelopmentFallback: false
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/abortar.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar operacao" }));
+
+    expect(capturedSignal?.aborted).toBe(true);
+  });
+
   it("shows an error when the native file picker fails", async () => {
     const selectStudyFile = vi.fn().mockRejectedValue(new Error("dialog failed"));
 

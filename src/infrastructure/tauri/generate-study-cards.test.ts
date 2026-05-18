@@ -174,6 +174,38 @@ describe("generateStudyCardsWithOllama", () => {
     expect(onProgress).toHaveBeenNthCalledWith(2, { current: 2, total: 2 });
   });
 
+  it("stops before requesting the next chunk when generation is aborted", async () => {
+    const abortController = new AbortController();
+    const chunks = [
+      {
+        id: "chunk-1",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 1,
+        content: "primeiro conteudo",
+        token_estimate: 1
+      },
+      {
+        id: "chunk-2",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 2,
+        content: "segundo conteudo",
+        token_estimate: 1
+      }
+    ];
+    invokeMock.mockImplementationOnce(async () => {
+      abortController.abort();
+
+      return { cards: [] };
+    });
+
+    await expect(
+      generateStudyCardsWithOllama(chunks, { signal: abortController.signal })
+    ).rejects.toThrow("Operacao cancelada.");
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects when card generation times out", async () => {
     vi.useFakeTimers();
     const chunk = {

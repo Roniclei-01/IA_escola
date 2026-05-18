@@ -623,6 +623,20 @@ function buildPrintableStudySessionReport(
         </tr>`;
     })
     .join("");
+  const sessionTrendRows = summaries
+    .map((summary, index) => {
+      const sessionTotal = summary.easy_count + summary.hard_count + summary.again_count;
+      const sessionAccuracy =
+        sessionTotal > 0 ? Math.round((summary.easy_count / sessionTotal) * 100) : 0;
+
+      return `
+        <div class="session-trend-row">
+          <span class="chart-label">Sessao ${index + 1}</span>
+          <div class="chart-track"><div class="chart-bar easy" style="width: ${sessionAccuracy}%"></div></div>
+          <span class="chart-value">${sessionAccuracy}% acertos</span>
+        </div>`;
+    })
+    .join("");
 
   return `<!doctype html>
 <html lang="pt-BR">
@@ -654,6 +668,8 @@ function buildPrintableStudySessionReport(
       .box { border: 1px solid #dce2dc; border-radius: 6px; padding: 10px; break-inside: avoid; }
       .performance-chart { display: grid; gap: 10px; break-inside: avoid; }
       .chart-row { display: grid; grid-template-columns: 92px 1fr 48px; align-items: center; gap: 10px; }
+      .session-trend-chart { display: grid; gap: 10px; break-inside: avoid; }
+      .session-trend-row { display: grid; grid-template-columns: 92px 1fr 84px; align-items: center; gap: 10px; }
       .chart-label { color: #536259; font-size: 12px; font-weight: 700; }
       .chart-track { height: 14px; overflow: hidden; border-radius: 999px; background: #edf1ee; }
       .chart-bar { height: 100%; border-radius: 999px; }
@@ -705,6 +721,10 @@ function buildPrintableStudySessionReport(
         <div class="chart-track"><div class="chart-bar again" style="width: ${againPercent}%"></div></div>
         <span class="chart-value">${againPercent}%</span>
       </div>
+    </section>
+    <h2>Tendencia por sessao</h2>
+    <section class="session-trend-chart" aria-label="Tendencia por sessao">
+      ${sessionTrendRows}
     </section>
     <h2>Sessoes</h2>
     <table>

@@ -1200,12 +1200,20 @@ describe("App", () => {
     ]);
     const listStudySessionSummaries = vi.fn().mockResolvedValue([
       {
-        session_id: "session-pdf-report",
+        session_id: "session-pdf-report-1",
         document_id: "document-pdf-report",
         started_at: 1700000000,
         again_count: 1,
         hard_count: 0,
         easy_count: 4
+      },
+      {
+        session_id: "session-pdf-report-2",
+        document_id: "document-pdf-report",
+        started_at: 1700086400,
+        again_count: 1,
+        hard_count: 1,
+        easy_count: 2
       }
     ]);
 
@@ -1238,10 +1246,15 @@ describe("App", () => {
     expect(printStudySessionReport.mock.calls[0][1]).toContain("counter(page)");
     expect(printStudySessionReport.mock.calls[0][1]).toContain("break-inside: avoid");
     expect(printStudySessionReport.mock.calls[0][1]).toContain('<section class="performance-chart"');
-    expect(printStudySessionReport.mock.calls[0][1]).toContain('class="chart-bar easy" style="width: 80%"');
-    expect(printStudySessionReport.mock.calls[0][1]).toContain('class="chart-bar again" style="width: 20%"');
+    expect(printStudySessionReport.mock.calls[0][1]).toContain('class="chart-bar easy" style="width: 67%"');
+    expect(printStudySessionReport.mock.calls[0][1]).toContain('class="chart-bar again" style="width: 22%"');
+    expect(printStudySessionReport.mock.calls[0][1]).toContain('<section class="session-trend-chart"');
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("Sessao 1");
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("Sessao 2");
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("80% acertos");
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("50% acertos");
     expect(printStudySessionReport.mock.calls[0][1]).toContain("<strong>Acertos</strong>");
-    expect(printStudySessionReport.mock.calls[0][1]).toContain("<span>4</span>");
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("<span>6</span>");
   });
 
   it("shows retention trend across study sessions", async () => {

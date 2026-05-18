@@ -1,10 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StudyCard } from "../domain/model-adapter";
 import type { GenerateStudyCardsOptions } from "../infrastructure/tauri/generate-study-cards";
+import i18n, { UI_LANGUAGE_STORAGE_KEY } from "../i18n";
 import { App } from "./App";
-import "../i18n";
 
 const listNoDocuments = vi.fn().mockResolvedValue({ documents: [] });
 const listNoArchivedDocuments = vi.fn().mockResolvedValue({ documents: [] });
@@ -72,6 +72,13 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
 }
 
 describe("App", () => {
+  afterEach(async () => {
+    window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+    await act(async () => {
+      await i18n.changeLanguage("pt");
+    });
+  });
+
   it("renders the product name", async () => {
     renderApp();
 
@@ -80,6 +87,25 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Biblioteca" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Estudo ativo" })).toBeInTheDocument();
     expect(await screen.findByText("Nenhum documento salvo ainda.")).toBeInTheDocument();
+  });
+
+  it("changes the interface language and persists the selected option", async () => {
+    renderApp();
+
+    fireEvent.change(screen.getByLabelText("Idioma da interface"), {
+      target: { value: "en" }
+    });
+
+    expect(await screen.findByRole("heading", { name: "Import and AI" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Library" })).toBeInTheDocument();
+    expect(window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY)).toBe("en");
+
+    fireEvent.change(screen.getByLabelText("Interface language"), {
+      target: { value: "es" }
+    });
+
+    expect(await screen.findByRole("heading", { name: "Importacion e IA" })).toBeInTheDocument();
+    expect(window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY)).toBe("es");
   });
 
   it("loads saved documents on startup", async () => {
@@ -98,7 +124,7 @@ describe("App", () => {
 
     expect(listImportedDocuments).toHaveBeenCalled();
     expect(await screen.findByText("Documentos salvos")).toBeInTheDocument();
-    expect(screen.getByText("Documento salvo anteriormente.")).toBeInTheDocument();
+    expect(await screen.findByText("Documento salvo anteriormente.")).toBeInTheDocument();
   });
 
   it("shows comparative progress for saved documents", async () => {

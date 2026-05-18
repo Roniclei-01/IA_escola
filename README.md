@@ -128,6 +128,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - dialog nativo do Tauri para selecionar arquivos `.txt` e `.pdf`;
 - busca na biblioteca com filtro instantaneo, tecla Enter e botao `Pesquisar` como gatilhos explicitos;
 - exibicao do tipo e caminho de origem na biblioteca e na previa do documento;
+- seletor de idioma da interface entre Portugues, Ingles e Espanhol, com persistencia local;
 - tela principal organizada em areas de `Importacao e IA`, `Biblioteca` e `Estudo ativo`;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
@@ -226,10 +227,9 @@ docs/
 3. Testar o app empacotado fora de `tauri dev`.
 4. Evoluir a geracao de cards para fila em background com progresso por chunk.
 5. Evoluir exportacao Anki para pacote `.apkg`.
-6. Implementar seletor de idioma da interface.
-7. Implementar leitura traduzida de PDFs com visualizacao lado a lado.
-8. Implementar `Meditacao` do leitor por documento.
-9. Implementar categorias e subcategorias de estudo por documento.
+6. Implementar leitura traduzida de PDFs com visualizacao lado a lado.
+7. Implementar `Meditacao` do leitor por documento.
+8. Implementar categorias e subcategorias de estudo por documento.
 
 ## Comandos de desenvolvimento
 
@@ -247,3 +247,5 @@ npm run build
 ```
 
 O comando `cargo test --no-default-features` valida o dominio sem compilar a camada grafica do Tauri. Para rodar o app desktop completo no Linux, o ambiente precisa das dependencias nativas exigidas pelo Tauri/WebKit, incluindo `pkg-config` e bibliotecas de sistema como DBus/WebKitGTK.
+
+O comando `npm run check:mvp:env` tenta validar o modelo com `ollama list`. Se o CLI do Ollama falhar por restricao local, como pode acontecer em instalacoes via snap, ele usa a API HTTP local `http://127.0.0.1:11434/api/tags`, que e o caminho usado pelo aplicativo.

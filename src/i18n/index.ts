@@ -1,6 +1,24 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+export const SUPPORTED_UI_LANGUAGES = ["pt", "en", "es"] as const;
+export type UiLanguage = (typeof SUPPORTED_UI_LANGUAGES)[number];
+export const UI_LANGUAGE_STORAGE_KEY = "estudo-ia-local.ui-language";
+
+function isSupportedUiLanguage(language: string): language is UiLanguage {
+  return SUPPORTED_UI_LANGUAGES.includes(language as UiLanguage);
+}
+
+function getInitialUiLanguage(): UiLanguage {
+  if (typeof window === "undefined") {
+    return "pt";
+  }
+
+  const storedLanguage = window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
+
+  return storedLanguage && isSupportedUiLanguage(storedLanguage) ? storedLanguage : "pt";
+}
+
 export const resources = {
   pt: {
     translation: {
@@ -199,6 +217,10 @@ export const resources = {
         reviewSaveError: "Nao foi possivel salvar a revisao do card."
       },
       settings: {
+        uiLanguageLabel: "Idioma da interface",
+        uiLanguagePortuguese: "Portugues",
+        uiLanguageEnglish: "Ingles",
+        uiLanguageSpanish: "Espanhol",
         ollamaTitle: "Ollama",
         ollamaBaseUrlLabel: "URL local do Ollama",
         ollamaModelLabel: "Modelo",
@@ -419,6 +441,10 @@ export const resources = {
         reviewSaveError: "Could not save the card review."
       },
       settings: {
+        uiLanguageLabel: "Interface language",
+        uiLanguagePortuguese: "Portuguese",
+        uiLanguageEnglish: "English",
+        uiLanguageSpanish: "Spanish",
         ollamaTitle: "Ollama",
         ollamaBaseUrlLabel: "Local Ollama URL",
         ollamaModelLabel: "Model",
@@ -639,6 +665,10 @@ export const resources = {
         reviewSaveError: "No fue posible guardar la revision del card."
       },
       settings: {
+        uiLanguageLabel: "Idioma de la interfaz",
+        uiLanguagePortuguese: "Portugues",
+        uiLanguageEnglish: "Ingles",
+        uiLanguageSpanish: "Espanol",
         ollamaTitle: "Ollama",
         ollamaBaseUrlLabel: "URL local de Ollama",
         ollamaModelLabel: "Modelo",
@@ -666,7 +696,7 @@ export const resources = {
 
 i18n.use(initReactI18next).init({
   resources,
-  lng: "pt",
+  lng: getInitialUiLanguage(),
   fallbackLng: "pt",
   interpolation: {
     escapeValue: false

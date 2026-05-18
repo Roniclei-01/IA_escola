@@ -47,6 +47,30 @@ select {
   gap: 24px;
 }
 
+.workspace-header-actions {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.language-selector {
+  display: grid;
+  gap: 6px;
+  color: #2d3932;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.language-selector select {
+  min-height: 36px;
+  min-width: 160px;
+  padding: 0 10px;
+  border: 1px solid #cfd7d1;
+  border-radius: 6px;
+  color: #18201c;
+  background: #fbfcfa;
+}
+
 .eyebrow {
   margin: 0 0 12px;
   color: #526256;

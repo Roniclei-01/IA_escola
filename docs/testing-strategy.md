@@ -112,6 +112,14 @@ Execute este roteiro no app desktop com `npm run tauri dev` e registre o resulta
 - Rodar `npm run check:mvp:env`.
 - Gerar e testar o app empacotado com `npm run tauri build`.
 
+### Idioma da interface
+
+1. Trocar o idioma da interface para `Ingles`.
+2. Confirmar que os rotulos principais da aplicacao mudam sem reiniciar o app.
+3. Fechar e abrir o app.
+4. Confirmar que o idioma escolhido continua aplicado.
+5. Trocar o idioma da interface de volta para `Portugues`.
+
 ### Fluxo principal com TXT
 
 1. Importar um arquivo `.txt` pequeno.

@@ -142,7 +142,15 @@ Arquivos gerados:
 - [ ] Confirmar busca por conteudo.
 - [ ] Confirmar busca por caminho de origem.
 
-## 9. Funcionalidades futuras registradas
+## 9. Idioma da interface
+
+- [ ] Trocar o idioma da interface para `Ingles`.
+- [ ] Confirmar que os rotulos principais mudam sem reiniciar o app.
+- [ ] Fechar e abrir o app.
+- [ ] Confirmar que o idioma escolhido continua aplicado.
+- [ ] Trocar o idioma da interface de volta para `Portugues`.
+
+## 10. Funcionalidades futuras registradas
 
 Esses itens estao documentados para as proximas fatias e nao bloqueiam o aceite do MVP 0.1:
 

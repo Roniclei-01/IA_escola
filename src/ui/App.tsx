@@ -82,6 +82,11 @@ import {
   type OcrDependencies
 } from "../infrastructure/tauri/ocr-dependencies";
 import { exportTextFile as defaultExportTextFile } from "../infrastructure/tauri/export-text-file";
+import {
+  SUPPORTED_UI_LANGUAGES,
+  UI_LANGUAGE_STORAGE_KEY,
+  type UiLanguage
+} from "../i18n";
 import { ImportPanel } from "./components/ImportPanel";
 import { DocumentSummary } from "./components/DocumentSummary";
 import { StudyCardViewer, type CardReview } from "./components/StudyCardViewer";
@@ -160,6 +165,20 @@ type MetricPeriodFilter = "all" | "last7" | "last30";
 type StudyGoalRecurrence = StudyGoal["recurrence"];
 const INITIAL_CARD_GENERATION_CHUNK_LIMIT = 3;
 const STUDY_GOAL_REMINDER_NOTIFICATION_ID = 1001;
+
+function normalizeUiLanguage(language: string): UiLanguage {
+  const shortLanguage = language.split("-")[0] as UiLanguage;
+
+  return SUPPORTED_UI_LANGUAGES.includes(shortLanguage) ? shortLanguage : "pt";
+}
+
+function persistUiLanguage(language: UiLanguage) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, language);
+}
 
 interface StudyGoalReminderNotification {
   title: string;
@@ -1052,9 +1071,12 @@ export function App({
   confirmDelete = (message: string) => window.confirm(message),
   enableDevelopmentFallback = shouldEnableMockAiFallback()
 }: AppProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const operationTokenRef = useRef(0);
   const operationAbortControllerRef = useRef<AbortController | null>(null);
+  const [uiLanguage, setUiLanguage] = useState<UiLanguage>(() =>
+    normalizeUiLanguage(i18n.language)
+  );
   const [filePath, setFilePath] = useState("");
   const [isOcrEnabled, setIsOcrEnabled] = useState(false);
   const [ocrLanguage, setOcrLanguage] = useState<"por" | "eng" | "spa">("por");
@@ -1481,6 +1503,12 @@ export function App({
       isCurrent = false;
     };
   }, [testOcrDependencies, t]);
+
+  async function handleUiLanguageChange(language: UiLanguage) {
+    setUiLanguage(language);
+    persistUiLanguage(language);
+    await i18n.changeLanguage(language);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2401,7 +2429,23 @@ export function App({
             <p className="eyebrow">{t("app.stage")}</p>
             <h1 id="app-title">{t("app.title")}</h1>
           </div>
-          <span className="status-pill">{t("library.status")}</span>
+          <div className="workspace-header-actions">
+            <label className="language-selector" htmlFor="ui-language">
+              <span>{t("settings.uiLanguageLabel")}</span>
+              <select
+                id="ui-language"
+                value={uiLanguage}
+                onChange={(event) => {
+                  void handleUiLanguageChange(event.target.value as UiLanguage);
+                }}
+              >
+                <option value="pt">{t("settings.uiLanguagePortuguese")}</option>
+                <option value="en">{t("settings.uiLanguageEnglish")}</option>
+                <option value="es">{t("settings.uiLanguageSpanish")}</option>
+              </select>
+            </label>
+            <span className="status-pill">{t("library.status")}</span>
+          </div>
         </header>
 
         <div className="workspace-grid">

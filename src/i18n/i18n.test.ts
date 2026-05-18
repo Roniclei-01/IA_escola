@@ -12,6 +12,18 @@ describe("i18n", () => {
     expect(i18n.getResource("es", "translation", "app.title")).toBe("Estudio IA Local");
   });
 
+  it("has interface language labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "settings.uiLanguageLabel")).toBe(
+      "Idioma da interface"
+    );
+    expect(i18n.getResource("en", "translation", "settings.uiLanguageLabel")).toBe(
+      "Interface language"
+    );
+    expect(i18n.getResource("es", "translation", "settings.uiLanguageLabel")).toBe(
+      "Idioma de la interfaz"
+    );
+  });
+
   it("has import labels in every supported language", () => {
     expect(i18n.getResource("pt", "translation", "library.import")).toBe("Importar");
     expect(i18n.getResource("en", "translation", "library.import")).toBe("Import");

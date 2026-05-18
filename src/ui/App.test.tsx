@@ -247,7 +247,8 @@ describe("App", () => {
       importTextBook,
       chunkTextDocument,
       generateCards,
-      saveStudyCards: saveCards
+      saveStudyCards: saveCards,
+      enableDevelopmentFallback: false
     });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
@@ -311,7 +312,8 @@ describe("App", () => {
       importTextBook,
       chunkTextDocument,
       generateCards,
-      saveStudyCards: saveCards
+      saveStudyCards: saveCards,
+      enableDevelopmentFallback: false
     });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
@@ -333,6 +335,57 @@ describe("App", () => {
     ]);
 
     expect(await screen.findByText("Pergunta gerada")).toBeInTheDocument();
+  });
+
+  it("uses mock cards as a development fallback when Ollama generation fails", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-1",
+      book_id: "book-1",
+      content: "Conteudo importado para estudo.",
+      language: "Pt"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-1",
+          book_id: "book-1",
+          document_id: "document-1",
+          position: 0,
+          content: "Conteudo importado para estudo.",
+          token_estimate: 4
+        }
+      ]
+    });
+    const generateCards = vi.fn().mockRejectedValue(new Error("Ollama indisponivel."));
+    const saveStudyCards = vi.fn().mockImplementation(async (cards: StudyCard[]) => cards);
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      generateCards,
+      saveStudyCards,
+      enableDevelopmentFallback: true
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
+      target: { value: "/tmp/book.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento."
+    );
+    expect(await screen.findByText("Pergunta 1 sobre o trecho 0")).toBeInTheDocument();
+    expect(saveStudyCards).toHaveBeenCalledWith([
+      {
+        id: "chunk-1-card-1",
+        bookId: "book-1",
+        chunkId: "chunk-1",
+        front: "Pergunta 1 sobre o trecho 0",
+        back: "Resposta baseada em: Conteudo importado para estudo.",
+        tags: ["mock", "pt"]
+      }
+    ]);
   });
 
   it("reveals the answer and advances through study cards", async () => {
@@ -385,7 +438,8 @@ describe("App", () => {
       importTextBook,
       chunkTextDocument,
       generateCards,
-      saveStudyCards: saveCards
+      saveStudyCards: saveCards,
+      enableDevelopmentFallback: false
     });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
@@ -471,7 +525,8 @@ describe("App", () => {
       importTextBook,
       chunkTextDocument,
       generateCards,
-      saveStudyCards: saveCards
+      saveStudyCards: saveCards,
+      enableDevelopmentFallback: false
     });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {

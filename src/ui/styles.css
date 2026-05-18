@@ -141,6 +141,11 @@ h1 {
   background: #e6f0f8;
 }
 
+.message.warning {
+  color: #5f3c00;
+  background: #fff2cc;
+}
+
 .message.success {
   color: #1f4e35;
   background: #e6f4eb;

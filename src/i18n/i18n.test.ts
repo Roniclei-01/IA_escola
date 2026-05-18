@@ -81,4 +81,16 @@ describe("i18n", () => {
       "Generando cards con Ollama."
     );
   });
+
+  it("has mock fallback labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "library.mockGenerationFallback")).toBe(
+      "Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento."
+    );
+    expect(i18n.getResource("en", "translation", "library.mockGenerationFallback")).toBe(
+      "Ollama failed. Mock cards were generated for development only."
+    );
+    expect(i18n.getResource("es", "translation", "library.mockGenerationFallback")).toBe(
+      "Ollama fallo. Se generaron cards mockados solo para desarrollo."
+    );
+  });
 });

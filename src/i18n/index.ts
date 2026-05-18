@@ -20,6 +20,8 @@ export const resources = {
         generatingCardsWithOllama: "Gerando cards com Ollama.",
         savingStudyCards: "Salvando cards de estudo.",
         loadingSavedCards: "Carregando cards salvos.",
+        mockGenerationFallback:
+          "Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento.",
         emptyPath: "Informe o caminho do arquivo .txt.",
         unknownError: "Nao foi possivel importar o arquivo.",
         savedDocuments: "Documentos salvos",
@@ -72,6 +74,8 @@ export const resources = {
         generatingCardsWithOllama: "Generating cards with Ollama.",
         savingStudyCards: "Saving study cards.",
         loadingSavedCards: "Loading saved cards.",
+        mockGenerationFallback:
+          "Ollama failed. Mock cards were generated for development only.",
         emptyPath: "Enter a .txt file path.",
         unknownError: "Could not import the file.",
         savedDocuments: "Saved documents",
@@ -124,6 +128,8 @@ export const resources = {
         generatingCardsWithOllama: "Generando cards con Ollama.",
         savingStudyCards: "Guardando cards de estudio.",
         loadingSavedCards: "Cargando cards guardados.",
+        mockGenerationFallback:
+          "Ollama fallo. Se generaron cards mockados solo para desarrollo.",
         emptyPath: "Informe la ruta del archivo .txt.",
         unknownError: "No fue posible importar el archivo.",
         savedDocuments: "Documentos guardados",

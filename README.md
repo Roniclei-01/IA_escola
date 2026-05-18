@@ -85,6 +85,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - comando `generate_study_cards` usando Ollama e configuracoes salvas;
 - UI usando Ollama por padrao para gerar cards, com testes ainda injetando geradores previsiveis;
 - feedback visual para importacao, chunking, geracao com Ollama, salvamento e carregamento de cards;
+- fallback de desenvolvimento para gerar cards mockados quando o Ollama falhar;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -159,9 +160,9 @@ docs/
 
 ## Proximos passos
 
-1. Criar fallback manual para geracao mockada em modo desenvolvimento.
-2. Preparar importacao de PDF como proxima expansao de parser.
-3. Evoluir revisao dos cards com marcacao de acerto, erro e dificuldade.
+1. Preparar importacao de PDF como proxima expansao de parser.
+2. Evoluir revisao dos cards com marcacao de acerto, erro e dificuldade.
+3. Melhorar a selecao de arquivos com dialog nativo do Tauri.
 
 ## Comandos de desenvolvimento
 

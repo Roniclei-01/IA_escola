@@ -19,6 +19,8 @@ import {
   type ChunkTextDocumentResponse
 } from "../infrastructure/tauri/chunk-text-document";
 import type { StudyCard } from "../domain/model-adapter";
+import { MockModelAdapter } from "../domain/mock-model-adapter";
+import { generateStudyCards } from "../app/generate-study-cards";
 import { generateStudyCardsWithOllama } from "../infrastructure/tauri/generate-study-cards";
 import {
   listStudyCards as defaultListStudyCards,
@@ -55,6 +57,7 @@ interface AppProps {
   }) => Promise<TestOllamaConnectionResponse>;
   loadOllamaSettings?: () => Promise<OllamaSettings>;
   saveOllamaSettings?: (settings: OllamaSettings) => Promise<OllamaSettings>;
+  enableDevelopmentFallback?: boolean;
 }
 
 type OperationStatus =
@@ -74,12 +77,14 @@ export function App({
   listStudyCards = defaultListStudyCards,
   testOllamaConnection = defaultTestOllamaConnection,
   loadOllamaSettings = defaultLoadOllamaSettings,
-  saveOllamaSettings = defaultSaveOllamaSettings
+  saveOllamaSettings = defaultSaveOllamaSettings,
+  enableDevelopmentFallback = import.meta.env.DEV
 }: AppProps) {
   const { t } = useTranslation();
   const [filePath, setFilePath] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
   const [document, setDocument] = useState<ImportTextBookResponse | null>(null);
   const [chunkCount, setChunkCount] = useState<number | null>(null);
@@ -94,6 +99,25 @@ export function App({
   const [ollamaStatus, setOllamaStatus] = useState<string | null>(null);
 
   const activeCard = cards[activeCardIndex] ?? null;
+
+  async function generateCardsWithFallback(chunks: ImportedDocumentChunk[]): Promise<StudyCard[]> {
+    try {
+      return await generateCards(chunks);
+    } catch (unknownError) {
+      if (!enableDevelopmentFallback) {
+        throw unknownError;
+      }
+
+      const fallbackCards = await generateStudyCards(
+        chunks,
+        { cardsPerChunk: 1, language: "pt" },
+        new MockModelAdapter()
+      );
+
+      setWarning(t("library.mockGenerationFallback"));
+      return fallbackCards;
+    }
+  }
 
   useEffect(() => {
     let isCurrent = true;
@@ -162,6 +186,7 @@ export function App({
 
     setIsImporting(true);
     setError(null);
+    setWarning(null);
     setOperationStatus("importingDocument");
     setChunkCount(null);
     setCards([]);
@@ -173,7 +198,7 @@ export function App({
       setOperationStatus("chunkingDocument");
       const chunkResponse = await chunkTextDocument(toChunkRequest(importedDocument, 180));
       setOperationStatus("generatingCardsWithOllama");
-      const generatedCards = await generateCards(chunkResponse.chunks);
+      const generatedCards = await generateCardsWithFallback(chunkResponse.chunks);
       setOperationStatus("savingStudyCards");
       const persistedCards =
         generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
@@ -203,6 +228,7 @@ export function App({
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
     setError(null);
+    setWarning(null);
     setOperationStatus("loadingSavedCards");
 
     try {
@@ -221,7 +247,7 @@ export function App({
       const chunkResponse = await listDocumentChunks(selectedDocument.document_id);
       setOperationStatus("generatingCardsWithOllama");
       const generatedCards =
-        chunkResponse.chunks.length > 0 ? await generateCards(chunkResponse.chunks) : [];
+        chunkResponse.chunks.length > 0 ? await generateCardsWithFallback(chunkResponse.chunks) : [];
       setOperationStatus("savingStudyCards");
       const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
 
@@ -245,6 +271,7 @@ export function App({
     setIsTestingOllama(true);
     setOllamaStatus(null);
     setError(null);
+    setWarning(null);
 
     try {
       const response = await testOllamaConnection({
@@ -294,6 +321,12 @@ export function App({
         {error ? (
           <p className="message error" role="alert">
             {error}
+          </p>
+        ) : null}
+
+        {warning ? (
+          <p className="message warning" role="alert">
+            {warning}
           </p>
         ) : null}
 

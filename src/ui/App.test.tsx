@@ -246,6 +246,36 @@ describe("App", () => {
     );
   });
 
+  it("archives a saved document from the active library", async () => {
+    const archiveImportedDocument = vi.fn().mockResolvedValue({
+      document_id: "document-archived"
+    });
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-archived",
+          book_id: "book-archived",
+          content: "Documento que sera arquivado.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/arquivar.txt"
+        }
+      ]
+    });
+
+    renderApp({ archiveImportedDocument, listImportedDocuments });
+
+    expect(await screen.findByText("Documento que sera arquivado.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Arquivar" }));
+
+    await waitFor(() => {
+      expect(archiveImportedDocument).toHaveBeenCalledWith("document-archived");
+    });
+    expect(screen.queryByText("Documento que sera arquivado.")).not.toBeInTheDocument();
+    expect(screen.getByText("Nenhum documento salvo ainda.")).toBeInTheDocument();
+  });
+
   it("tests the Ollama connection from settings", async () => {
     const testOllamaConnection = vi.fn().mockResolvedValue({
       ok: true,

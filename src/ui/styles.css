@@ -254,9 +254,15 @@ h1 {
   list-style: none;
 }
 
-.saved-documents button {
+.saved-documents li {
   display: grid;
-  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.saved-document-select,
+.saved-document-archive {
+  display: grid;
   gap: 4px;
   padding: 12px;
   border: 1px solid #d8ddd4;
@@ -265,6 +271,18 @@ h1 {
   background: #fbfcfa;
   text-align: left;
   cursor: pointer;
+}
+
+.saved-document-select {
+  width: 100%;
+}
+
+.saved-document-archive {
+  align-content: center;
+  min-width: 88px;
+  color: #5a302c;
+  background: #fffafa;
+  text-align: center;
 }
 
 .saved-documents span {
@@ -532,6 +550,10 @@ h1 {
   .import-row,
     .settings-row,
     .library-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-documents li {
     grid-template-columns: 1fr;
   }
 

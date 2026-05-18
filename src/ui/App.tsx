@@ -4,6 +4,7 @@ import {
   importTextBook as defaultImportTextBook,
   type ImportTextBookResponse
 } from "../infrastructure/tauri/import-text-book";
+import { archiveImportedDocument as defaultArchiveImportedDocument } from "../infrastructure/tauri/archive-imported-document";
 import {
   listImportedDocuments as defaultListImportedDocuments,
   type ListImportedDocumentsResponse
@@ -59,6 +60,7 @@ import { StudySessionHistory } from "./components/StudySessionHistory";
 
 interface AppProps {
   importTextBook?: (filePath: string) => Promise<ImportTextBookResponse>;
+  archiveImportedDocument?: (documentId: string) => Promise<{ document_id: string }>;
   listImportedDocuments?: () => Promise<ListImportedDocumentsResponse>;
   listDocumentChunks?: (documentId: string) => Promise<ListDocumentChunksResponse>;
   chunkTextDocument?: (
@@ -309,6 +311,7 @@ function filterSavedDocuments(
 
 export function App({
   importTextBook = defaultImportTextBook,
+  archiveImportedDocument = defaultArchiveImportedDocument,
   listImportedDocuments = defaultListImportedDocuments,
   listDocumentChunks = defaultListDocumentChunks,
   chunkTextDocument = defaultChunkTextDocument,
@@ -669,6 +672,41 @@ export function App({
     }
   }
 
+  async function handleArchiveDocument(documentToArchive: ImportTextBookResponse) {
+    setError(null);
+    setWarning(null);
+
+    try {
+      await archiveImportedDocument(documentToArchive.document_id);
+      setSavedDocuments((currentDocuments) =>
+        currentDocuments.filter(
+          (savedDocument) => savedDocument.document_id !== documentToArchive.document_id
+        )
+      );
+      setDocumentReviewCounts((currentCounts) => {
+        const nextCounts = { ...currentCounts };
+        delete nextCounts[documentToArchive.document_id];
+        return nextCounts;
+      });
+
+      if (document?.document_id === documentToArchive.document_id) {
+        setDocument(null);
+        setChunkCount(null);
+        setCards([]);
+        setActiveCardIndex(0);
+        setIsAnswerVisible(false);
+        setCardReviews({});
+        setReviewHistory([]);
+        setActiveStudySession(null);
+        setStudySessionReviewCount(0);
+        setStudySessionSummaries([]);
+        setCardReviewSchedules({});
+      }
+    } catch (unknownError) {
+      setError(unknownError instanceof Error ? unknownError.message : t("library.archiveError"));
+    }
+  }
+
   async function handleReviewCard(review: CardReview) {
     if (!activeCard) {
       return;
@@ -832,6 +870,7 @@ export function App({
             newestFirst: t("library.newestFirst"),
             sortByType: t("library.sortByType"),
             sortByStatus: t("library.sortByStatus"),
+            archive: t("library.archiveDocument"),
             itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 }),
             sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
           }}
@@ -841,6 +880,9 @@ export function App({
           onSortModeChange={setLibrarySortMode}
           onSelectDocument={(selectedDocument) => {
             void handleSelectSavedDocument(selectedDocument);
+          }}
+          onArchiveDocument={(selectedDocument) => {
+            void handleArchiveDocument(selectedDocument);
           }}
         />
 

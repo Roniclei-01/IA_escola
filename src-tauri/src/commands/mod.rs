@@ -1,5 +1,6 @@
 #[cfg(feature = "tauri-app")]
 pub mod app_storage;
+pub mod archive_imported_document;
 pub mod chunk_text_document;
 pub mod generate_study_cards;
 pub mod import_text_book;
@@ -14,6 +15,8 @@ pub mod save_study_review;
 pub mod start_study_session;
 pub mod test_ollama_connection;
 
+#[cfg(feature = "tauri-app")]
+pub use archive_imported_document::archive_imported_document;
 #[cfg(feature = "tauri-app")]
 pub use chunk_text_document::chunk_text_document;
 #[cfg(feature = "tauri-app")]
@@ -41,6 +44,10 @@ pub use start_study_session::start_study_session;
 #[cfg(feature = "tauri-app")]
 pub use test_ollama_connection::test_ollama_connection;
 
+pub use archive_imported_document::{
+    archive_imported_document_with_storage, ArchiveImportedDocumentRequest,
+    ArchiveImportedDocumentResponse,
+};
 pub use chunk_text_document::{
     chunk_text_document_from_request, ChunkTextDocumentRequest, ChunkTextDocumentResponse,
 };

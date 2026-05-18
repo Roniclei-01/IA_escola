@@ -27,6 +27,7 @@ interface SavedDocumentsListProps {
     newestFirst: string;
     sortByType: string;
     sortByStatus: string;
+    archive: string;
     itemLabel: (index: number) => string;
     sourceType: (sourceType: ImportTextBookResponse["source_type"]) => string;
   };
@@ -35,6 +36,7 @@ interface SavedDocumentsListProps {
   onReviewStatusFilterChange: (reviewStatus: "all" | "reviewed" | "pending") => void;
   onSortModeChange: (sortMode: "oldest" | "newest" | "type" | "status") => void;
   onSelectDocument: (document: ImportTextBookResponse) => void;
+  onArchiveDocument: (document: ImportTextBookResponse) => void;
 }
 
 export function SavedDocumentsList({
@@ -46,7 +48,8 @@ export function SavedDocumentsList({
   onSourceTypeFilterChange,
   onReviewStatusFilterChange,
   onSortModeChange,
-  onSelectDocument
+  onSelectDocument,
+  onArchiveDocument
 }: SavedDocumentsListProps) {
   const hasActiveFilters =
     filters.sourceType !== "all" ||
@@ -113,11 +116,22 @@ export function SavedDocumentsList({
         <ul>
           {documents.map((document, index) => (
             <li key={document.document_id}>
-              <button type="button" onClick={() => onSelectDocument(document)}>
+              <button
+                type="button"
+                className="saved-document-select"
+                onClick={() => onSelectDocument(document)}
+              >
                 <span>
                   {labels.itemLabel(index)} | {labels.sourceType(document.source_type)}
                 </span>
                 <strong>{document.content.slice(0, 80)}</strong>
+              </button>
+              <button
+                type="button"
+                className="saved-document-archive"
+                onClick={() => onArchiveDocument(document)}
+              >
+                {labels.archive}
               </button>
             </li>
           ))}

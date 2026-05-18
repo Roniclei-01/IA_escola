@@ -15,6 +15,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             health_check,
+            commands::archive_imported_document::archive_imported_document,
             commands::import_text_book::import_text_book,
             commands::chunk_text_document::chunk_text_document,
             commands::list_imported_documents::list_imported_documents,

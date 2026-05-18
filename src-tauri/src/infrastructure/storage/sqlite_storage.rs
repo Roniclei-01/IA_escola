@@ -19,6 +19,8 @@ pub enum StorageError {
     SaveDocumentFailed(#[source] rusqlite::Error),
     #[error("failed to list documents")]
     ListDocumentsFailed(#[source] rusqlite::Error),
+    #[error("failed to archive document")]
+    ArchiveDocumentFailed(#[source] rusqlite::Error),
     #[error("failed to save document chunks")]
     SaveChunksFailed(#[source] rusqlite::Error),
     #[error("failed to list document chunks")]
@@ -126,6 +128,7 @@ impl SQLiteStorage {
             .prepare(
                 "SELECT id, book_id, content, language, source_type, source_path
                  FROM documents
+                 WHERE archived_at IS NULL
                  ORDER BY created_at ASC",
             )
             .map_err(StorageError::ListDocumentsFailed)?;
@@ -151,6 +154,19 @@ impl SQLiteStorage {
         }
 
         Ok(documents)
+    }
+
+    pub fn archive_document(&self, document_id: Uuid) -> Result<(), StorageError> {
+        self.connection
+            .execute(
+                "UPDATE documents
+                 SET archived_at = strftime('%s', 'now')
+                 WHERE id = ?1",
+                [document_id.to_string()],
+            )
+            .map_err(StorageError::ArchiveDocumentFailed)?;
+
+        Ok(())
     }
 
     pub fn save_chunks(&mut self, chunks: &[DocumentChunk]) -> Result<(), StorageError> {
@@ -526,6 +542,7 @@ impl SQLiteStorage {
                     language TEXT NOT NULL,
                     source_type TEXT NOT NULL DEFAULT 'txt',
                     source_path TEXT NOT NULL DEFAULT '',
+                    archived_at INTEGER,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -594,6 +611,12 @@ impl SQLiteStorage {
                     "ALTER TABLE documents ADD COLUMN source_path TEXT NOT NULL DEFAULT ''",
                     [],
                 )
+                .map_err(StorageError::MigrationFailed)?;
+        }
+
+        if !self.has_column("documents", "archived_at")? {
+            self.connection
+                .execute("ALTER TABLE documents ADD COLUMN archived_at INTEGER", [])
                 .map_err(StorageError::MigrationFailed)?;
         }
 
@@ -981,6 +1004,25 @@ mod tests {
         let documents = storage.list_documents().unwrap();
 
         assert_eq!(documents, vec![document]);
+    }
+
+    #[test]
+    fn archives_document_from_active_list() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let book_id = Uuid::new_v4();
+        let document = Document::new(
+            book_id,
+            "Conteudo arquivado",
+            Language::Pt,
+            DocumentSourceType::Txt,
+            "/tmp/arquivado.txt",
+        )
+        .unwrap();
+
+        storage.save_document(&document).unwrap();
+        storage.archive_document(document.id).unwrap();
+
+        assert_eq!(storage.list_documents().unwrap(), Vec::<Document>::new());
     }
 
     #[test]

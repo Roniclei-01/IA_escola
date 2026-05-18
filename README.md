@@ -102,6 +102,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - sessoes de estudo vinculando novas revisoes a uma rodada ativa;
 - resumo historico de desempenho por sessao;
 - exportacao local de relatorio Markdown das sessoes do documento;
+- arquivamento de documentos da biblioteca ativa sem exclusao fisica imediata;
 - dialog nativo do Tauri para selecionar arquivos `.txt` e `.pdf`;
 - exibicao do tipo e caminho de origem na biblioteca e na previa do documento;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
@@ -179,7 +180,7 @@ docs/
 ## Proximos passos
 
 1. Melhorar suporte a PDFs digitalizados com OCR opcional.
-2. Criar limpeza/arquivamento de documentos da biblioteca.
+2. Adicionar tela/filtro para documentos arquivados e restauracao.
 3. Evoluir exportacao para PDF/Anki quando o formato de estudo estabilizar.
 
 ## Comandos de desenvolvimento

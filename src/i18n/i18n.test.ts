@@ -115,6 +115,9 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.goalRecurrenceLabel")).toBe(
       "Periodo da meta"
     );
+    expect(i18n.getResource("pt", "translation", "study.goalAlertWeekly_other")).toBe(
+      "Faltam {{count}} revisoes para cumprir a meta de 7 dias."
+    );
     expect(i18n.getResource("pt", "translation", "study.sessionTrendTitle")).toBe(
       "Tendencia por sessao"
     );

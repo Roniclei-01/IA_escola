@@ -101,6 +101,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - evolucao semanal de cards dificeis por periodo de estudo;
 - filtro de periodo para metricas de estudo com resumo de sessoes, revisoes, acertos e dificuldades;
 - meta persistida de revisoes por documento com progresso percentual;
+- alerta visual para metas diarias ou semanais ainda nao cumpridas;
 - filtros da biblioteca por tipo de arquivo e status de revisao;
 - busca textual na biblioteca por conteudo e caminho de origem;
 - ordenacao da biblioteca por data, tipo e status;
@@ -194,7 +195,7 @@ docs/
 
 1. Evoluir exportacao para formatos avancados de Anki.
 2. Melhorar a paginacao e identidade visual do relatorio PDF.
-3. Adicionar alertas locais para metas diarias ou semanais nao cumpridas.
+3. Adicionar notificacoes do sistema para metas recorrentes nao cumpridas.
 
 ## Comandos de desenvolvimento
 

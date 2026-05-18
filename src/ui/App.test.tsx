@@ -1603,6 +1603,9 @@ describe("App", () => {
     });
     expect(await screen.findByText("3 de 6 revisoes")).toBeInTheDocument();
     expect(screen.getByText("50% concluido")).toBeInTheDocument();
+    expect(
+      screen.getByText("Faltam 3 revisoes para cumprir a meta de 7 dias.")
+    ).toBeInTheDocument();
   });
 
   it("exports study cards as an Anki TSV deck", async () => {

@@ -767,7 +767,8 @@ h1 {
 }
 
 .study-goal .study-goal-progress strong,
-.study-goal .study-goal-progress span {
+.study-goal .study-goal-progress span,
+.study-goal .study-goal-progress em {
   width: fit-content;
   padding: 6px 10px;
   border: 1px solid #b7d8c0;
@@ -775,7 +776,14 @@ h1 {
   color: #1f4e35;
   background: #e6f4eb;
   font-size: 0.9rem;
+  font-style: normal;
   font-weight: 800;
+}
+
+.study-goal .study-goal-progress em {
+  border-color: #e6c87c;
+  color: #5c4612;
+  background: #fff3c4;
 }
 
 .session-history-header {

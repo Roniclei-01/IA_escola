@@ -177,6 +177,7 @@ interface StudyMetricPeriodSummary {
 interface StudyGoalProgress {
   completedReviews: number;
   targetReviews: number;
+  remainingReviews: number;
   percent: number;
 }
 
@@ -396,8 +397,21 @@ function buildStudyGoalProgress(
   return {
     completedReviews,
     targetReviews,
+    remainingReviews: Math.max(0, targetReviews - completedReviews),
     percent: Math.min(100, Math.round((completedReviews / targetReviews) * 100))
   };
+}
+
+function studyGoalAlertKey(recurrence: StudyGoalRecurrence): string | null {
+  if (recurrence === "daily") {
+    return "study.goalAlertDaily";
+  }
+
+  if (recurrence === "weekly") {
+    return "study.goalAlertWeekly";
+  }
+
+  return null;
 }
 
 function buildHardCardPeriodTrend(summaries: StudySessionSummary[]): HardCardPeriodTrend | null {
@@ -882,6 +896,10 @@ export function App({
     activeStudyReviewGoal,
     activeStudyReviewGoalRecurrence
   );
+  const activeStudyGoalAlertKey =
+    activeStudyGoalProgress && activeStudyGoalProgress.remainingReviews > 0
+      ? studyGoalAlertKey(activeStudyReviewGoalRecurrence)
+      : null;
   const reviewCounts = Object.values(cardReviews).reduce(
     (counts, review) => ({
       ...counts,
@@ -2023,6 +2041,13 @@ export function App({
                       percent: activeStudyGoalProgress.percent
                     })}
                   </span>
+                  {activeStudyGoalAlertKey ? (
+                    <em role="status">
+                      {t(activeStudyGoalAlertKey, {
+                        count: activeStudyGoalProgress.remainingReviews
+                      })}
+                    </em>
+                  ) : null}
                 </div>
               ) : (
                 <p>{t("study.goalEmpty")}</p>

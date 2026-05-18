@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { StudyCard } from "../domain/model-adapter";
+import type { GenerateStudyCardsOptions } from "../infrastructure/tauri/generate-study-cards";
 import { App } from "./App";
 import "../i18n";
 
@@ -1419,6 +1420,98 @@ describe("App", () => {
     });
     expect(await screen.findByText("5 cards gerados")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Gerar mais cards" })).not.toBeInTheDocument();
+  });
+
+  it("shows and saves additional cards as each generated chunk completes", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-more-incremental",
+      book_id: "book-more-incremental",
+      content: "Conteudo grande para progresso incremental.",
+      language: "Pt"
+    });
+    const chunks = Array.from({ length: 4 }, (_, index) => ({
+      id: `chunk-${index + 1}`,
+      book_id: "book-more-incremental",
+      document_id: "document-more-incremental",
+      position: index,
+      content: `Chunk ${index + 1}.`,
+      token_estimate: 2
+    }));
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks });
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks });
+    const incrementalCard = {
+      id: "card-4",
+      bookId: "book-more-incremental",
+      chunkId: "chunk-4",
+      front: "Pergunta incremental",
+      back: "Resposta incremental",
+      tags: ["more"]
+    };
+    const saveStudyCards = vi.fn().mockImplementation(async (cards: StudyCard[]) => cards);
+    const generateCards = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          id: "card-1",
+          bookId: "book-more-incremental",
+          chunkId: "chunk-1",
+          front: "Pergunta 1",
+          back: "Resposta 1",
+          tags: ["more"]
+        },
+        {
+          id: "card-2",
+          bookId: "book-more-incremental",
+          chunkId: "chunk-2",
+          front: "Pergunta 2",
+          back: "Resposta 2",
+          tags: ["more"]
+        },
+        {
+          id: "card-3",
+          bookId: "book-more-incremental",
+          chunkId: "chunk-3",
+          front: "Pergunta 3",
+          back: "Resposta 3",
+          tags: ["more"]
+        }
+      ])
+      .mockImplementationOnce(
+        async (
+          _chunks: typeof chunks,
+          options?: GenerateStudyCardsOptions
+        ) => {
+          await options?.onChunkCards?.([incrementalCard], { current: 1, total: 1 });
+
+          return new Promise<StudyCard[]>(() => {
+            // Keep final generation pending so only the incremental save updates the UI.
+          });
+        }
+      );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      listDocumentChunks,
+      generateCards,
+      saveStudyCards,
+      enableDevelopmentFallback: false
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/incremental.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByText("3 cards gerados")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar mais cards" }));
+
+    expect(await screen.findByText("4 cards gerados")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Proximo card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Proximo card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Proximo card" }));
+    expect(screen.getByText("Pergunta incremental")).toBeInTheDocument();
+    expect(saveStudyCards).toHaveBeenLastCalledWith([incrementalCard]);
   });
 
   it("cancels pending additional card generation and ignores late results", async () => {

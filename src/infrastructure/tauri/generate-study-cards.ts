@@ -22,13 +22,19 @@ export interface GenerateStudyCardsProgress {
   total: number;
 }
 
+export interface GenerateStudyCardsOptions {
+  timeoutMs?: number;
+  onProgress?: (progress: GenerateStudyCardsProgress) => void;
+  onChunkCards?: (
+    cards: StudyCard[],
+    progress: GenerateStudyCardsProgress
+  ) => void | Promise<void>;
+  signal?: AbortSignal;
+}
+
 export async function generateStudyCardsWithOllama(
   chunks: ImportedDocumentChunk[],
-  options: {
-    timeoutMs?: number;
-    onProgress?: (progress: GenerateStudyCardsProgress) => void;
-    signal?: AbortSignal;
-  } = {}
+  options: GenerateStudyCardsOptions = {}
 ): Promise<StudyCard[]> {
   if (chunks.length === 0) {
     return [];
@@ -40,10 +46,12 @@ export async function generateStudyCardsWithOllama(
   for (const [index, chunk] of chunks.entries()) {
     throwIfAborted(options.signal);
 
-    options.onProgress?.({
+    const progress = {
       current: index + 1,
       total: chunks.length
-    });
+    };
+
+    options.onProgress?.(progress);
 
     const response = await withTimeout(invoke<GenerateStudyCardsResponse>("generate_study_cards", {
       request: {
@@ -54,7 +62,10 @@ export async function generateStudyCardsWithOllama(
     }), timeoutMs);
     throwIfAborted(options.signal);
 
-    cards.push(...response.cards.map(toStudyCard));
+    const chunkCards = response.cards.map(toStudyCard);
+
+    await options.onChunkCards?.(chunkCards, progress);
+    cards.push(...chunkCards);
   }
 
   return cards;

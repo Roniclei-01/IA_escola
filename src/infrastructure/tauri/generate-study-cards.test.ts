@@ -174,6 +174,84 @@ describe("generateStudyCardsWithOllama", () => {
     expect(onProgress).toHaveBeenNthCalledWith(2, { current: 2, total: 2 });
   });
 
+  it("reports cards generated for each completed chunk", async () => {
+    const chunks = [
+      {
+        id: "chunk-1",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 1,
+        content: "primeiro conteudo",
+        token_estimate: 1
+      },
+      {
+        id: "chunk-2",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 2,
+        content: "segundo conteudo",
+        token_estimate: 1
+      }
+    ];
+    const onChunkCards = vi.fn();
+    invokeMock
+      .mockResolvedValueOnce({
+        cards: [
+          {
+            id: "card-1",
+            book_id: "book-1",
+            chunk_id: "chunk-1",
+            front: "Pergunta 1",
+            back: "Resposta 1",
+            tags: ["ollama"]
+          }
+        ]
+      })
+      .mockResolvedValueOnce({
+        cards: [
+          {
+            id: "card-2",
+            book_id: "book-1",
+            chunk_id: "chunk-2",
+            front: "Pergunta 2",
+            back: "Resposta 2",
+            tags: ["ollama"]
+          }
+        ]
+      });
+
+    await generateStudyCardsWithOllama(chunks, { onChunkCards });
+
+    expect(onChunkCards).toHaveBeenNthCalledWith(
+      1,
+      [
+        {
+          id: "card-1",
+          bookId: "book-1",
+          chunkId: "chunk-1",
+          front: "Pergunta 1",
+          back: "Resposta 1",
+          tags: ["ollama"]
+        }
+      ],
+      { current: 1, total: 2 }
+    );
+    expect(onChunkCards).toHaveBeenNthCalledWith(
+      2,
+      [
+        {
+          id: "card-2",
+          bookId: "book-1",
+          chunkId: "chunk-2",
+          front: "Pergunta 2",
+          back: "Resposta 2",
+          tags: ["ollama"]
+        }
+      ],
+      { current: 2, total: 2 }
+    );
+  });
+
   it("stops before requesting the next chunk when generation is aborted", async () => {
     const abortController = new AbortController();
     const chunks = [

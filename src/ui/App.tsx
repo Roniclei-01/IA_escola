@@ -36,6 +36,7 @@ import { MockModelAdapter } from "../domain/mock-model-adapter";
 import { generateStudyCards } from "../app/generate-study-cards";
 import {
   generateStudyCardsWithOllama,
+  type GenerateStudyCardsOptions,
   type GenerateStudyCardsProgress
 } from "../infrastructure/tauri/generate-study-cards";
 import {
@@ -105,7 +106,7 @@ interface AppProps {
   ) => Promise<ChunkTextDocumentResponse>;
   generateCards?: (
     chunks: ImportedDocumentChunk[],
-    options?: { onProgress?: (progress: GenerateStudyCardsProgress) => void; signal?: AbortSignal }
+    options?: GenerateStudyCardsOptions
   ) => Promise<StudyCard[]>;
   saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
   listStudyCards?: (documentId: string) => Promise<StudyCard[]>;
@@ -1145,7 +1146,8 @@ export function App({
 
   async function generateCardsWithFallback(
     chunks: ImportedDocumentChunk[],
-    operationToken: number
+    operationToken: number,
+    options: Pick<GenerateStudyCardsOptions, "onChunkCards"> = {}
   ): Promise<StudyCard[]> {
     const chunksForGeneration = chunks.slice(0, INITIAL_CARD_GENERATION_CHUNK_LIMIT);
     setCardGenerationProgress(null);
@@ -1166,6 +1168,7 @@ export function App({
             setCardGenerationProgress(progress);
           }
         },
+        onChunkCards: options.onChunkCards,
         signal: operationAbortControllerRef.current?.signal
       });
     } catch (unknownError) {
@@ -1764,22 +1767,51 @@ export function App({
       );
 
       setOperationStatus("generatingCardsWithOllama");
+      const incrementallySavedCardIds = new Set<string>();
       const generatedCards =
         remainingChunks.length > 0
-          ? await generateCardsWithFallback(remainingChunks, operationToken)
+          ? await generateCardsWithFallback(remainingChunks, operationToken, {
+              onChunkCards: async (chunkCards) => {
+                if (!isCurrentOperation(operationToken) || chunkCards.length === 0) {
+                  return;
+                }
+
+                const savedChunkCards = await saveStudyCards(chunkCards);
+
+                if (!isCurrentOperation(operationToken)) {
+                  return;
+                }
+
+                savedChunkCards.forEach((card) => {
+                  incrementallySavedCardIds.add(card.id);
+                });
+                setCards((currentCards) => [...currentCards, ...savedChunkCards]);
+
+                if (!activeCard && savedChunkCards.length > 0) {
+                  setActiveCardIndex(0);
+                  setIsAnswerVisible(false);
+                }
+              }
+            })
           : [];
       if (!isCurrentOperation(operationToken)) {
         return;
       }
       setOperationStatus("savingStudyCards");
       setCardGenerationProgress(null);
-      const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
+      const unsavedGeneratedCards = generatedCards.filter(
+        (generatedCard) => !incrementallySavedCardIds.has(generatedCard.id)
+      );
+      const savedCards =
+        unsavedGeneratedCards.length > 0 ? await saveStudyCards(unsavedGeneratedCards) : [];
       if (!isCurrentOperation(operationToken)) {
         return;
       }
 
       setChunkCount(chunkResponse.chunks.length);
-      setCards((currentCards) => [...currentCards, ...savedCards]);
+      if (savedCards.length > 0) {
+        setCards((currentCards) => [...currentCards, ...savedCards]);
+      }
 
       if (!activeCard && savedCards.length > 0) {
         setActiveCardIndex(0);

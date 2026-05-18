@@ -4,6 +4,8 @@ import { App } from "./App";
 import "../i18n";
 
 const listNoDocuments = vi.fn().mockResolvedValue({ documents: [] });
+const listNoStudyCards = vi.fn().mockResolvedValue([]);
+const saveCards = vi.fn().mockImplementation(async (cards: unknown[]) => cards);
 
 describe("App", () => {
   it("renders the product name", async () => {
@@ -55,6 +57,7 @@ describe("App", () => {
         }
       ]
     });
+    const listStudyCards = vi.fn().mockResolvedValue([]);
     const generateCards = vi.fn().mockResolvedValue([
       {
         id: "card-saved",
@@ -70,6 +73,8 @@ describe("App", () => {
       <App
         listImportedDocuments={listImportedDocuments}
         listDocumentChunks={listDocumentChunks}
+        listStudyCards={listStudyCards}
+        saveStudyCards={saveCards}
         generateCards={generateCards}
       />
     );
@@ -92,6 +97,50 @@ describe("App", () => {
     expect(await screen.findByText("1 chunk gerado")).toBeInTheDocument();
     expect(screen.getByText("1 card gerado")).toBeInTheDocument();
     expect(screen.getByText("Pergunta salva")).toBeInTheDocument();
+  });
+
+  it("uses persisted cards when selecting a saved document", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-saved",
+          book_id: "book-saved",
+          content: "Documento salvo anteriormente.",
+          language: "Pt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-saved",
+        bookId: "book-saved",
+        chunkId: "chunk-saved",
+        front: "Pergunta persistida",
+        back: "Resposta persistida",
+        tags: ["saved"]
+      }
+    ]);
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+    const generateCards = vi.fn().mockResolvedValue([]);
+
+    render(
+      <App
+        listImportedDocuments={listImportedDocuments}
+        listDocumentChunks={listDocumentChunks}
+        listStudyCards={listStudyCards}
+        generateCards={generateCards}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
+
+    await waitFor(() => {
+      expect(listStudyCards).toHaveBeenCalledWith("document-saved");
+    });
+    expect(listDocumentChunks).not.toHaveBeenCalled();
+    expect(generateCards).not.toHaveBeenCalled();
+    expect(await screen.findByText("Pergunta persistida")).toBeInTheDocument();
+    expect(screen.getByText("1 card gerado")).toBeInTheDocument();
   });
 
   it("imports a text book from a file path", async () => {
@@ -119,6 +168,7 @@ describe("App", () => {
         importTextBook={importTextBook}
         listImportedDocuments={listNoDocuments}
         chunkTextDocument={chunkTextDocument}
+        saveStudyCards={saveCards}
       />
     );
 
@@ -197,6 +247,7 @@ describe("App", () => {
         listImportedDocuments={listNoDocuments}
         chunkTextDocument={chunkTextDocument}
         generateCards={generateCards}
+        saveStudyCards={saveCards}
       />
     );
 
@@ -222,7 +273,13 @@ describe("App", () => {
   it("shows an error when import fails", async () => {
     const importTextBook = vi.fn().mockRejectedValue(new Error("Arquivo de texto nao encontrado."));
 
-    render(<App importTextBook={importTextBook} listImportedDocuments={listNoDocuments} />);
+    render(
+      <App
+        importTextBook={importTextBook}
+        listImportedDocuments={listNoDocuments}
+        listStudyCards={listNoStudyCards}
+      />
+    );
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt"), {
       target: { value: "/tmp/missing.txt" }
@@ -246,6 +303,7 @@ describe("App", () => {
         importTextBook={importTextBook}
         listImportedDocuments={listNoDocuments}
         chunkTextDocument={chunkTextDocument}
+        saveStudyCards={saveCards}
       />
     );
 
@@ -284,6 +342,7 @@ describe("App", () => {
         listImportedDocuments={listNoDocuments}
         chunkTextDocument={chunkTextDocument}
         generateCards={generateCards}
+        saveStudyCards={saveCards}
       />
     );
 

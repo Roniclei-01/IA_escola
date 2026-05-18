@@ -32,24 +32,8 @@ pub fn list_document_chunks(
     list_document_chunks_from_storage(&storage, document_id)
 }
 
-fn format_storage_error(error: StorageError) -> String {
-    match error {
-        StorageError::OpenFailed(_)
-        | StorageError::MigrationFailed(_)
-        | StorageError::SaveDocumentFailed(_)
-        | StorageError::ListDocumentsFailed(_)
-        | StorageError::SaveChunksFailed(_)
-        | StorageError::ListChunksFailed(_)
-        | StorageError::InvalidDocumentId(_)
-        | StorageError::InvalidBookId(_)
-        | StorageError::InvalidChunkId(_)
-        | StorageError::InvalidChunkDocumentId(_)
-        | StorageError::InvalidChunkPosition(_)
-        | StorageError::InvalidChunkTokenEstimate(_)
-        | StorageError::InvalidLanguage(_) => {
-            "Nao foi possivel acessar os chunks do documento.".to_owned()
-        }
-    }
+fn format_storage_error(_error: StorageError) -> String {
+    "Nao foi possivel acessar os chunks do documento.".to_owned()
 }
 
 #[cfg(test)]

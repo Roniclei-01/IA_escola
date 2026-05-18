@@ -131,11 +131,11 @@ Tabelas ja iniciadas:
 
 - `documents`.
 - `document_chunks`.
+- `study_cards`.
 
 Tabelas futuras:
 
 - `books`.
-- `study_cards`.
 - `model_profiles`.
 - `user_settings`.
 - `study_sessions`.

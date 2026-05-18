@@ -21,6 +21,10 @@ import {
 import { MockModelAdapter } from "../domain/mock-model-adapter";
 import type { StudyCard } from "../domain/model-adapter";
 import { generateStudyCards } from "../app/generate-study-cards";
+import {
+  listStudyCards as defaultListStudyCards,
+  saveStudyCards as defaultSaveStudyCards
+} from "../infrastructure/tauri/study-cards";
 import { ImportPanel } from "./components/ImportPanel";
 import { DocumentSummary } from "./components/DocumentSummary";
 import { StudyCardViewer } from "./components/StudyCardViewer";
@@ -34,6 +38,8 @@ interface AppProps {
     request: ReturnType<typeof toChunkRequest>
   ) => Promise<ChunkTextDocumentResponse>;
   generateCards?: (chunks: ImportedDocumentChunk[]) => Promise<StudyCard[]>;
+  saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
+  listStudyCards?: (documentId: string) => Promise<StudyCard[]>;
 }
 
 const mockModelAdapter = new MockModelAdapter();
@@ -54,7 +60,9 @@ export function App({
   listImportedDocuments = defaultListImportedDocuments,
   listDocumentChunks = defaultListDocumentChunks,
   chunkTextDocument = defaultChunkTextDocument,
-  generateCards = defaultGenerateCards
+  generateCards = defaultGenerateCards,
+  saveStudyCards = defaultSaveStudyCards,
+  listStudyCards = defaultListStudyCards
 }: AppProps) {
   const { t } = useTranslation();
   const [filePath, setFilePath] = useState("");
@@ -121,10 +129,12 @@ export function App({
       const importedDocument = await importTextBook(trimmedPath);
       const chunkResponse = await chunkTextDocument(toChunkRequest(importedDocument, 180));
       const generatedCards = await generateCards(chunkResponse.chunks);
+      const persistedCards =
+        generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
       setDocument(importedDocument);
       setSavedDocuments((currentDocuments) => [importedDocument, ...currentDocuments]);
       setChunkCount(chunkResponse.chunks.length);
-      setCards(generatedCards);
+      setCards(persistedCards);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
     } catch (unknownError) {
@@ -148,12 +158,23 @@ export function App({
     setError(null);
 
     try {
+      const persistedCards = await listStudyCards(selectedDocument.document_id);
+
+      if (persistedCards.length > 0) {
+        setChunkCount(new Set(persistedCards.map((card) => card.chunkId)).size);
+        setCards(persistedCards);
+        setActiveCardIndex(0);
+        setIsAnswerVisible(false);
+        return;
+      }
+
       const chunkResponse = await listDocumentChunks(selectedDocument.document_id);
       const generatedCards =
         chunkResponse.chunks.length > 0 ? await generateCards(chunkResponse.chunks) : [];
+      const savedCards = generatedCards.length > 0 ? await saveStudyCards(generatedCards) : [];
 
       setChunkCount(chunkResponse.chunks.length);
-      setCards(generatedCards);
+      setCards(savedCards);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
     } catch (unknownError) {

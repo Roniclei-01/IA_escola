@@ -4,7 +4,7 @@ use rusqlite::{params, Connection};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::domain::{Document, DocumentChunk, Language};
+use crate::domain::{Document, DocumentChunk, Language, StudyCard};
 
 #[derive(Debug, Error)]
 pub enum StorageError {
@@ -20,6 +20,10 @@ pub enum StorageError {
     SaveChunksFailed(#[source] rusqlite::Error),
     #[error("failed to list document chunks")]
     ListChunksFailed(#[source] rusqlite::Error),
+    #[error("failed to save study cards")]
+    SaveStudyCardsFailed(#[source] rusqlite::Error),
+    #[error("failed to list study cards")]
+    ListStudyCardsFailed(#[source] rusqlite::Error),
     #[error("stored document has invalid id")]
     InvalidDocumentId(#[source] uuid::Error),
     #[error("stored document has invalid book id")]
@@ -32,6 +36,12 @@ pub enum StorageError {
     InvalidChunkPosition(i64),
     #[error("stored chunk token estimate is invalid")]
     InvalidChunkTokenEstimate(i64),
+    #[error("stored study card has invalid id")]
+    InvalidStudyCardId(#[source] uuid::Error),
+    #[error("stored study card has invalid chunk id")]
+    InvalidStudyCardChunkId(#[source] uuid::Error),
+    #[error("stored study card has invalid tags")]
+    InvalidStudyCardTags(#[source] serde_json::Error),
     #[error("stored document has invalid language")]
     InvalidLanguage(String),
 }
@@ -181,6 +191,97 @@ impl SQLiteStorage {
         Ok(chunks)
     }
 
+    pub fn save_study_cards(&mut self, cards: &[StudyCard]) -> Result<(), StorageError> {
+        let transaction = self
+            .connection
+            .transaction()
+            .map_err(StorageError::SaveStudyCardsFailed)?;
+
+        let chunk_ids = cards
+            .iter()
+            .map(|card| card.chunk_id)
+            .collect::<HashSet<_>>();
+
+        for chunk_id in chunk_ids {
+            transaction
+                .execute(
+                    "DELETE FROM study_cards WHERE chunk_id = ?1",
+                    [chunk_id.to_string()],
+                )
+                .map_err(StorageError::SaveStudyCardsFailed)?;
+        }
+
+        for card in cards {
+            let tags =
+                serde_json::to_string(&card.tags).map_err(StorageError::InvalidStudyCardTags)?;
+
+            transaction
+                .execute(
+                    "INSERT OR REPLACE INTO study_cards
+                        (id, book_id, chunk_id, front, back, tags)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![
+                        card.id.to_string(),
+                        card.book_id.to_string(),
+                        card.chunk_id.to_string(),
+                        card.front,
+                        card.back,
+                        tags,
+                    ],
+                )
+                .map_err(StorageError::SaveStudyCardsFailed)?;
+        }
+
+        transaction
+            .commit()
+            .map_err(StorageError::SaveStudyCardsFailed)?;
+
+        Ok(())
+    }
+
+    pub fn list_study_cards_by_document(
+        &self,
+        document_id: Uuid,
+    ) -> Result<Vec<StudyCard>, StorageError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT study_cards.id,
+                        study_cards.book_id,
+                        study_cards.chunk_id,
+                        study_cards.front,
+                        study_cards.back,
+                        study_cards.tags
+                 FROM study_cards
+                 INNER JOIN document_chunks ON document_chunks.id = study_cards.chunk_id
+                 WHERE document_chunks.document_id = ?1
+                 ORDER BY document_chunks.position ASC, study_cards.created_at ASC",
+            )
+            .map_err(StorageError::ListStudyCardsFailed)?;
+
+        let rows = statement
+            .query_map([document_id.to_string()], |row| {
+                Ok(RawStudyCard {
+                    id: row.get(0)?,
+                    book_id: row.get(1)?,
+                    chunk_id: row.get(2)?,
+                    front: row.get(3)?,
+                    back: row.get(4)?,
+                    tags: row.get(5)?,
+                })
+            })
+            .map_err(StorageError::ListStudyCardsFailed)?;
+
+        let mut cards = Vec::new();
+
+        for row in rows {
+            let raw_card = row.map_err(StorageError::ListStudyCardsFailed)?;
+            cards.push(raw_card.try_into()?);
+        }
+
+        Ok(cards)
+    }
+
     fn migrate(&self) -> Result<(), StorageError> {
         self.connection
             .execute_batch(
@@ -199,6 +300,16 @@ impl SQLiteStorage {
                     position INTEGER NOT NULL,
                     content TEXT NOT NULL,
                     token_estimate INTEGER NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS study_cards (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    book_id TEXT NOT NULL,
+                    chunk_id TEXT NOT NULL,
+                    front TEXT NOT NULL,
+                    back TEXT NOT NULL,
+                    tags TEXT NOT NULL,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );",
             )
@@ -220,6 +331,15 @@ struct RawDocumentChunk {
     position: i64,
     content: String,
     token_estimate: i64,
+}
+
+struct RawStudyCard {
+    id: String,
+    book_id: String,
+    chunk_id: String,
+    front: String,
+    back: String,
+    tags: String,
 }
 
 impl TryFrom<RawDocument> for Document {
@@ -256,6 +376,22 @@ impl TryFrom<RawDocumentChunk> for DocumentChunk {
     }
 }
 
+impl TryFrom<RawStudyCard> for StudyCard {
+    type Error = StorageError;
+
+    fn try_from(raw: RawStudyCard) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: Uuid::parse_str(&raw.id).map_err(StorageError::InvalidStudyCardId)?,
+            book_id: Uuid::parse_str(&raw.book_id).map_err(StorageError::InvalidBookId)?,
+            chunk_id: Uuid::parse_str(&raw.chunk_id)
+                .map_err(StorageError::InvalidStudyCardChunkId)?,
+            front: raw.front,
+            back: raw.back,
+            tags: serde_json::from_str(&raw.tags).map_err(StorageError::InvalidStudyCardTags)?,
+        })
+    }
+}
+
 fn language_to_code(language: &Language) -> &'static str {
     match language {
         Language::Pt => "pt",
@@ -278,7 +414,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::SQLiteStorage;
-    use crate::domain::{Document, DocumentChunk, Language};
+    use crate::domain::{Document, DocumentChunk, Language, StudyCard};
 
     #[test]
     fn creates_documents_table_on_open() {
@@ -294,6 +430,18 @@ mod tests {
         assert_eq!(
             storage.list_chunks_by_document(Uuid::new_v4()).unwrap(),
             Vec::<DocumentChunk>::new()
+        );
+    }
+
+    #[test]
+    fn creates_study_cards_table_on_open() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+
+        assert_eq!(
+            storage
+                .list_study_cards_by_document(Uuid::new_v4())
+                .unwrap(),
+            Vec::<StudyCard>::new()
         );
     }
 
@@ -393,5 +541,75 @@ mod tests {
         let chunks = storage.list_chunks_by_document(document_id).unwrap();
 
         assert_eq!(chunks, vec![replacement_chunk]);
+    }
+
+    #[test]
+    fn saves_and_lists_study_cards_by_document() {
+        let mut storage = SQLiteStorage::open_in_memory().unwrap();
+        let book_id = Uuid::new_v4();
+        let document_id = Uuid::new_v4();
+        let first_chunk = DocumentChunk::new(book_id, document_id, 1, "primeiro chunk").unwrap();
+        let second_chunk = DocumentChunk::new(book_id, document_id, 2, "segundo chunk").unwrap();
+        let first_card = StudyCard::new(
+            book_id,
+            first_chunk.id,
+            "Pergunta 1",
+            "Resposta 1",
+            vec!["mock".to_owned()],
+        )
+        .unwrap();
+        let second_card = StudyCard::new(
+            book_id,
+            second_chunk.id,
+            "Pergunta 2",
+            "Resposta 2",
+            vec!["mock".to_owned()],
+        )
+        .unwrap();
+
+        storage
+            .save_chunks(&[second_chunk.clone(), first_chunk.clone()])
+            .unwrap();
+        storage
+            .save_study_cards(&[second_card.clone(), first_card.clone()])
+            .unwrap();
+
+        let cards = storage.list_study_cards_by_document(document_id).unwrap();
+
+        assert_eq!(cards, vec![first_card, second_card]);
+    }
+
+    #[test]
+    fn replaces_study_card_set_for_chunk() {
+        let mut storage = SQLiteStorage::open_in_memory().unwrap();
+        let book_id = Uuid::new_v4();
+        let document_id = Uuid::new_v4();
+        let chunk = DocumentChunk::new(book_id, document_id, 1, "chunk").unwrap();
+        let first_card = StudyCard::new(
+            book_id,
+            chunk.id,
+            "Pergunta inicial",
+            "Resposta inicial",
+            vec!["old".to_owned()],
+        )
+        .unwrap();
+        let replacement_card = StudyCard::new(
+            book_id,
+            chunk.id,
+            "Pergunta nova",
+            "Resposta nova",
+            vec!["new".to_owned()],
+        )
+        .unwrap();
+
+        storage.save_chunks(&[chunk]).unwrap();
+        storage.save_study_cards(&[first_card]).unwrap();
+        storage
+            .save_study_cards(&[replacement_card.clone()])
+            .unwrap();
+
+        let cards = storage.list_study_cards_by_document(document_id).unwrap();
+
+        assert_eq!(cards, vec![replacement_card]);
     }
 }

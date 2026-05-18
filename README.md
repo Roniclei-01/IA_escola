@@ -72,6 +72,9 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - comando `chunk_text_document` persistindo chunks gerados no SQLite;
 - comando `list_document_chunks` para recuperar chunks salvos por documento;
 - UI reaproveitando chunks persistidos ao selecionar documento salvo;
+- persistencia SQLite de `study_cards`;
+- comandos `save_study_cards` e `list_study_cards`;
+- UI salvando cards gerados e reutilizando cards salvos ao abrir documento da biblioteca;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -146,11 +149,10 @@ docs/
 
 ## Proximos passos
 
-1. Persistir `study_cards` em SQLite.
-2. Criar comando para listar cards persistidos por documento.
-3. Fazer a UI reutilizar cards salvos antes de gerar novos cards mockados.
-4. Implementar adaptador inicial para Ollama.
-5. Evoluir tela de biblioteca, estudo e configuracoes.
+1. Implementar adaptador inicial para Ollama.
+2. Adicionar configuracao de modelo local na UI.
+3. Evoluir tela de biblioteca, estudo e configuracoes.
+4. Preparar importacao de PDF como proxima expansao de parser.
 
 ## Comandos de desenvolvimento
 

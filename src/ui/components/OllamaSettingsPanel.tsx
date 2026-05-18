@@ -44,9 +44,13 @@ export function OllamaSettingsPanel({
           <input
             id="ollama-model"
             type="text"
+            list="ollama-model-options"
             value={model}
             onChange={(event) => onModelChange(event.target.value)}
           />
+          <datalist id="ollama-model-options">
+            <option value="llama3.2:1b" />
+          </datalist>
           <button type="submit" disabled={isTesting}>
             {isTesting ? labels.testing : labels.test}
           </button>

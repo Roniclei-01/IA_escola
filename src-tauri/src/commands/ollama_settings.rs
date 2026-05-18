@@ -31,6 +31,7 @@ pub fn load_ollama_settings_from_storage(
     let model = storage
         .load_setting(OLLAMA_MODEL_KEY)
         .map_err(format_load_error)?
+        .map(normalize_model_name)
         .unwrap_or(defaults.model);
 
     Ok(OllamaSettings { base_url, model })
@@ -73,7 +74,7 @@ pub fn save_ollama_settings(
 
 fn normalize_settings(settings: OllamaSettings) -> Result<OllamaSettings, String> {
     let base_url = settings.base_url.trim().to_owned();
-    let model = settings.model.trim().to_owned();
+    let model = normalize_model_name(settings.model);
 
     if base_url.is_empty() {
         return Err("Informe a URL local do Ollama.".to_owned());
@@ -84,6 +85,13 @@ fn normalize_settings(settings: OllamaSettings) -> Result<OllamaSettings, String
     }
 
     Ok(OllamaSettings { base_url, model })
+}
+
+fn normalize_model_name(model: String) -> String {
+    match model.trim() {
+        "llama3.2" => DEFAULT_OLLAMA_MODEL.to_owned(),
+        trimmed_model => trimmed_model.to_owned(),
+    }
 }
 
 fn format_load_error(_error: StorageError) -> String {
@@ -131,6 +139,30 @@ mod tests {
             OllamaSettings {
                 base_url: "http://127.0.0.1:11435".to_owned(),
                 model: "mistral".to_owned(),
+            }
+        );
+    }
+
+    #[test]
+    fn migrates_ambiguous_llama32_alias_to_lightweight_default() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+
+        save_ollama_settings_with_storage(
+            OllamaSettings {
+                base_url: "http://127.0.0.1:11434".to_owned(),
+                model: "llama3.2".to_owned(),
+            },
+            &storage,
+        )
+        .unwrap();
+
+        let settings = load_ollama_settings_from_storage(&storage).unwrap();
+
+        assert_eq!(
+            settings,
+            OllamaSettings {
+                base_url: "http://127.0.0.1:11434".to_owned(),
+                model: "llama3.2:1b".to_owned(),
             }
         );
     }

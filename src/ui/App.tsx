@@ -970,6 +970,22 @@ function filterSavedDocuments(
     .map(({ savedDocument }) => savedDocument);
 }
 
+function shouldEnableMockAiFallback() {
+  return import.meta.env.VITE_ENABLE_MOCK_AI_FALLBACK === "true";
+}
+
+function getErrorMessage(unknownError: unknown, fallbackMessage: string) {
+  if (unknownError instanceof Error && unknownError.message.trim().length > 0) {
+    return unknownError.message;
+  }
+
+  if (typeof unknownError === "string" && unknownError.trim().length > 0) {
+    return unknownError;
+  }
+
+  return fallbackMessage;
+}
+
 export function App({
   importTextBook = defaultImportTextBook,
   archiveImportedDocument = defaultArchiveImportedDocument,
@@ -999,7 +1015,7 @@ export function App({
   printStudySessionReport = defaultPrintStudySessionReport,
   notifyStudyGoalReminder = defaultNotifyStudyGoalReminder,
   confirmDelete = (message: string) => window.confirm(message),
-  enableDevelopmentFallback = import.meta.env.DEV
+  enableDevelopmentFallback = shouldEnableMockAiFallback()
 }: AppProps) {
   const { t } = useTranslation();
   const operationTokenRef = useRef(0);
@@ -1552,7 +1568,8 @@ export function App({
       if (partiallySavedCards.length > 0) {
         setWarning(t("library.partialCardsSaved", { count: partiallySavedCards.length }));
       } else {
-        setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+        setWarning(null);
+        setError(getErrorMessage(unknownError, t("library.unknownError")));
       }
     } finally {
       if (isCurrentOperation(operationToken)) {
@@ -1686,7 +1703,7 @@ export function App({
       setStudySessionSummaries([]);
       setCardReviewSchedules({});
       setOperationStatus(null);
-      setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+      setError(getErrorMessage(unknownError, t("library.unknownError")));
     } finally {
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
@@ -1718,7 +1735,7 @@ export function App({
       setOllamaStatus(t("settings.ollamaConnectionOk", { model: savedSettings.model }));
     } catch (unknownError) {
       setOllamaStatus(null);
-      setError(unknownError instanceof Error ? unknownError.message : t("settings.ollamaConnectionError"));
+      setError(getErrorMessage(unknownError, t("settings.ollamaConnectionError")));
     } finally {
       setIsTestingOllama(false);
     }
@@ -1826,7 +1843,7 @@ export function App({
       if (partiallySavedCards.length > 0) {
         setWarning(t("library.partialCardsSaved", { count: partiallySavedCards.length }));
       } else {
-        setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+        setError(getErrorMessage(unknownError, t("library.unknownError")));
       }
     } finally {
       if (isCurrentOperation(operationToken)) {
@@ -1919,7 +1936,7 @@ export function App({
       if (partiallySavedCards.length > 0) {
         setWarning(t("library.partialCardsSaved", { count: partiallySavedCards.length }));
       } else {
-        setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+        setError(getErrorMessage(unknownError, t("library.unknownError")));
       }
     } finally {
       if (isCurrentOperation(operationToken)) {
@@ -1970,7 +1987,7 @@ export function App({
         setCardReviewSchedules({});
       }
     } catch (unknownError) {
-      setError(unknownError instanceof Error ? unknownError.message : t("library.archiveError"));
+      setError(getErrorMessage(unknownError, t("library.archiveError")));
     }
   }
 
@@ -2011,7 +2028,7 @@ export function App({
         }));
       }
     } catch (unknownError) {
-      setError(unknownError instanceof Error ? unknownError.message : t("library.restoreError"));
+      setError(getErrorMessage(unknownError, t("library.restoreError")));
     }
   }
 
@@ -2033,7 +2050,7 @@ export function App({
         )
       );
     } catch (unknownError) {
-      setError(unknownError instanceof Error ? unknownError.message : t("library.deleteError"));
+      setError(getErrorMessage(unknownError, t("library.deleteError")));
     }
   }
 
@@ -2172,11 +2189,7 @@ export function App({
       setIsStudyGoalNotificationEnabled(settings.study_goal_reminders_enabled);
       setStudyGoalReminderTime(settings.study_goal_reminder_time);
     } catch (unknownError) {
-      setError(
-        unknownError instanceof Error
-          ? unknownError.message
-          : t("settings.notificationSettingsSaveError")
-      );
+      setError(getErrorMessage(unknownError, t("settings.notificationSettingsSaveError")));
     }
   }
 
@@ -2191,11 +2204,7 @@ export function App({
       setIsStudyGoalNotificationEnabled(settings.study_goal_reminders_enabled);
       setStudyGoalReminderTime(settings.study_goal_reminder_time);
     } catch (unknownError) {
-      setError(
-        unknownError instanceof Error
-          ? unknownError.message
-          : t("settings.notificationSettingsSaveError")
-      );
+      setError(getErrorMessage(unknownError, t("settings.notificationSettingsSaveError")));
     }
   }
 
@@ -2251,7 +2260,7 @@ export function App({
         });
       }
     } catch (unknownError) {
-      setError(unknownError instanceof Error ? unknownError.message : t("study.goalSaveError"));
+      setError(getErrorMessage(unknownError, t("study.goalSaveError")));
     }
   }
 

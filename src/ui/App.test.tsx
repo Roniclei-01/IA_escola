@@ -2760,7 +2760,7 @@ describe("App", () => {
   });
 
   it("shows an error when import fails", async () => {
-    const importTextBook = vi.fn().mockRejectedValue(new Error("Arquivo de texto nao encontrado."));
+    const importTextBook = vi.fn().mockRejectedValue("Arquivo de estudo nao encontrado.");
 
     renderApp({
       importTextBook,
@@ -2772,7 +2772,7 @@ describe("App", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Arquivo de texto nao encontrado.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Arquivo de estudo nao encontrado.");
   });
 
   it("shows chunking errors after a successful import", async () => {
@@ -2817,14 +2817,13 @@ describe("App", () => {
         }
       ]
     });
-    const generateCards = vi.fn().mockRejectedValue(new Error("Falha ao gerar cards."));
+    const generateCards = vi.fn().mockRejectedValue("Modelo Ollama indisponivel.");
 
     renderApp({
       importTextBook,
       chunkTextDocument,
       generateCards,
-      saveStudyCards: saveCards,
-      enableDevelopmentFallback: false
+      saveStudyCards: saveCards
     });
 
     fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
@@ -2832,7 +2831,8 @@ describe("App", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Falha ao gerar cards.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Modelo Ollama indisponivel.");
+    expect(screen.queryByText("Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento.")).not.toBeInTheDocument();
   });
 
   it("keeps partially saved imported cards when generation fails later", async () => {

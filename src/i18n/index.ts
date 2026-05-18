@@ -29,6 +29,8 @@ export const resources = {
         loadingSavedCards: "Carregando cards salvos.",
         cancelOperation: "Cancelar operacao",
         operationCanceled: "Operacao cancelada.",
+        partialCardsSaved_one: "A geracao parou, mas {{count}} card ja foi salvo.",
+        partialCardsSaved_other: "A geracao parou, mas {{count}} cards ja foram salvos.",
         mockGenerationFallback:
           "Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento.",
         emptyPath: "Informe o caminho do arquivo .txt ou .pdf.",
@@ -231,6 +233,8 @@ export const resources = {
         loadingSavedCards: "Loading saved cards.",
         cancelOperation: "Cancel operation",
         operationCanceled: "Operation canceled.",
+        partialCardsSaved_one: "Generation stopped, but {{count}} card was already saved.",
+        partialCardsSaved_other: "Generation stopped, but {{count}} cards were already saved.",
         mockGenerationFallback:
           "Ollama failed. Mock cards were generated for development only.",
         emptyPath: "Enter a .txt or .pdf file path.",
@@ -433,6 +437,8 @@ export const resources = {
         loadingSavedCards: "Cargando cards guardados.",
         cancelOperation: "Cancelar operacion",
         operationCanceled: "Operacion cancelada.",
+        partialCardsSaved_one: "La generacion se detuvo, pero {{count}} card ya fue guardado.",
+        partialCardsSaved_other: "La generacion se detuvo, pero {{count}} cards ya fueron guardados.",
         mockGenerationFallback:
           "Ollama fallo. Se generaron cards mockados solo para desarrollo.",
         emptyPath: "Informe la ruta del archivo .txt o .pdf.",

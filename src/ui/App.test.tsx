@@ -2666,4 +2666,72 @@ describe("App", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Falha ao gerar cards.");
   });
+
+  it("keeps partially saved imported cards when generation fails later", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-partial",
+      book_id: "book-partial",
+      content: "Conteudo com geracao parcial.",
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/partial.txt"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-partial",
+          book_id: "book-partial",
+          document_id: "document-partial",
+          position: 0,
+          content: "Conteudo com geracao parcial.",
+          token_estimate: 4
+        }
+      ]
+    });
+    const partialCard = {
+      id: "card-partial",
+      bookId: "book-partial",
+      chunkId: "chunk-partial",
+      front: "Pergunta parcial",
+      back: "Resposta parcial",
+      tags: ["ollama"]
+    };
+    const saveStudyCards = vi.fn().mockImplementation(async (cards: StudyCard[]) => cards);
+    const generateCards = vi.fn(
+      async (
+        _chunks: Array<{
+          id: string;
+          book_id: string;
+          document_id: string;
+          position: number;
+          content: string;
+          token_estimate: number;
+        }>,
+        options?: GenerateStudyCardsOptions
+      ) => {
+        await options?.onChunkCards?.([partialCard], { current: 1, total: 2 });
+        throw new Error("Falha depois do primeiro card.");
+      }
+    );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      generateCards,
+      saveStudyCards,
+      enableDevelopmentFallback: false
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/partial.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "A geracao parou, mas 1 card ja foi salvo."
+    );
+    expect(screen.getByText("1 card gerado")).toBeInTheDocument();
+    expect(screen.getByText("Pergunta parcial")).toBeInTheDocument();
+    expect(screen.queryByText("Falha depois do primeiro card.")).not.toBeInTheDocument();
+  });
 });

@@ -1549,7 +1549,11 @@ export function App({
       setStudySessionReviewCount(0);
       setStudySessionSummaries([]);
       setCardReviewSchedules({});
-      setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+      if (partiallySavedCards.length > 0) {
+        setWarning(t("library.partialCardsSaved", { count: partiallySavedCards.length }));
+      } else {
+        setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
+      }
     } finally {
       if (isCurrentOperation(operationToken)) {
         setIsImporting(false);

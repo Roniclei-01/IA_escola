@@ -18,9 +18,8 @@ import {
   type ImportedDocumentChunk,
   type ChunkTextDocumentResponse
 } from "../infrastructure/tauri/chunk-text-document";
-import { MockModelAdapter } from "../domain/mock-model-adapter";
 import type { StudyCard } from "../domain/model-adapter";
-import { generateStudyCards } from "../app/generate-study-cards";
+import { generateStudyCardsWithOllama } from "../infrastructure/tauri/generate-study-cards";
 import {
   listStudyCards as defaultListStudyCards,
   saveStudyCards as defaultSaveStudyCards
@@ -58,25 +57,12 @@ interface AppProps {
   saveOllamaSettings?: (settings: OllamaSettings) => Promise<OllamaSettings>;
 }
 
-const mockModelAdapter = new MockModelAdapter();
-
-async function defaultGenerateCards(chunks: ImportedDocumentChunk[]) {
-  return generateStudyCards(
-    chunks,
-    {
-      cardsPerChunk: 1,
-      language: "pt"
-    },
-    mockModelAdapter
-  );
-}
-
 export function App({
   importTextBook = defaultImportTextBook,
   listImportedDocuments = defaultListImportedDocuments,
   listDocumentChunks = defaultListDocumentChunks,
   chunkTextDocument = defaultChunkTextDocument,
-  generateCards = defaultGenerateCards,
+  generateCards = generateStudyCardsWithOllama,
   saveStudyCards = defaultSaveStudyCards,
   listStudyCards = defaultListStudyCards,
   testOllamaConnection = defaultTestOllamaConnection,

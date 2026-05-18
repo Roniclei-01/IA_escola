@@ -22,7 +22,8 @@ pub fn run() {
             commands::list_study_cards::list_study_cards,
             commands::test_ollama_connection::test_ollama_connection,
             commands::ollama_settings::load_ollama_settings,
-            commands::ollama_settings::save_ollama_settings
+            commands::ollama_settings::save_ollama_settings,
+            commands::generate_study_cards::generate_study_cards
         ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");

@@ -231,10 +231,21 @@ describe("App", () => {
         }
       ]
     });
+    const generateCards = vi.fn().mockResolvedValue([
+      {
+        id: "chunk-1-card-1",
+        bookId: "book-1",
+        chunkId: "chunk-1",
+        front: "Pergunta 1 sobre o trecho 0",
+        back: "Resposta baseada em: Conteudo importado para estudo.",
+        tags: ["mock"]
+      }
+    ]);
 
     renderApp({
       importTextBook,
       chunkTextDocument,
+      generateCards,
       saveStudyCards: saveCards
     });
 

@@ -82,6 +82,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - painel de configuracao na UI para URL/modelo Ollama e teste de conexao;
 - persistencia SQLite das configuracoes do Ollama em `app_settings`;
 - comandos `load_ollama_settings` e `save_ollama_settings`;
+- comando `generate_study_cards` usando Ollama e configuracoes salvas;
+- UI usando Ollama por padrao para gerar cards, com testes ainda injetando geradores previsiveis;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -156,8 +158,8 @@ docs/
 
 ## Proximos passos
 
-1. Trocar a geracao mockada por Ollama quando o modelo estiver configurado.
-2. Evoluir tela de biblioteca, estudo e configuracoes.
+1. Evoluir feedback visual de geracao com Ollama.
+2. Criar fallback manual para geracao mockada em modo desenvolvimento.
 3. Preparar importacao de PDF como proxima expansao de parser.
 
 ## Comandos de desenvolvimento

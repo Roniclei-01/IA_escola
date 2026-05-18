@@ -627,21 +627,42 @@ function buildPrintableStudySessionReport(
     <meta charset="utf-8" />
     <title>Relatorio de estudo - ${escapeHtml(documentTitle)}</title>
     <style>
-      @page { margin: 20mm; }
+      @page {
+        margin: 18mm 16mm 22mm;
+        @bottom-center {
+          color: #6b776f;
+          content: "Pagina " counter(page) " de " counter(pages);
+          font-size: 10px;
+        }
+      }
       body { color: #17201b; font-family: Arial, sans-serif; line-height: 1.45; }
-      h1 { margin: 0 0 16px; font-size: 24px; }
-      h2 { margin: 28px 0 12px; font-size: 18px; }
+      h1 { margin: 0; font-size: 26px; }
+      h2 { margin: 28px 0 12px; font-size: 18px; break-after: avoid; }
+      .report-cover {
+        margin-bottom: 18px;
+        padding: 18px;
+        border: 1px solid #cbd8ce;
+        border-radius: 8px;
+        background: #f4f7f3;
+        break-inside: avoid;
+      }
+      .report-cover p { margin: 8px 0 0; color: #536259; }
       .meta, .summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-      .box { border: 1px solid #dce2dc; border-radius: 6px; padding: 10px; }
+      .box { border: 1px solid #dce2dc; border-radius: 6px; padding: 10px; break-inside: avoid; }
       strong { display: block; color: #536259; font-size: 11px; text-transform: uppercase; }
       span { display: block; margin-top: 4px; font-weight: 700; }
       table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      thead { display: table-header-group; }
+      tr { break-inside: avoid; }
       th, td { border: 1px solid #dce2dc; padding: 8px; text-align: left; }
       th { background: #f4f7f3; }
     </style>
   </head>
   <body>
-    <h1>Relatorio de estudo - ${escapeHtml(documentTitle)}</h1>
+    <header class="report-cover">
+      <h1>Relatorio de estudo - ${escapeHtml(documentTitle)}</h1>
+      <p>Resumo imprimivel das sessoes, retencao e volume de revisoes deste documento.</p>
+    </header>
     <section class="meta">
       <div class="box"><strong>Documento</strong><span>${escapeHtml(documentTitle)}</span></div>
       <div class="box"><strong>Origem</strong><span>${escapeHtml(document.source_path ?? "Nao informada")}</span></div>
@@ -683,10 +704,23 @@ function toAnkiTags(tags: string[]): string {
     .join(" ");
 }
 
-function buildAnkiTsv(cards: StudyCard[]): string {
-  return cards
-    .map((card) => [toAnkiField(card.front), toAnkiField(card.back), toAnkiTags(card.tags)].join("\t"))
-    .join("\n");
+function toAnkiTag(value: string): string {
+  return value.trim().replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function buildAnkiTsv(cards: StudyCard[], document: ImportTextBookResponse): string {
+  const documentTag = toAnkiTag(`document_${document.document_id}`);
+  const sourceTypeTag = toAnkiTag(`source_${document.source_type ?? "txt"}`);
+  const headers = ["#separator:tab", "#html:false", "#notetype:Basic", "#columns:Front Back Tags"];
+  const rows = cards.map((card) =>
+    [
+      toAnkiField(card.front),
+      toAnkiField(card.back),
+      toAnkiTags(["estudo_ia_local", documentTag, sourceTypeTag, ...card.tags])
+    ].join("\t")
+  );
+
+  return [...headers, ...rows].join("\n");
 }
 
 function buildDueStudyQueue(
@@ -839,6 +873,7 @@ export function App({
   const [activeStudySession, setActiveStudySession] = useState<StudySession | null>(null);
   const [studySessionReviewCount, setStudySessionReviewCount] = useState(0);
   const [studySessionSummaries, setStudySessionSummaries] = useState<StudySessionSummary[]>([]);
+  const [printableReportPreviewHtml, setPrintableReportPreviewHtml] = useState<string | null>(null);
   const [studyReviewGoalsByDocumentId, setStudyReviewGoalsByDocumentId] = useState<
     Record<string, number>
   >({});
@@ -1136,6 +1171,7 @@ export function App({
     setActiveStudySession(null);
     setStudySessionReviewCount(0);
     setStudySessionSummaries([]);
+    setPrintableReportPreviewHtml(null);
     setCardReviewSchedules({});
 
     try {
@@ -1603,6 +1639,14 @@ export function App({
     downloadTextFile(fileName, buildStudySessionReport(document, studySessionSummaries));
   }
 
+  function handlePreviewPrintableStudySessionReport() {
+    if (!document || studySessionSummaries.length === 0) {
+      return;
+    }
+
+    setPrintableReportPreviewHtml(buildPrintableStudySessionReport(document, studySessionSummaries));
+  }
+
   function handleExportPrintableStudySessionReport() {
     if (!document || studySessionSummaries.length === 0) {
       return;
@@ -1621,7 +1665,7 @@ export function App({
     }
 
     const fileName = `anki-${sanitizeReportFileName(document.document_id)}.tsv`;
-    downloadTextFile(fileName, buildAnkiTsv(cards));
+    downloadTextFile(fileName, buildAnkiTsv(cards, document));
   }
 
   return (
@@ -2101,6 +2145,7 @@ export function App({
                 title: t("study.sessionHistoryTitle"),
                 empty: t("study.sessionHistoryEmpty"),
                 exportReport: t("study.exportSessionReport"),
+                previewPdfReport: t("study.previewSessionPdfReport"),
                 exportPdfReport: t("study.exportSessionPdfReport"),
                 itemLabel: (summary, index) =>
                   t("study.sessionHistoryItem", {
@@ -2115,8 +2160,18 @@ export function App({
                   })
               }}
               onExportReport={handleExportStudySessionReport}
+              onPreviewPdfReport={handlePreviewPrintableStudySessionReport}
               onExportPdfReport={handleExportPrintableStudySessionReport}
             />
+            {printableReportPreviewHtml ? (
+              <section className="pdf-preview" aria-labelledby="pdf-preview-title">
+                <h3 id="pdf-preview-title">{t("study.pdfPreviewTitle")}</h3>
+                <iframe
+                  title={t("study.pdfPreviewFrameTitle")}
+                  srcDoc={printableReportPreviewHtml}
+                />
+              </section>
+            ) : null}
           </DocumentSummary>
         ) : (
           <section className="empty-state" aria-label={t("library.emptyStateLabel")}>

@@ -1217,13 +1217,26 @@ describe("App", () => {
     });
 
     fireEvent.click(await screen.findByRole("button", { name: /Historia geral/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Previa PDF" }));
+
+    expect(await screen.findByText("Previa do PDF")).toBeInTheDocument();
+    expect(screen.getByTitle("Previa do relatorio PDF")).toHaveAttribute(
+      "srcdoc",
+      expect.stringContaining("<title>Relatorio de estudo - Historia geral</title>")
+    );
+    expect(printStudySessionReport).not.toHaveBeenCalled();
+
     fireEvent.click(await screen.findByRole("button", { name: "Exportar PDF" }));
 
     expect(printStudySessionReport).toHaveBeenCalledWith(
       "relatorio-estudo-document-pdf-report.pdf",
       expect.stringContaining("<title>Relatorio de estudo - Historia geral</title>")
     );
+    expect(printStudySessionReport.mock.calls[0][1]).toContain('<header class="report-cover">');
     expect(printStudySessionReport.mock.calls[0][1]).toContain("<h1>Relatorio de estudo - Historia geral</h1>");
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("@bottom-center");
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("counter(page)");
+    expect(printStudySessionReport.mock.calls[0][1]).toContain("break-inside: avoid");
     expect(printStudySessionReport.mock.calls[0][1]).toContain("<strong>Acertos</strong>");
     expect(printStudySessionReport.mock.calls[0][1]).toContain("<span>4</span>");
   });
@@ -1655,8 +1668,12 @@ describe("App", () => {
     expect(downloadTextFile).toHaveBeenCalledWith(
       "anki-document-anki.tsv",
       [
-        "O que e celula? Explique.\tUnidade basica da vida.\tbiologia celula_animal",
-        "Funcao da mitocondria?\tProduzir energia.\tbiologia"
+        "#separator:tab",
+        "#html:false",
+        "#notetype:Basic",
+        "#columns:Front Back Tags",
+        "O que e celula? Explique.\tUnidade basica da vida.\testudo_ia_local document_document-anki source_txt biologia celula_animal",
+        "Funcao da mitocondria?\tProduzir energia.\testudo_ia_local document_document-anki source_txt biologia"
       ].join("\n")
     );
   });

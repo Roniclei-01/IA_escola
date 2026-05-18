@@ -816,6 +816,18 @@ h1 {
   opacity: 0.55;
 }
 
+.pdf-preview {
+  margin-top: 18px;
+}
+
+.pdf-preview iframe {
+  width: 100%;
+  min-height: 420px;
+  border: 1px solid #cbd8ce;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
 .review-history p,
 .due-study-queue p,
 .retention-metrics p,

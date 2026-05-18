@@ -6,11 +6,13 @@ interface StudySessionHistoryProps {
     title: string;
     empty: string;
     exportReport: string;
+    previewPdfReport: string;
     exportPdfReport: string;
     itemLabel: (summary: StudySessionSummary, index: number) => string;
     itemCounts: (summary: StudySessionSummary) => string;
   };
   onExportReport: () => void;
+  onPreviewPdfReport: () => void;
   onExportPdfReport: () => void;
 }
 
@@ -18,6 +20,7 @@ export function StudySessionHistory({
   summaries,
   labels,
   onExportReport,
+  onPreviewPdfReport,
   onExportPdfReport
 }: StudySessionHistoryProps) {
   const latestSummaries = summaries.slice(-5).reverse();
@@ -30,6 +33,9 @@ export function StudySessionHistory({
         <div className="session-history-actions">
           <button type="button" disabled={!hasSummaries} onClick={onExportReport}>
             {labels.exportReport}
+          </button>
+          <button type="button" disabled={!hasSummaries} onClick={onPreviewPdfReport}>
+            {labels.previewPdfReport}
           </button>
           <button type="button" disabled={!hasSummaries} onClick={onExportPdfReport}>
             {labels.exportPdfReport}

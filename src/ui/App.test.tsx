@@ -573,6 +573,10 @@ describe("App", () => {
     const savedDocumentButton = await screen.findByRole("button", { name: /Documento 1/ });
     expect(await screen.findByRole("status")).toHaveTextContent("Importando documento.");
     expect(savedDocumentButton).toBeDisabled();
+    expect(screen.getByLabelText("Buscar na biblioteca")).toBeDisabled();
+    expect(screen.getByLabelText("Tipo de arquivo")).toBeDisabled();
+    expect(screen.getByLabelText("Status de revisao")).toBeDisabled();
+    expect(screen.getByLabelText("Ordenar biblioteca")).toBeDisabled();
 
     fireEvent.click(savedDocumentButton);
 

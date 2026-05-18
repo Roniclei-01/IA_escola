@@ -68,6 +68,7 @@ export function SavedDocumentsList({
           type="search"
           value={filters.searchQuery}
           placeholder={labels.searchPlaceholder}
+          disabled={isInteractionDisabled}
           onChange={(event) => onSearchQueryChange(event.target.value)}
         />
 
@@ -75,6 +76,7 @@ export function SavedDocumentsList({
         <select
           id="source-type-filter"
           value={filters.sourceType}
+          disabled={isInteractionDisabled}
           onChange={(event) =>
             onSourceTypeFilterChange(event.target.value as "all" | "txt" | "pdf")
           }
@@ -88,6 +90,7 @@ export function SavedDocumentsList({
         <select
           id="review-status-filter"
           value={filters.reviewStatus}
+          disabled={isInteractionDisabled}
           onChange={(event) =>
             onReviewStatusFilterChange(event.target.value as "all" | "reviewed" | "pending")
           }
@@ -101,6 +104,7 @@ export function SavedDocumentsList({
         <select
           id="library-sort"
           value={filters.sortMode}
+          disabled={isInteractionDisabled}
           onChange={(event) =>
             onSortModeChange(event.target.value as "oldest" | "newest" | "type" | "status")
           }

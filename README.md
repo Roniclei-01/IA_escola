@@ -52,6 +52,9 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - contrato `ModelAdapter`;
 - caso de uso `generate_flashcards`;
 - `MockModelAdapter` no frontend para testes previsiveis;
+- parser de `.txt` no backend Tauri;
+- comando Tauri `import_text_book`;
+- ponte TypeScript `importTextBook`;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase

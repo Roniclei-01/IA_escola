@@ -184,6 +184,12 @@ describe("i18n", () => {
     expect(i18n.getResource("es", "translation", "library.generatingCardsWithOllama")).toBe(
       "Generando cards con Ollama."
     );
+    expect(i18n.getResource("pt", "translation", "library.operationOverlayTitle")).toBe(
+      "Processando arquivo"
+    );
+    expect(i18n.getResource("pt", "translation", "library.cancelProcessing")).toBe(
+      "Cancelar processamento"
+    );
   });
 
   it("has mock fallback labels in every supported language", () => {

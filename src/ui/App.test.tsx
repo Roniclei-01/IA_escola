@@ -578,6 +578,9 @@ describe("App", () => {
 
     const savedDocumentButton = await screen.findByRole("button", { name: /Documento 1/ });
     expect(await screen.findByRole("status")).toHaveTextContent("Importando documento.");
+    expect(await screen.findByRole("dialog", { name: "Processando arquivo" })).toHaveTextContent(
+      "Importando documento."
+    );
     expect(savedDocumentButton).toBeDisabled();
     expect(screen.getByLabelText("Buscar na biblioteca")).toBeDisabled();
     expect(screen.getByLabelText("Tipo de arquivo")).toBeDisabled();
@@ -684,9 +687,11 @@ describe("App", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Gerando cards com Ollama. Chunk 2 de 3."
-    );
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Gerando cards com Ollama. Chunk 2 de 3."
+      );
+    });
   });
 
   it("aborts the active card generation request when canceling", async () => {
@@ -743,7 +748,9 @@ describe("App", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+    });
     fireEvent.click(screen.getByRole("button", { name: "Cancelar operacao" }));
 
     expect(capturedSignal?.aborted).toBe(true);
@@ -1327,7 +1334,9 @@ describe("App", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Gerando cards com Ollama.");
+    });
 
     resolveCards([
       {

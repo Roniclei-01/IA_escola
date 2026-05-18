@@ -1,7 +1,9 @@
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, ExitStatus, Output},
+    thread,
+    time::{Duration, Instant},
 };
 
 use lopdf::Document as PdfDocument;
@@ -39,6 +41,9 @@ pub struct OcrEngineOptions {
     pub pdftoppm_path: PathBuf,
     pub tesseract_path: PathBuf,
     pub language: String,
+    pub resolution_dpi: u16,
+    pub max_pages: Option<u32>,
+    pub command_timeout_seconds: u64,
 }
 
 impl Default for TextBookParserOptions {
@@ -57,6 +62,9 @@ impl Default for OcrEngineOptions {
             pdftoppm_path: PathBuf::from("pdftoppm"),
             tesseract_path: PathBuf::from("tesseract"),
             language: "por".to_owned(),
+            resolution_dpi: 180,
+            max_pages: Some(8),
+            command_timeout_seconds: 90,
         }
     }
 }
@@ -155,14 +163,20 @@ fn extract_pdf_text_with_ocr(
     fs::create_dir_all(&output_dir).map_err(|_| TextBookParserError::OcrUnavailable)?;
 
     let output_prefix = output_dir.join("page");
-    let raster_status = Command::new(&engine.pdftoppm_path)
+    let mut raster_command = Command::new(&engine.pdftoppm_path);
+    raster_command
         .arg("-png")
         .arg("-r")
-        .arg("300")
-        .arg(path)
-        .arg(&output_prefix)
-        .status()
-        .map_err(|_| TextBookParserError::OcrUnavailable)?;
+        .arg(engine.resolution_dpi.to_string());
+
+    if let Some(max_pages) = engine.max_pages {
+        raster_command.arg("-f").arg("1").arg("-l").arg(max_pages.to_string());
+    }
+
+    raster_command.arg(path).arg(&output_prefix);
+
+    let command_timeout = Duration::from_secs(engine.command_timeout_seconds);
+    let raster_status = run_command_status_with_timeout(&mut raster_command, command_timeout)?;
 
     if !raster_status.success() {
         let _ = fs::remove_dir_all(&output_dir);
@@ -190,13 +204,14 @@ fn extract_pdf_text_with_ocr(
     let mut pages_text = Vec::new();
 
     for page_image in page_images {
-        let output = Command::new(&engine.tesseract_path)
-            .arg(&page_image)
-            .arg("stdout")
-            .arg("-l")
-            .arg(&engine.language)
-            .output()
-            .map_err(|_| TextBookParserError::OcrUnavailable)?;
+        let output = run_command_output_with_timeout(
+            Command::new(&engine.tesseract_path)
+                .arg(&page_image)
+                .arg("stdout")
+                .arg("-l")
+                .arg(&engine.language),
+            command_timeout,
+        )?;
 
         if !output.status.success() {
             let _ = fs::remove_dir_all(&output_dir);
@@ -217,6 +232,64 @@ fn extract_pdf_text_with_ocr(
     }
 
     Ok(text)
+}
+
+fn run_command_status_with_timeout(
+    command: &mut Command,
+    timeout: Duration,
+) -> Result<ExitStatus, TextBookParserError> {
+    let mut child = command
+        .spawn()
+        .map_err(|_| TextBookParserError::OcrUnavailable)?;
+    let start = Instant::now();
+
+    loop {
+        if let Some(status) = child
+            .try_wait()
+            .map_err(|_| TextBookParserError::OcrUnavailable)?
+        {
+            return Ok(status);
+        }
+
+        if start.elapsed() >= timeout {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(TextBookParserError::OcrUnavailable);
+        }
+
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+
+fn run_command_output_with_timeout(
+    command: &mut Command,
+    timeout: Duration,
+) -> Result<Output, TextBookParserError> {
+    let mut child = command
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|_| TextBookParserError::OcrUnavailable)?;
+    let start = Instant::now();
+
+    loop {
+        if child
+            .try_wait()
+            .map_err(|_| TextBookParserError::OcrUnavailable)?
+            .is_some()
+        {
+            return child
+                .wait_with_output()
+                .map_err(|_| TextBookParserError::OcrUnavailable);
+        }
+
+        if start.elapsed() >= timeout {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(TextBookParserError::OcrUnavailable);
+        }
+
+        thread::sleep(Duration::from_millis(100));
+    }
 }
 
 #[cfg(test)]
@@ -339,6 +412,7 @@ mod tests {
                     pdftoppm_path: dir.path().join("missing-pdftoppm"),
                     tesseract_path: dir.path().join("missing-tesseract"),
                     language: "por".to_owned(),
+                    ..Default::default()
                 },
             },
         );
@@ -356,7 +430,7 @@ mod tests {
         write_pdf_file(&path, "");
         write_executable(
             &pdftoppm_path,
-            "#!/bin/sh\nprefix=\"$5\"\ntouch \"${prefix}-1.png\"\n",
+            "#!/bin/sh\nprefix=\"$9\"\ntouch \"${prefix}-1.png\"\n",
         );
         write_executable(
             &tesseract_path,
@@ -374,6 +448,7 @@ mod tests {
                     pdftoppm_path,
                     tesseract_path,
                     language: "por".to_owned(),
+                    ..Default::default()
                 },
             },
         )
@@ -392,7 +467,7 @@ mod tests {
         let tesseract_path = dir.path().join("tesseract");
         write_executable(
             &pdftoppm_path,
-            "#!/bin/sh\nprefix=\"$5\"\ntouch \"${prefix}-1.png\"\n",
+            "#!/bin/sh\nprefix=\"$9\"\ntouch \"${prefix}-1.png\"\n",
         );
         write_executable(
             &tesseract_path,
@@ -410,6 +485,7 @@ mod tests {
                     pdftoppm_path,
                     tesseract_path,
                     language: "por".to_owned(),
+                    ..Default::default()
                 },
             },
         )
@@ -428,7 +504,7 @@ mod tests {
         let tesseract_path = dir.path().join("tesseract");
         write_executable(
             &pdftoppm_path,
-            "#!/bin/sh\nprefix=\"$5\"\ntouch \"${prefix}-1.png\"\n",
+            "#!/bin/sh\nprefix=\"$9\"\ntouch \"${prefix}-1.png\"\n",
         );
         write_executable(
             &tesseract_path,
@@ -446,12 +522,53 @@ mod tests {
                     pdftoppm_path,
                     tesseract_path,
                     language: "por".to_owned(),
+                    ..Default::default()
                 },
             },
         )
         .unwrap();
 
         assert_eq!(document.content, "Texto importado pelo fallback OCR.");
+        assert_eq!(document.source_type, DocumentSourceType::Pdf);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn limits_ocr_rasterization_to_configured_initial_pages() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("scanned.pdf");
+        let pdftoppm_path = dir.path().join("pdftoppm");
+        let tesseract_path = dir.path().join("tesseract");
+        write_pdf_file(&path, "");
+        write_executable(
+            &pdftoppm_path,
+            "#!/bin/sh\n[ \"$3\" = \"150\" ] || exit 1\n[ \"$5\" = \"1\" ] || exit 1\n[ \"$7\" = \"2\" ] || exit 1\nprefix=\"$9\"\ntouch \"${prefix}-1.png\"\ntouch \"${prefix}-2.png\"\n",
+        );
+        write_executable(
+            &tesseract_path,
+            "#!/bin/sh\nprintf 'Pagina OCR\\n'\n",
+        );
+
+        let document = parse_text_book_with_options(
+            Uuid::new_v4(),
+            &path,
+            Language::Pt,
+            TextBookParserOptions {
+                ocr_enabled: true,
+                ocr_fallback_enabled: false,
+                ocr_engine: super::OcrEngineOptions {
+                    pdftoppm_path,
+                    tesseract_path,
+                    language: "por".to_owned(),
+                    resolution_dpi: 150,
+                    max_pages: Some(2),
+                    command_timeout_seconds: 5,
+                },
+            },
+        )
+        .unwrap();
+
+        assert_eq!(document.content, "Pagina OCR\n\nPagina OCR");
         assert_eq!(document.source_type, DocumentSourceType::Pdf);
     }
 

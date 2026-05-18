@@ -1086,6 +1086,15 @@ export function App({
   const [isLoadingOcrDependencies, setIsLoadingOcrDependencies] = useState(true);
 
   const activeCard = cards[activeCardIndex] ?? null;
+  const activeOperationMessage =
+    operationStatus === "generatingCardsWithOllama" && cardGenerationProgress
+      ? `${t(`library.${operationStatus}`)} ${t("library.cardGenerationProgress", {
+          current: cardGenerationProgress.current,
+          total: cardGenerationProgress.total
+        })}`
+      : operationStatus
+        ? t(`library.${operationStatus}`)
+        : null;
   const filteredSavedDocuments = filterSavedDocuments(
     savedDocuments,
     sourceTypeFilter,
@@ -1479,6 +1488,10 @@ export function App({
     const partiallySavedCards: StudyCard[] = [];
 
     try {
+      await waitForUiPaint();
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       importedDocument = await importTextBook(trimmedPath, {
         ocrEnabled: isOcrEnabled,
         ocrLanguage
@@ -2370,13 +2383,7 @@ export function App({
             {operationStatus ? (
               <div className="operation-status">
                 <p className="message info" role="status">
-                  {t(`library.${operationStatus}`)}
-                  {operationStatus === "generatingCardsWithOllama" && cardGenerationProgress
-                    ? ` ${t("library.cardGenerationProgress", {
-                        current: cardGenerationProgress.current,
-                        total: cardGenerationProgress.total
-                      })}`
-                    : null}
+                  {activeOperationMessage}
                 </p>
                 <button type="button" onClick={handleCancelOperation}>
                   {t("library.cancelOperation")}
@@ -2889,6 +2896,43 @@ export function App({
           </section>
         </div>
       </section>
+      {activeOperationMessage ? (
+        <div
+          className="processing-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="processing-overlay-title"
+        >
+          <div className="processing-panel">
+            <div className="processing-spinner" aria-hidden="true" />
+            <div>
+              <h2 id="processing-overlay-title">{t("library.operationOverlayTitle")}</h2>
+              <p>{activeOperationMessage}</p>
+              <span>{t("library.operationOverlayDetail")}</span>
+            </div>
+            <button
+              type="button"
+              aria-label={t("library.cancelProcessing")}
+              onClick={handleCancelOperation}
+            >
+              {t("library.cancelOperation")}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
+}
+
+function waitForUiPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window.requestAnimationFrame !== "function") {
+      setTimeout(resolve, 0);
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  });
 }

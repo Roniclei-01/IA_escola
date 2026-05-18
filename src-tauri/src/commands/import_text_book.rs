@@ -79,15 +79,21 @@ pub fn import_text_book_with_storage(
 
 #[cfg(feature = "tauri-app")]
 #[tauri::command]
-pub fn import_text_book(
+pub async fn import_text_book(
     app_handle: tauri::AppHandle,
     file_path: String,
     ocr_enabled: Option<bool>,
     ocr_language: Option<String>,
 ) -> Result<ImportTextBookResponse, String> {
-    let storage = crate::commands::app_storage::open_app_storage(&app_handle)?;
+    let ocr_enabled = ocr_enabled.unwrap_or(false);
 
-    import_text_book_with_storage(file_path, ocr_enabled.unwrap_or(false), ocr_language, &storage)
+    tauri::async_runtime::spawn_blocking(move || {
+        let storage = crate::commands::app_storage::open_app_storage(&app_handle)?;
+
+        import_text_book_with_storage(file_path, ocr_enabled, ocr_language, &storage)
+    })
+    .await
+    .map_err(|_| "Nao foi possivel concluir a importacao do documento.".to_owned())?
 }
 
 fn normalize_ocr_language(ocr_language: Option<String>) -> String {

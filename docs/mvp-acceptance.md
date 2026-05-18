@@ -31,6 +31,7 @@ Resultado esperado:
 - [ ] Modelo `llama3.2:1b` instalado.
 - [ ] `pdftoppm` instalado.
 - [ ] `tesseract` instalado.
+- [ ] `GStreamer appsink` disponivel.
 - [ ] Pacotes `.deb`, `.rpm` e AppImage encontrados.
 
 Gere os pacotes:
@@ -50,6 +51,12 @@ Smoke test recomendado com AppImage:
 ```bash
 chmod +x "src-tauri/target/release/bundle/appimage/Estudo IA Local_0.1.0_amd64.AppImage"
 "src-tauri/target/release/bundle/appimage/Estudo IA Local_0.1.0_amd64.AppImage"
+```
+
+Se o sistema retornar erro de FUSE ao montar o AppImage, use o modo sem FUSE:
+
+```bash
+APPIMAGE_EXTRACT_AND_RUN=1 "src-tauri/target/release/bundle/appimage/Estudo IA Local_0.1.0_amd64.AppImage"
 ```
 
 Resultado esperado:

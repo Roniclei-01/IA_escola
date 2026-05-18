@@ -51,6 +51,16 @@ fi
 
 check_command pdftoppm "pdftoppm"
 check_command tesseract "tesseract"
+check_command gst-inspect-1.0 "gst-inspect-1.0"
+
+if command -v gst-inspect-1.0 >/dev/null 2>&1; then
+  if gst-inspect-1.0 appsink >/dev/null 2>&1; then
+    check_ok "GStreamer appsink disponivel"
+  else
+    check_fail "GStreamer appsink nao encontrado"
+  fi
+fi
+
 check_file "$deb_path" "pacote DEB"
 check_file "$rpm_path" "pacote RPM"
 check_file "$appimage_path" "AppImage"

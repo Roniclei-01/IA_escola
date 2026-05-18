@@ -132,6 +132,7 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "settings.testOllama")).toBe("Testar");
     expect(i18n.getResource("en", "translation", "settings.testOllama")).toBe("Test");
     expect(i18n.getResource("es", "translation", "settings.testOllama")).toBe("Probar");
+    expect(i18n.getResource("pt", "translation", "settings.ocrTitle")).toBe("OCR local");
   });
 
   it("has operation progress labels in every supported language", () => {

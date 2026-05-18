@@ -318,7 +318,11 @@ mod tests {
             Language::Pt,
             TextBookParserOptions {
                 ocr_enabled: true,
-                ..TextBookParserOptions::default()
+                ocr_engine: super::OcrEngineOptions {
+                    pdftoppm_path: dir.path().join("missing-pdftoppm"),
+                    tesseract_path: dir.path().join("missing-tesseract"),
+                    language: "por".to_owned(),
+                },
             },
         );
 

@@ -28,6 +28,7 @@ pub fn run() {
             commands::start_study_session::start_study_session,
             commands::list_study_session_summaries::list_study_session_summaries,
             commands::list_study_reviews::list_study_reviews,
+            commands::test_ocr_dependencies::test_ocr_dependencies,
             commands::test_ollama_connection::test_ollama_connection,
             commands::ollama_settings::load_ollama_settings,
             commands::ollama_settings::save_ollama_settings,

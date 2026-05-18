@@ -106,6 +106,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - listagem de documentos arquivados com restauracao para a biblioteca ativa;
 - exclusao definitiva de documentos arquivados com confirmacao e limpeza dos dados de estudo relacionados;
 - OCR opt-in para PDFs digitalizados usando `pdftoppm` e `tesseract` quando disponiveis no sistema;
+- verificacao visual das dependencias OCR com instrucao de instalacao quando faltar componente local;
 - dialog nativo do Tauri para selecionar arquivos `.txt` e `.pdf`;
 - exibicao do tipo e caminho de origem na biblioteca e na previa do documento;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
@@ -182,9 +183,9 @@ docs/
 
 ## Proximos passos
 
-1. Adicionar verificacao visual de dependencias OCR e instrucao de instalacao quando faltar `tesseract`.
-2. Evoluir exportacao para PDF/Anki quando o formato de estudo estabilizar.
-3. Adicionar relatorios comparativos de progresso por documento.
+1. Evoluir exportacao para PDF/Anki quando o formato de estudo estabilizar.
+2. Adicionar relatorios comparativos de progresso por documento.
+3. Melhorar configuracao do idioma OCR por documento.
 
 ## Comandos de desenvolvimento
 

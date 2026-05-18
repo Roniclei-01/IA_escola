@@ -55,6 +55,10 @@ import {
   saveOllamaSettings as defaultSaveOllamaSettings,
   type OllamaSettings
 } from "../infrastructure/tauri/ollama-settings";
+import {
+  testOcrDependencies as defaultTestOcrDependencies,
+  type OcrDependencies
+} from "../infrastructure/tauri/ocr-dependencies";
 import { ImportPanel } from "./components/ImportPanel";
 import { DocumentSummary } from "./components/DocumentSummary";
 import { StudyCardViewer, type CardReview } from "./components/StudyCardViewer";
@@ -64,6 +68,7 @@ import { StudyReviewHistory } from "./components/StudyReviewHistory";
 import { DueStudyQueue, type DueStudyQueueItem } from "./components/DueStudyQueue";
 import { StudySessionHistory } from "./components/StudySessionHistory";
 import { ArchivedDocumentsList } from "./components/ArchivedDocumentsList";
+import { OcrDependenciesPanel } from "./components/OcrDependenciesPanel";
 
 interface AppProps {
   importTextBook?: (
@@ -97,6 +102,7 @@ interface AppProps {
   }) => Promise<TestOllamaConnectionResponse>;
   loadOllamaSettings?: () => Promise<OllamaSettings>;
   saveOllamaSettings?: (settings: OllamaSettings) => Promise<OllamaSettings>;
+  testOcrDependencies?: () => Promise<OcrDependencies>;
   downloadTextFile?: (fileName: string, content: string) => void;
   confirmDelete?: (message: string) => boolean;
   enableDevelopmentFallback?: boolean;
@@ -343,6 +349,7 @@ export function App({
   testOllamaConnection = defaultTestOllamaConnection,
   loadOllamaSettings = defaultLoadOllamaSettings,
   saveOllamaSettings = defaultSaveOllamaSettings,
+  testOcrDependencies = defaultTestOcrDependencies,
   downloadTextFile = defaultDownloadTextFile,
   confirmDelete = (message: string) => window.confirm(message),
   enableDevelopmentFallback = import.meta.env.DEV
@@ -380,6 +387,8 @@ export function App({
   const [ollamaModel, setOllamaModel] = useState("llama3.2");
   const [isTestingOllama, setIsTestingOllama] = useState(false);
   const [ollamaStatus, setOllamaStatus] = useState<string | null>(null);
+  const [ocrDependencies, setOcrDependencies] = useState<OcrDependencies | null>(null);
+  const [isLoadingOcrDependencies, setIsLoadingOcrDependencies] = useState(true);
 
   const activeCard = cards[activeCardIndex] ?? null;
   const filteredSavedDocuments = filterSavedDocuments(
@@ -536,6 +545,36 @@ export function App({
       isCurrent = false;
     };
   }, [loadOllamaSettings, t]);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadOcrDependencies() {
+      setIsLoadingOcrDependencies(true);
+
+      try {
+        const dependencies = await testOcrDependencies();
+
+        if (isCurrent) {
+          setOcrDependencies(dependencies);
+        }
+      } catch {
+        if (isCurrent) {
+          setError(t("settings.ocrDependencyLoadError"));
+        }
+      } finally {
+        if (isCurrent) {
+          setIsLoadingOcrDependencies(false);
+        }
+      }
+    }
+
+    void loadOcrDependencies();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [testOcrDependencies, t]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -950,6 +989,22 @@ export function App({
           onBaseUrlChange={setOllamaBaseUrl}
           onModelChange={setOllamaModel}
           onSubmit={handleTestOllama}
+        />
+
+        <OcrDependenciesPanel
+          dependencies={ocrDependencies}
+          isLoading={isLoadingOcrDependencies}
+          labels={{
+            title: t("settings.ocrTitle"),
+            loading: t("settings.loadingOcrDependencies"),
+            ready: t("settings.ocrReady"),
+            missing: t("settings.ocrMissing"),
+            install: t("settings.ocrInstallCommand"),
+            pdftoppmAvailable: t("settings.pdftoppmAvailable"),
+            pdftoppmMissing: t("settings.pdftoppmMissing"),
+            tesseractAvailable: t("settings.tesseractAvailable"),
+            tesseractMissing: t("settings.tesseractMissing")
+          }}
         />
 
         <SavedDocumentsList

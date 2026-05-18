@@ -109,7 +109,17 @@ export const resources = {
         testingOllama: "Testando",
         ollamaConnectionOk: "Ollama conectado com o modelo {{model}}.",
         ollamaConnectionError: "Nao foi possivel testar o Ollama.",
-        ollamaSettingsLoadError: "Nao foi possivel carregar as configuracoes do Ollama."
+        ollamaSettingsLoadError: "Nao foi possivel carregar as configuracoes do Ollama.",
+        ocrTitle: "OCR local",
+        loadingOcrDependencies: "Verificando dependencias de OCR.",
+        ocrReady: "OCR pronto para PDFs digitalizados.",
+        ocrMissing: "OCR indisponivel neste computador.",
+        ocrInstallCommand: "Ubuntu/Debian: sudo apt install poppler-utils tesseract-ocr tesseract-ocr-por",
+        pdftoppmAvailable: "pdftoppm disponivel",
+        pdftoppmMissing: "pdftoppm ausente",
+        tesseractAvailable: "tesseract disponivel",
+        tesseractMissing: "tesseract ausente",
+        ocrDependencyLoadError: "Nao foi possivel verificar as dependencias de OCR."
       }
     }
   },
@@ -220,7 +230,17 @@ export const resources = {
         testingOllama: "Testing",
         ollamaConnectionOk: "Ollama connected with model {{model}}.",
         ollamaConnectionError: "Could not test Ollama.",
-        ollamaSettingsLoadError: "Could not load Ollama settings."
+        ollamaSettingsLoadError: "Could not load Ollama settings.",
+        ocrTitle: "Local OCR",
+        loadingOcrDependencies: "Checking OCR dependencies.",
+        ocrReady: "OCR is ready for scanned PDFs.",
+        ocrMissing: "OCR is unavailable on this computer.",
+        ocrInstallCommand: "Ubuntu/Debian: sudo apt install poppler-utils tesseract-ocr tesseract-ocr-por",
+        pdftoppmAvailable: "pdftoppm available",
+        pdftoppmMissing: "pdftoppm missing",
+        tesseractAvailable: "tesseract available",
+        tesseractMissing: "tesseract missing",
+        ocrDependencyLoadError: "Could not check OCR dependencies."
       }
     }
   },
@@ -331,7 +351,17 @@ export const resources = {
         testingOllama: "Probando",
         ollamaConnectionOk: "Ollama conectado con el modelo {{model}}.",
         ollamaConnectionError: "No fue posible probar Ollama.",
-        ollamaSettingsLoadError: "No fue posible cargar la configuracion de Ollama."
+        ollamaSettingsLoadError: "No fue posible cargar la configuracion de Ollama.",
+        ocrTitle: "OCR local",
+        loadingOcrDependencies: "Verificando dependencias de OCR.",
+        ocrReady: "OCR listo para PDFs digitalizados.",
+        ocrMissing: "OCR no disponible en este computador.",
+        ocrInstallCommand: "Ubuntu/Debian: sudo apt install poppler-utils tesseract-ocr tesseract-ocr-por",
+        pdftoppmAvailable: "pdftoppm disponible",
+        pdftoppmMissing: "pdftoppm ausente",
+        tesseractAvailable: "tesseract disponible",
+        tesseractMissing: "tesseract ausente",
+        ocrDependencyLoadError: "No fue posible verificar las dependencias de OCR."
       }
     }
   }

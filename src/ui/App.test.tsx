@@ -30,6 +30,10 @@ const loadDefaultOllamaSettings = vi.fn().mockResolvedValue({
   model: "llama3.2"
 });
 const saveOllamaSettings = vi.fn().mockImplementation(async (settings: unknown) => settings);
+const testOcrDependencies = vi.fn().mockResolvedValue({
+  pdftoppm_available: true,
+  tesseract_available: true
+});
 
 function renderApp(props: ComponentProps<typeof App> = {}) {
   return render(
@@ -43,6 +47,7 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       selectStudyFile={selectNoFile}
       loadOllamaSettings={loadDefaultOllamaSettings}
       saveOllamaSettings={saveOllamaSettings}
+      testOcrDependencies={testOcrDependencies}
       {...props}
     />
   );
@@ -406,6 +411,23 @@ describe("App", () => {
       base_url: "http://127.0.0.1:11434"
     });
     expect(await screen.findByText("Ollama conectado com o modelo mistral.")).toBeInTheDocument();
+  });
+
+  it("shows missing OCR dependencies with installation guidance", async () => {
+    const testOcrDependencies = vi.fn().mockResolvedValue({
+      pdftoppm_available: true,
+      tesseract_available: false
+    });
+
+    renderApp({ testOcrDependencies });
+
+    expect(await screen.findByText("OCR local")).toBeInTheDocument();
+    expect(screen.getByText("OCR indisponivel neste computador.")).toBeInTheDocument();
+    expect(screen.getByText("pdftoppm disponivel")).toBeInTheDocument();
+    expect(screen.getByText("tesseract ausente")).toBeInTheDocument();
+    expect(
+      screen.getByText("Ubuntu/Debian: sudo apt install poppler-utils tesseract-ocr tesseract-ocr-por")
+    ).toBeInTheDocument();
   });
 
   it("loads persisted Ollama settings on startup", async () => {

@@ -64,6 +64,12 @@ describe("i18n", () => {
     );
   });
 
+  it("has study review labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "study.easy")).toBe("Acertei");
+    expect(i18n.getResource("en", "translation", "study.easy")).toBe("Correct");
+    expect(i18n.getResource("es", "translation", "study.easy")).toBe("Acerto");
+  });
+
   it("has saved document labels in every supported language", () => {
     expect(i18n.getResource("pt", "translation", "library.savedDocuments")).toBe(
       "Documentos salvos"

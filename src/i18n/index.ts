@@ -41,8 +41,12 @@ export const resources = {
       study: {
         title: "Estudo",
         progress: "Card {{current}} de {{total}}",
+        reviewSummary: "Acertos: {{easy}} | Erros: {{again}} | Dificeis: {{hard}}",
         revealAnswer: "Revelar resposta",
-        nextCard: "Proximo card"
+        nextCard: "Proximo card",
+        again: "Errei",
+        hard: "Dificil",
+        easy: "Acertei"
       },
       settings: {
         ollamaTitle: "Ollama",
@@ -95,8 +99,12 @@ export const resources = {
       study: {
         title: "Study",
         progress: "Card {{current}} of {{total}}",
+        reviewSummary: "Correct: {{easy}} | Missed: {{again}} | Hard: {{hard}}",
         revealAnswer: "Reveal answer",
-        nextCard: "Next card"
+        nextCard: "Next card",
+        again: "Missed",
+        hard: "Hard",
+        easy: "Correct"
       },
       settings: {
         ollamaTitle: "Ollama",
@@ -149,8 +157,12 @@ export const resources = {
       study: {
         title: "Estudio",
         progress: "Card {{current}} de {{total}}",
+        reviewSummary: "Aciertos: {{easy}} | Errores: {{again}} | Dificiles: {{hard}}",
         revealAnswer: "Revelar respuesta",
-        nextCard: "Siguiente card"
+        nextCard: "Siguiente card",
+        again: "Falle",
+        hard: "Dificil",
+        easy: "Acerto"
       },
       settings: {
         ollamaTitle: "Ollama",

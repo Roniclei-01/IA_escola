@@ -37,7 +37,7 @@ import {
 } from "../infrastructure/tauri/ollama-settings";
 import { ImportPanel } from "./components/ImportPanel";
 import { DocumentSummary } from "./components/DocumentSummary";
-import { StudyCardViewer } from "./components/StudyCardViewer";
+import { StudyCardViewer, type CardReview } from "./components/StudyCardViewer";
 import { SavedDocumentsList } from "./components/SavedDocumentsList";
 import { OllamaSettingsPanel } from "./components/OllamaSettingsPanel";
 
@@ -93,12 +93,20 @@ export function App({
   const [isLoadingSavedDocuments, setIsLoadingSavedDocuments] = useState(true);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
+  const [cardReviews, setCardReviews] = useState<Record<string, CardReview>>({});
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://127.0.0.1:11434");
   const [ollamaModel, setOllamaModel] = useState("llama3.2");
   const [isTestingOllama, setIsTestingOllama] = useState(false);
   const [ollamaStatus, setOllamaStatus] = useState<string | null>(null);
 
   const activeCard = cards[activeCardIndex] ?? null;
+  const reviewCounts = Object.values(cardReviews).reduce(
+    (counts, review) => ({
+      ...counts,
+      [review]: counts[review] + 1
+    }),
+    { again: 0, hard: 0, easy: 0 } satisfies Record<CardReview, number>
+  );
 
   async function generateCardsWithFallback(chunks: ImportedDocumentChunk[]): Promise<StudyCard[]> {
     try {
@@ -192,6 +200,7 @@ export function App({
     setCards([]);
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
+    setCardReviews({});
 
     try {
       const importedDocument = await importTextBook(trimmedPath);
@@ -208,12 +217,14 @@ export function App({
       setCards(persistedCards);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
+      setCardReviews({});
     } catch (unknownError) {
       setDocument(null);
       setChunkCount(null);
       setCards([]);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
+      setCardReviews({});
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     } finally {
       setIsImporting(false);
@@ -227,6 +238,7 @@ export function App({
     setCards([]);
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
+    setCardReviews({});
     setError(null);
     setWarning(null);
     setOperationStatus("loadingSavedCards");
@@ -239,6 +251,7 @@ export function App({
         setCards(persistedCards);
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
+        setCardReviews({});
         setOperationStatus(null);
         return;
       }
@@ -255,12 +268,14 @@ export function App({
       setCards(savedCards);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
+      setCardReviews({});
       setOperationStatus(null);
     } catch (unknownError) {
       setChunkCount(null);
       setCards([]);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
+      setCardReviews({});
       setOperationStatus(null);
       setError(unknownError instanceof Error ? unknownError.message : t("library.unknownError"));
     }
@@ -291,6 +306,22 @@ export function App({
       setError(unknownError instanceof Error ? unknownError.message : t("settings.ollamaConnectionError"));
     } finally {
       setIsTestingOllama(false);
+    }
+  }
+
+  function handleReviewCard(review: CardReview) {
+    if (!activeCard) {
+      return;
+    }
+
+    setCardReviews((currentReviews) => ({
+      ...currentReviews,
+      [activeCard.id]: review
+    }));
+
+    if (activeCardIndex < cards.length - 1) {
+      setActiveCardIndex((currentIndex) => currentIndex + 1);
+      setIsAnswerVisible(false);
     }
   }
 
@@ -384,20 +415,30 @@ export function App({
                 card={activeCard}
                 isAnswerVisible={isAnswerVisible}
                 isNextDisabled={activeCardIndex >= cards.length - 1}
+                selectedReview={cardReviews[activeCard.id] ?? null}
                 labels={{
                   title: t("study.title"),
                   progress: t("study.progress", {
                     current: activeCardIndex + 1,
                     total: cards.length
                   }),
+                  reviewSummary: t("study.reviewSummary", {
+                    easy: reviewCounts.easy,
+                    again: reviewCounts.again,
+                    hard: reviewCounts.hard
+                  }),
                   revealAnswer: t("study.revealAnswer"),
-                  nextCard: t("study.nextCard")
+                  nextCard: t("study.nextCard"),
+                  again: t("study.again"),
+                  hard: t("study.hard"),
+                  easy: t("study.easy")
                 }}
                 onRevealAnswer={() => setIsAnswerVisible(true)}
                 onNextCard={() => {
                   setActiveCardIndex((currentIndex) => Math.min(currentIndex + 1, cards.length - 1));
                   setIsAnswerVisible(false);
                 }}
+                onReviewCard={handleReviewCard}
               />
             ) : null}
           </DocumentSummary>

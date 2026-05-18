@@ -62,7 +62,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - exibicao da quantidade de chunks gerados apos importacao;
 - geracao de flashcards com `MockModelAdapter`;
 - exibicao da quantidade de cards gerados e previa do primeiro card;
-- area de estudo para revelar resposta e avancar entre cards;
+- area de estudo para revelar resposta, avaliar cards e avancar entre cards;
 - UI separada em componentes `ImportPanel`, `DocumentSummary` e `StudyCardViewer`;
 - persistencia SQLite inicial para documentos importados;
 - comando `import_text_book` persistindo documentos no SQLite;
@@ -86,6 +86,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - UI usando Ollama por padrao para gerar cards, com testes ainda injetando geradores previsiveis;
 - feedback visual para importacao, chunking, geracao com Ollama, salvamento e carregamento de cards;
 - fallback de desenvolvimento para gerar cards mockados quando o Ollama falhar;
+- revisao em sessao com marcacao de acerto, erro e dificuldade;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -160,7 +161,7 @@ docs/
 
 ## Proximos passos
 
-1. Evoluir revisao dos cards com marcacao de acerto, erro e dificuldade.
+1. Persistir sessoes de revisao em SQLite.
 2. Melhorar a selecao de arquivos com dialog nativo do Tauri.
 3. Adicionar metadados de origem para diferenciar livros TXT e PDF.
 

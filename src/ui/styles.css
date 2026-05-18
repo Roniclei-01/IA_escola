@@ -311,11 +311,19 @@ h1 {
   margin: 8px 0 0;
 }
 
+.review-summary {
+  margin: 12px 0 0;
+  color: #526256;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .card-front {
   color: #18201c;
   font-weight: 700;
 }
 
+.review-actions,
 .study-actions {
   display: flex;
   flex-wrap: wrap;
@@ -323,6 +331,7 @@ h1 {
   margin-top: 16px;
 }
 
+.review-actions button,
 .study-actions button {
   min-height: 40px;
   padding: 0 14px;
@@ -332,6 +341,12 @@ h1 {
   background: #ffffff;
   font-weight: 700;
   cursor: pointer;
+}
+
+.review-actions button[aria-pressed="true"] {
+  color: #ffffff;
+  background: #5b4b8a;
+  border-color: #5b4b8a;
 }
 
 .study-actions button:first-child {

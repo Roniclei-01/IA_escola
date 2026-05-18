@@ -238,7 +238,7 @@ where
             .map_err(map_client_error)?;
 
         parse_flashcards_response(&response.response, chunks)
-            .map_err(|_| ModelAdapterError::InvalidFlashcards)
+            .map_err(|error| invalid_flashcards_error(&response.response, error))
     }
 }
 
@@ -247,7 +247,9 @@ fn map_client_error(error: OllamaClientError) -> ModelAdapterError {
         OllamaClientError::InvalidBaseUrl => ModelAdapterError::Unavailable,
         OllamaClientError::Unavailable => ModelAdapterError::Unavailable,
         OllamaClientError::HttpStatus(_) => ModelAdapterError::Unavailable,
-        OllamaClientError::InvalidResponse => ModelAdapterError::InvalidFlashcards,
+        OllamaClientError::InvalidResponse => {
+            ModelAdapterError::InvalidFlashcards("resposta HTTP invalida do Ollama".to_owned())
+        }
     }
 }
 
@@ -322,7 +324,7 @@ fn parse_flashcards_response(
                     None
                 }
             })
-            .ok_or(ModelAdapterError::InvalidFlashcards)?;
+            .ok_or_else(|| invalid_flashcards_reason("chunk_id nao corresponde a nenhum chunk"))?;
 
         cards.push(
             StudyCard::new(
@@ -332,7 +334,7 @@ fn parse_flashcards_response(
                 raw_card.back,
                 raw_card.tags,
             )
-            .map_err(|_| ModelAdapterError::InvalidFlashcards)?,
+            .map_err(|error| invalid_flashcards_reason(&error.to_string()))?,
         );
     }
 
@@ -350,8 +352,10 @@ fn parse_raw_flashcards_response(
         }
     }
 
-    let json = extract_json_object(response).ok_or(ModelAdapterError::InvalidFlashcards)?;
-    let value: Value = serde_json::from_str(json).map_err(|_| ModelAdapterError::InvalidFlashcards)?;
+    let json = extract_json_object(response)
+        .ok_or_else(|| invalid_flashcards_reason("nao encontrei JSON na resposta"))?;
+    let value: Value = serde_json::from_str(json)
+        .map_err(|error| invalid_flashcards_reason(&format!("JSON invalido: {error}")))?;
 
     raw_flashcards_from_value(&value)
 }
@@ -374,9 +378,14 @@ fn raw_flashcards_from_value(value: &Value) -> Result<Vec<ParsedFlashcard>, Mode
 
 fn parsed_flashcard_from_value(value: &Value) -> Result<ParsedFlashcard, ModelAdapterError> {
     let raw_card: RawFlashcard =
-        serde_json::from_value(value.clone()).map_err(|_| ModelAdapterError::InvalidFlashcards)?;
-    let front = raw_card.front.ok_or(ModelAdapterError::InvalidFlashcards)?;
-    let back = raw_card.back.ok_or(ModelAdapterError::InvalidFlashcards)?;
+        serde_json::from_value(value.clone())
+            .map_err(|error| invalid_flashcards_reason(&format!("card invalido: {error}")))?;
+    let front = raw_card
+        .front
+        .ok_or_else(|| invalid_flashcards_reason("campo front/question/pergunta ausente"))?;
+    let back = raw_card
+        .back
+        .ok_or_else(|| invalid_flashcards_reason("campo back/answer/resposta ausente"))?;
 
     Ok(ParsedFlashcard {
         chunk_id: raw_card.chunk_id,
@@ -384,6 +393,27 @@ fn parsed_flashcard_from_value(value: &Value) -> Result<ParsedFlashcard, ModelAd
         back,
         tags: raw_card.tags,
     })
+}
+
+fn invalid_flashcards_reason(reason: &str) -> ModelAdapterError {
+    ModelAdapterError::InvalidFlashcards(reason.to_owned())
+}
+
+fn invalid_flashcards_error(response: &str, error: ModelAdapterError) -> ModelAdapterError {
+    match error {
+        ModelAdapterError::InvalidFlashcards(reason) => {
+            ModelAdapterError::InvalidFlashcards(format!(
+                "{reason}. Trecho da resposta: {}",
+                response_snippet(response)
+            ))
+        }
+        ModelAdapterError::Unavailable => ModelAdapterError::Unavailable,
+    }
+}
+
+fn response_snippet(response: &str) -> String {
+    let normalized = response.split_whitespace().collect::<Vec<_>>().join(" ");
+    normalized.chars().take(240).collect()
 }
 
 fn extract_json_array(response: &str) -> Option<&str> {
@@ -670,7 +700,12 @@ mod tests {
             },
         );
 
-        assert_eq!(result.unwrap_err(), ModelAdapterError::InvalidFlashcards);
+        assert_eq!(
+            result.unwrap_err(),
+            ModelAdapterError::InvalidFlashcards(
+                "nao encontrei JSON na resposta. Trecho da resposta: sem json".to_owned()
+            )
+        );
     }
 
     #[test]

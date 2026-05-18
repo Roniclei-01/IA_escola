@@ -72,7 +72,7 @@ mod tests {
                             format!("Resposta baseada em {}", chunk.content),
                             vec!["mock".to_owned()],
                         )
-                        .map_err(|_| ModelAdapterError::InvalidFlashcards)?,
+                        .map_err(|error| ModelAdapterError::InvalidFlashcards(error.to_string()))?,
                     );
                 }
             }

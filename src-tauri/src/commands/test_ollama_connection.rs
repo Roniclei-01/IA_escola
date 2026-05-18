@@ -69,7 +69,7 @@ fn format_model_error(error: ModelAdapterError) -> String {
         ModelAdapterError::Unavailable => {
             "Nao foi possivel conectar ao Ollama ou carregar o modelo informado.".to_owned()
         }
-        ModelAdapterError::InvalidFlashcards => {
+        ModelAdapterError::InvalidFlashcards(_) => {
             "O Ollama respondeu em um formato invalido.".to_owned()
         }
     }

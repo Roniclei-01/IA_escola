@@ -12,8 +12,8 @@ pub struct FlashcardConfig {
 pub enum ModelAdapterError {
     #[error("model is unavailable")]
     Unavailable,
-    #[error("model returned invalid flashcards")]
-    InvalidFlashcards,
+    #[error("model returned invalid flashcards: {0}")]
+    InvalidFlashcards(String),
 }
 
 pub trait ModelAdapter {

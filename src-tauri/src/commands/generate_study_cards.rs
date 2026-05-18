@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::{generate_flashcards, FlashcardConfig, GenerateFlashcardsError},
+    app::{generate_flashcards, FlashcardConfig, GenerateFlashcardsError, ModelAdapterError},
     domain::{DocumentChunk, Language, StudyCard},
 };
 
@@ -59,9 +59,12 @@ fn format_generate_error(error: GenerateFlashcardsError) -> String {
         GenerateFlashcardsError::InvalidCardsPerChunk => {
             "A quantidade de cards por chunk deve ser maior que zero.".to_owned()
         }
-        GenerateFlashcardsError::Model(_) => {
+        GenerateFlashcardsError::Model(ModelAdapterError::Unavailable) => {
             "Nao foi possivel gerar cards com o Ollama. Verifique a conexao e o modelo configurado."
                 .to_owned()
+        }
+        GenerateFlashcardsError::Model(ModelAdapterError::InvalidFlashcards(detail)) => {
+            format!("O Ollama respondeu, mas nao gerou cards validos. {detail}")
         }
     }
 }
@@ -104,7 +107,7 @@ mod tests {
                         "Resposta gerada",
                         vec!["ollama".to_owned()],
                     )
-                    .map_err(|_| ModelAdapterError::InvalidFlashcards)
+                    .map_err(|error| ModelAdapterError::InvalidFlashcards(error.to_string()))
                 })
                 .collect()
         }

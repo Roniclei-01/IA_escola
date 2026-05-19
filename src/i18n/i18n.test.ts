@@ -73,6 +73,9 @@ describe("i18n", () => {
     expect(i18n.getResource("en", "translation", "library.readerPageStatus")).toBe(
       "Page {{currentPage}} of {{totalPages}}"
     );
+    expect(i18n.getResource("pt", "translation", "library.translatedReaderPages")).toBe(
+      "Paginas traduzidas: {{pages}}"
+    );
   });
 
   it("has supported file labels in every supported language", () => {

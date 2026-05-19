@@ -60,6 +60,10 @@ import {
   type LoadDocumentTranslationResponse
 } from "../infrastructure/tauri/load-document-translation";
 import {
+  listDocumentPageTranslations as defaultListDocumentPageTranslations,
+  type ListDocumentPageTranslationsResponse
+} from "../infrastructure/tauri/list-document-page-translations";
+import {
   deleteStudyCards as defaultDeleteStudyCards,
   listStudyCards as defaultListStudyCards,
   saveStudyCards as defaultSaveStudyCards
@@ -148,6 +152,10 @@ interface AppProps {
     targetLanguage: ImportTextBookResponse["language"],
     pageIndex?: number
   ) => Promise<LoadDocumentTranslationResponse>;
+  listDocumentPageTranslations?: (
+    documentId: string,
+    targetLanguage: ImportTextBookResponse["language"]
+  ) => Promise<ListDocumentPageTranslationsResponse>;
   saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
   deleteStudyCards?: (documentId: string) => Promise<{ document_id: string; deleted_cards: number }>;
   listStudyCards?: (documentId: string) => Promise<StudyCard[]>;
@@ -1144,6 +1152,14 @@ function getErrorMessage(unknownError: unknown, fallbackMessage: string) {
   return fallbackMessage;
 }
 
+function normalizePageIndexes(pageIndexes: number[]) {
+  return Array.from(
+    new Set(
+      pageIndexes.filter((pageIndex) => Number.isInteger(pageIndex) && pageIndex >= 0)
+    )
+  ).sort((firstPage, secondPage) => firstPage - secondPage);
+}
+
 export function App({
   importTextBook = defaultImportTextBook,
   archiveImportedDocument = defaultArchiveImportedDocument,
@@ -1159,6 +1175,7 @@ export function App({
   loadPdfReaderPreference = defaultLoadPdfReaderPreference,
   savePdfReaderPreference = defaultSavePdfReaderPreference,
   loadDocumentTranslation = defaultLoadDocumentTranslation,
+  listDocumentPageTranslations = defaultListDocumentPageTranslations,
   saveStudyCards = defaultSaveStudyCards,
   deleteStudyCards = defaultDeleteStudyCards,
   listStudyCards = defaultListStudyCards,
@@ -1186,6 +1203,7 @@ export function App({
   const operationTokenRef = useRef(0);
   const operationAbortControllerRef = useRef<AbortController | null>(null);
   const translationLoadTokenRef = useRef(0);
+  const translatedPageIndexesLoadTokenRef = useRef(0);
   const pdfReaderPreferenceTokenRef = useRef(0);
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>(() =>
     normalizeUiLanguage(i18n.language)
@@ -1206,6 +1224,7 @@ export function App({
   const [translatedDocumentPageSources, setTranslatedDocumentPageSources] = useState<
     Record<number, ReaderPageTranslationSource>
   >({});
+  const [translatedReaderPageIndexes, setTranslatedReaderPageIndexes] = useState<number[]>([]);
   const [pdfReaderPage, setPdfReaderPage] = useState(1);
   const [pdfReaderZoom, setPdfReaderZoom] = useState(1);
   const [renderedPdfPage, setRenderedPdfPage] = useState<RenderPdfPageResponse | null>(null);
@@ -1355,6 +1374,22 @@ export function App({
 
   function isCurrentTranslationLoad(translationLoadToken: number) {
     return translationLoadTokenRef.current === translationLoadToken;
+  }
+
+  function nextTranslatedPageIndexesLoadToken() {
+    translatedPageIndexesLoadTokenRef.current += 1;
+
+    return translatedPageIndexesLoadTokenRef.current;
+  }
+
+  function isCurrentTranslatedPageIndexesLoad(translatedPageIndexesLoadToken: number) {
+    return translatedPageIndexesLoadTokenRef.current === translatedPageIndexesLoadToken;
+  }
+
+  function rememberTranslatedReaderPageIndex(pageIndex: number) {
+    setTranslatedReaderPageIndexes((currentIndexes) =>
+      normalizePageIndexes([...currentIndexes, pageIndex])
+    );
   }
 
   function handleCancelOperation() {
@@ -1771,8 +1806,11 @@ export function App({
     if (targetLanguage === sourceLanguage) {
       setTranslatedDocumentPages({});
       setTranslatedDocumentPageSources({});
+      setTranslatedReaderPageIndexes([]);
       return;
     }
+
+    void loadTranslatedReaderPageIndexesForDocument(selectedDocument, targetLanguage);
 
     try {
       const response = await loadDocumentTranslation(
@@ -1789,9 +1827,42 @@ export function App({
         response.translation ? { 0: response.translation.translated_content } : {}
       );
       setTranslatedDocumentPageSources(response.translation ? { 0: "cache" } : {});
+      if (response.translation) {
+        rememberTranslatedReaderPageIndex(0);
+      }
     } catch {
       if (isCurrentTranslationLoad(translationLoadToken)) {
         setError(t("library.translationLoadError"));
+      }
+    }
+  }
+
+  async function loadTranslatedReaderPageIndexesForDocument(
+    selectedDocument: ImportTextBookResponse,
+    targetLanguage: ImportTextBookResponse["language"]
+  ) {
+    const translatedPageIndexesLoadToken = nextTranslatedPageIndexesLoadToken();
+    const sourceLanguage = inferDocumentLanguage(selectedDocument);
+
+    if (targetLanguage === sourceLanguage) {
+      setTranslatedReaderPageIndexes([]);
+      return;
+    }
+
+    try {
+      const response = await listDocumentPageTranslations(
+        selectedDocument.document_id,
+        targetLanguage
+      );
+
+      if (!isCurrentTranslatedPageIndexesLoad(translatedPageIndexesLoadToken)) {
+        return;
+      }
+
+      setTranslatedReaderPageIndexes(normalizePageIndexes(response.page_indexes));
+    } catch {
+      if (isCurrentTranslatedPageIndexesLoad(translatedPageIndexesLoadToken)) {
+        setTranslatedReaderPageIndexes([]);
       }
     }
   }
@@ -1800,6 +1871,7 @@ export function App({
     setReaderTargetLanguage(language);
     setTranslatedDocumentPages({});
     setTranslatedDocumentPageSources({});
+    setTranslatedReaderPageIndexes([]);
 
     if (document) {
       void loadPersistedTranslationForDocument(document, language);
@@ -1838,6 +1910,7 @@ export function App({
         ...currentSources,
         [pageIndex]: "cache"
       }));
+      rememberTranslatedReaderPageIndex(pageIndex);
     } catch {
       if (isCurrentTranslationLoad(translationLoadToken)) {
         setError(t("library.translationLoadError"));
@@ -1861,6 +1934,7 @@ export function App({
     if (readerTargetLanguage === sourceLanguage) {
       setTranslatedDocumentPages({});
       setTranslatedDocumentPageSources({});
+      setTranslatedReaderPageIndexes([]);
       return;
     }
 
@@ -1898,6 +1972,7 @@ export function App({
             ...currentSources,
             [pageIndex]: "cache"
           }));
+          rememberTranslatedReaderPageIndex(pageIndex);
           return;
         }
       }
@@ -1921,6 +1996,7 @@ export function App({
         ...currentSources,
         [pageIndex]: "generated"
       }));
+      rememberTranslatedReaderPageIndex(pageIndex);
     } catch (unknownError) {
       if (!isCurrentOperation(operationToken)) {
         return;
@@ -1956,6 +2032,7 @@ export function App({
     setReaderTargetLanguage("En");
     setTranslatedDocumentPages({});
     setTranslatedDocumentPageSources({});
+    setTranslatedReaderPageIndexes([]);
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
     setCardReviews({});
@@ -1992,6 +2069,7 @@ export function App({
       );
       setTranslatedDocumentPages({});
       setTranslatedDocumentPageSources({});
+      setTranslatedReaderPageIndexes([]);
       setDocumentChunks(chunkResponse.chunks);
       setSavedDocuments((currentDocuments) => [...currentDocuments, currentImportedDocument]);
       setDocumentReviewCounts((currentCounts) => ({
@@ -2027,6 +2105,7 @@ export function App({
       setReaderTargetLanguage("En");
       setTranslatedDocumentPages({});
       setTranslatedDocumentPageSources({});
+      setTranslatedReaderPageIndexes([]);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
@@ -2054,6 +2133,7 @@ export function App({
     setReaderTargetLanguage(targetLanguage);
     setTranslatedDocumentPages({});
     setTranslatedDocumentPageSources({});
+    setTranslatedReaderPageIndexes([]);
     void loadPersistedTranslationForDocument(selectedDocument, targetLanguage);
     setChunkCount(null);
     setDocumentChunks([]);
@@ -2484,6 +2564,7 @@ export function App({
         setReaderTargetLanguage("En");
         setTranslatedDocumentPages({});
         setTranslatedDocumentPageSources({});
+        setTranslatedReaderPageIndexes([]);
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
         setCardReviews({});
@@ -3122,6 +3203,8 @@ export function App({
               nextReaderPage: t("library.nextReaderPage"),
               readerPageStatus: (currentPage, totalPages) =>
                 t("library.readerPageStatus", { currentPage, totalPages }),
+              translatedReaderPages: (pages) =>
+                t("library.translatedReaderPages", { pages }),
               pdfReaderTitle: t("library.pdfReaderTitle"),
               previousPdfPage: t("library.previousPdfPage"),
               nextPdfPage: t("library.nextPdfPage"),
@@ -3137,6 +3220,7 @@ export function App({
             readerTargetLanguage={readerTargetLanguage}
             translatedPagesByIndex={translatedDocumentPages}
             translatedPageSourcesByIndex={translatedDocumentPageSources}
+            translatedReaderPageIndexes={translatedReaderPageIndexes}
             renderedPdfPage={renderedPdfPage}
             isRenderingPdfPage={isRenderingPdfPage}
             pdfReaderPage={pdfReaderPage}

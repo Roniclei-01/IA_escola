@@ -755,6 +755,18 @@ h1 {
   border: 1px solid #cfd7d1;
 }
 
+.reader-translated-pages {
+  width: fit-content;
+  margin: -4px auto 0;
+  padding: 6px 10px;
+  border: 1px solid #d8ddd4;
+  border-radius: 6px;
+  color: #526256;
+  background: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .pdf-page-reader {
   display: grid;
   gap: 12px;

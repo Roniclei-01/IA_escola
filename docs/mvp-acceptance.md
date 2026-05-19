@@ -19,6 +19,12 @@ Resultado esperado:
 
 Validado em 2026-05-18 com `npm run check:mvp`.
 
+Atualizado em 2026-05-19:
+
+- `npm run check:mvp` passou em Vitest, testes Rust e build web.
+- O Playwright E2E precisou ser repetido fora do sandbox porque o servidor local do Vite recebeu `EPERM` ao abrir `127.0.0.1:1421` no ambiente sandboxado.
+- `npm run test:e2e` passou fora do sandbox com 2 testes Playwright.
+
 ## 2. App empacotado
 
 Verifique ambiente, dependencias locais e artefatos:
@@ -37,6 +43,13 @@ Resultado esperado:
 - [x] Pacotes `.deb`, `.rpm` e AppImage encontrados.
 
 Validado em 2026-05-18 com `npm run check:mvp:env`.
+
+Atualizado em 2026-05-19 com `npm run check:mvp:env` fora do sandbox:
+
+- Ollama encontrado.
+- Modelo `llama3.2:1b` instalado.
+- `pdftoppm`, `tesseract` e `GStreamer appsink` encontrados.
+- Pacotes `.deb`, `.rpm` e AppImage encontrados.
 
 Gere os pacotes:
 
@@ -72,6 +85,12 @@ Resultado esperado:
 
 Validado em 2026-05-18 com `npm run check:mvp:appimage`. No ambiente atual, o AppImage direto falhou por FUSE e o smoke test abriu corretamente com `APPIMAGE_EXTRACT_AND_RUN=1`.
 
+Atualizado em 2026-05-19:
+
+- `npm run tauri build` passou fora do sandbox e gerou `.deb`, `.rpm` e AppImage.
+- `npm run check:mvp:appimage` passou em modo sem FUSE com `APPIMAGE_EXTRACT_AND_RUN=1`.
+- Durante o smoke test apareceu a mensagem `GStreamer element appsink not found`; por isso, a secao OCR ainda deve ser confirmada manualmente na interface.
+
 Para executar o aceite manual no AppImage:
 
 ```bash
@@ -91,6 +110,8 @@ Arquivos gerados:
 - `/tmp/estudo-ia-local-mvp-samples/mvp-small.txt`
 - `/tmp/estudo-ia-local-mvp-samples/mvp-large.txt`
 - `/tmp/estudo-ia-local-mvp-samples/mvp-pdf-text.pdf`
+
+Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 
 - [ ] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-small.txt`.
 - [ ] Ver previa do conteudo.

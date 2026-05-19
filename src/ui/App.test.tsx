@@ -49,6 +49,7 @@ const testOcrDependencies = vi.fn().mockResolvedValue({
   tesseract_available: true
 });
 const loadNoDocumentTranslation = vi.fn().mockResolvedValue({ translation: null });
+const listNoDocumentPageTranslations = vi.fn().mockResolvedValue({ page_indexes: [] });
 const renderDefaultPdfPage = vi.fn().mockResolvedValue({
   page: 1,
   page_count: 1,
@@ -79,6 +80,7 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       saveNotificationSettings={saveNotificationSettings}
       testOcrDependencies={testOcrDependencies}
       loadDocumentTranslation={loadNoDocumentTranslation}
+      listDocumentPageTranslations={listNoDocumentPageTranslations}
       renderPdfPage={renderDefaultPdfPage}
       loadPdfReaderPreference={loadDefaultPdfReaderPreference}
       savePdfReaderPreference={saveDefaultPdfReaderPreference}
@@ -96,6 +98,7 @@ describe("App", () => {
     renderDefaultPdfPage.mockClear();
     loadDefaultPdfReaderPreference.mockClear();
     saveDefaultPdfReaderPreference.mockClear();
+    listNoDocumentPageTranslations.mockClear();
   });
 
   it("renders the product name", async () => {
@@ -1535,6 +1538,40 @@ describe("App", () => {
     expect(translateDocument).not.toHaveBeenCalled();
     expect(await screen.findByText("Cached translated second reader page.")).toBeInTheDocument();
     expect(screen.getByText("Traducao carregada do cache local.")).toBeInTheDocument();
+  });
+
+  it("shows which reader pages already have saved translations", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-translated-pages",
+          book_id: "book-translated-pages",
+          content: `${"Primeira pagina do leitor. ".repeat(160)}\n\n${"Segunda pagina do leitor. ".repeat(
+            160
+          )}\n\n${"Terceira pagina do leitor. ".repeat(160)}`,
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/translated-pages.pdf"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([]);
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+    const listDocumentPageTranslations = vi.fn().mockResolvedValue({ page_indexes: [0, 2] });
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listDocumentChunks,
+      listDocumentPageTranslations
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
+
+    await waitFor(() => {
+      expect(listDocumentPageTranslations).toHaveBeenCalledWith("document-translated-pages", "En");
+    });
+    expect(await screen.findByText("Paginas traduzidas: 1, 3")).toBeInTheDocument();
   });
 
   it("renders the original PDF page with navigation and zoom controls", async () => {

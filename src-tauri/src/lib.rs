@@ -20,6 +20,7 @@ pub fn run() {
             commands::delete_imported_document::delete_imported_document,
             commands::import_text_book::import_text_book,
             commands::list_archived_documents::list_archived_documents,
+            commands::list_document_page_translations::list_document_page_translations,
             commands::load_document_translation::load_document_translation,
             commands::chunk_text_document::chunk_text_document,
             commands::list_imported_documents::list_imported_documents,

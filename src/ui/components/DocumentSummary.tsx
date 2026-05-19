@@ -46,6 +46,7 @@ interface DocumentSummaryProps {
     previousReaderPage: string;
     nextReaderPage: string;
     readerPageStatus: (currentPage: number, totalPages: number) => string;
+    translatedReaderPages: (pages: string) => string;
     pdfReaderTitle: string;
     previousPdfPage: string;
     nextPdfPage: string;
@@ -58,6 +59,7 @@ interface DocumentSummaryProps {
   readerTargetLanguage: ImportTextBookResponse["language"];
   translatedPagesByIndex: Record<number, string>;
   translatedPageSourcesByIndex: Record<number, ReaderPageTranslationSource>;
+  translatedReaderPageIndexes: number[];
   renderedPdfPage: RenderPdfPageResponse | null;
   isRenderingPdfPage?: boolean;
   pdfReaderPage: number;
@@ -82,6 +84,7 @@ export function DocumentSummary({
   readerTargetLanguage,
   translatedPagesByIndex,
   translatedPageSourcesByIndex,
+  translatedReaderPageIndexes,
   renderedPdfPage,
   isRenderingPdfPage = false,
   pdfReaderPage,
@@ -114,6 +117,13 @@ export function DocumentSummary({
   const currentTranslationSource = translatedPageSourcesByIndex[currentReaderPage];
   const isPdfDocument = document.source_type === "pdf" && Boolean(document.source_path);
   const renderedPageCount = renderedPdfPage?.page_count ?? null;
+  const translatedReaderPageLabels = useMemo(
+    () =>
+      translatedReaderPageIndexes
+        .filter((pageIndex) => pageIndex >= 0 && pageIndex < totalReaderPages)
+        .map((pageIndex) => String(pageIndex + 1)),
+    [totalReaderPages, translatedReaderPageIndexes]
+  );
 
   useEffect(() => {
     setReaderPageIndex(0);
@@ -275,6 +285,11 @@ export function DocumentSummary({
               {labels.nextReaderPage}
             </button>
           </div>
+        ) : null}
+        {!isSameLanguage && translatedReaderPageLabels.length > 0 ? (
+          <p className="reader-translated-pages">
+            {labels.translatedReaderPages(translatedReaderPageLabels.join(", "))}
+          </p>
         ) : null}
         {isSameLanguage ? <p className="reader-note">{labels.translationSameLanguage}</p> : null}
         {currentTranslatedPage && !isSameLanguage ? (

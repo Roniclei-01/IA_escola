@@ -500,6 +500,37 @@ impl SQLiteStorage {
         raw_translation.try_into().map(Some)
     }
 
+    pub fn list_document_page_translation_indexes(
+        &self,
+        document_id: Uuid,
+        target_language: &Language,
+    ) -> Result<Vec<u32>, StorageError> {
+        let key_prefix = document_page_translation_key_prefix(document_id, target_language);
+        let mut statement = self
+            .connection
+            .prepare("SELECT key FROM app_settings WHERE key LIKE ?1")
+            .map_err(StorageError::LoadSettingFailed)?;
+        let rows = statement
+            .query_map([format!("{key_prefix}%")], |row| row.get::<_, String>(0))
+            .map_err(StorageError::LoadSettingFailed)?;
+
+        let mut page_indexes = Vec::new();
+
+        for row in rows {
+            let key = row.map_err(StorageError::LoadSettingFailed)?;
+            if let Some(raw_index) = key.strip_prefix(&key_prefix) {
+                if let Ok(page_index) = raw_index.parse::<u32>() {
+                    page_indexes.push(page_index);
+                }
+            }
+        }
+
+        page_indexes.sort_unstable();
+        page_indexes.dedup();
+
+        Ok(page_indexes)
+    }
+
     pub fn save_study_cards(&mut self, cards: &[StudyCard]) -> Result<(), StorageError> {
         let transaction = self
             .connection
@@ -1213,10 +1244,17 @@ fn document_page_translation_key(
     page_index: u32,
 ) -> String {
     format!(
-        "document_translation.page.{}.{}.{}",
-        document_id,
-        language_to_code(target_language),
+        "{}{}",
+        document_page_translation_key_prefix(document_id, target_language),
         page_index
+    )
+}
+
+fn document_page_translation_key_prefix(document_id: Uuid, target_language: &Language) -> String {
+    format!(
+        "document_translation.page.{}.{}.",
+        document_id,
+        language_to_code(target_language)
     )
 }
 
@@ -1640,6 +1678,38 @@ mod tests {
 
         assert_eq!(first_page.translated_content, "Page 0.");
         assert_eq!(second_page.translated_content, "Page 1.");
+    }
+
+    #[test]
+    fn lists_document_page_translation_indexes_by_document_and_language() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let document_id = Uuid::new_v4();
+        let other_document_id = Uuid::new_v4();
+
+        storage
+            .save_document_page_translation(document_id, &Language::Pt, &Language::En, 2, "Page 2.")
+            .unwrap();
+        storage
+            .save_document_page_translation(document_id, &Language::Pt, &Language::En, 0, "Page 0.")
+            .unwrap();
+        storage
+            .save_document_page_translation(document_id, &Language::Pt, &Language::Es, 1, "Page 1.")
+            .unwrap();
+        storage
+            .save_document_page_translation(
+                other_document_id,
+                &Language::Pt,
+                &Language::En,
+                4,
+                "Other document.",
+            )
+            .unwrap();
+
+        let page_indexes = storage
+            .list_document_page_translation_indexes(document_id, &Language::En)
+            .unwrap();
+
+        assert_eq!(page_indexes, vec![0, 2]);
     }
 
     #[test]

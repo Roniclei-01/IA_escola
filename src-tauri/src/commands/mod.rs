@@ -9,6 +9,7 @@ pub mod generate_study_cards;
 pub mod import_text_book;
 pub mod list_archived_documents;
 pub mod list_document_chunks;
+pub mod list_document_page_translations;
 pub mod list_imported_documents;
 pub mod list_study_cards;
 pub mod list_study_reviews;
@@ -45,6 +46,8 @@ pub use import_text_book::import_text_book;
 pub use list_archived_documents::list_archived_documents;
 #[cfg(feature = "tauri-app")]
 pub use list_document_chunks::list_document_chunks;
+#[cfg(feature = "tauri-app")]
+pub use list_document_page_translations::list_document_page_translations;
 #[cfg(feature = "tauri-app")]
 pub use list_imported_documents::list_imported_documents;
 #[cfg(feature = "tauri-app")]
@@ -103,6 +106,10 @@ pub use list_archived_documents::{
     list_archived_documents_from_storage, ListArchivedDocumentsResponse,
 };
 pub use list_document_chunks::{list_document_chunks_from_storage, ListDocumentChunksResponse};
+pub use list_document_page_translations::{
+    list_document_page_translations_from_storage, ListDocumentPageTranslationsRequest,
+    ListDocumentPageTranslationsResponse,
+};
 pub use list_imported_documents::{
     list_imported_documents_from_storage, ListImportedDocumentsResponse,
 };

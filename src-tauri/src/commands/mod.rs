@@ -16,6 +16,7 @@ pub mod list_study_cards;
 pub mod list_study_reviews;
 pub mod list_study_session_summaries;
 pub mod load_document_translation;
+pub mod meditation_notes;
 pub mod notification_settings;
 pub mod ollama_settings;
 pub mod pdf_reader_preferences;
@@ -61,6 +62,8 @@ pub use list_study_reviews::list_study_reviews;
 pub use list_study_session_summaries::list_study_session_summaries;
 #[cfg(feature = "tauri-app")]
 pub use load_document_translation::load_document_translation;
+#[cfg(feature = "tauri-app")]
+pub use meditation_notes::{load_meditation_note, save_meditation_note};
 #[cfg(feature = "tauri-app")]
 pub use notification_settings::{load_notification_settings, save_notification_settings};
 #[cfg(feature = "tauri-app")]
@@ -128,6 +131,10 @@ pub use list_study_session_summaries::{
 pub use load_document_translation::{
     load_document_translation_from_storage, LoadDocumentTranslationRequest,
     LoadDocumentTranslationResponse,
+};
+pub use meditation_notes::{
+    load_meditation_note_from_storage, save_meditation_note_with_storage, MeditationNoteResponse,
+    SaveMeditationNoteRequest,
 };
 pub use notification_settings::{
     default_notification_settings, load_notification_settings_from_storage,

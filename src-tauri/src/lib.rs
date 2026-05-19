@@ -38,6 +38,8 @@ pub fn run() {
             commands::ollama_settings::save_ollama_settings,
             commands::notification_settings::load_notification_settings,
             commands::notification_settings::save_notification_settings,
+            commands::meditation_notes::load_meditation_note,
+            commands::meditation_notes::save_meditation_note,
             commands::pdf_reader_preferences::load_pdf_reader_preference,
             commands::pdf_reader_preferences::save_pdf_reader_preference,
             commands::render_pdf_page::render_pdf_page,

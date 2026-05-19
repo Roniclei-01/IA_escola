@@ -892,6 +892,18 @@ impl SQLiteStorage {
         Ok(Some((target_reviews, recurrence)))
     }
 
+    pub fn save_meditation_note(
+        &self,
+        document_id: Uuid,
+        content: &str,
+    ) -> Result<(), StorageError> {
+        self.save_setting(&meditation_note_setting_key(document_id), content)
+    }
+
+    pub fn load_meditation_note(&self, document_id: Uuid) -> Result<Option<String>, StorageError> {
+        self.load_setting(&meditation_note_setting_key(document_id))
+    }
+
     fn migrate(&self) -> Result<(), StorageError> {
         self.connection
             .execute_batch(
@@ -1296,6 +1308,10 @@ fn study_goal_setting_key(document_id: Uuid) -> String {
 
 fn study_goal_recurrence_setting_key(document_id: Uuid) -> String {
     format!("study_goal.{document_id}.recurrence")
+}
+
+fn meditation_note_setting_key(document_id: Uuid) -> String {
+    format!("meditation_note.{document_id}.content")
 }
 
 fn is_valid_study_goal_recurrence(recurrence: &str) -> bool {

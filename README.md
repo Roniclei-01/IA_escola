@@ -95,7 +95,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - timeout na geracao de cards com Ollama para evitar espera indefinida em modelos lentos;
 - importacao separada da geracao de cards, permitindo subir TXT/PDF, revisar a previa e iniciar a IA apenas quando o usuario desejar;
 - geracao sob demanda limitada aos primeiros chunks, com acao incremental para gerar mais cards sem sobrecarregar o modelo local;
-- progresso de geracao por fila de chunks, com contadores de concluidos, falhas e pendentes durante o processamento do Ollama;
+- progresso de geracao por fila de chunks em painel de segundo plano, com contadores de concluidos, falhas e pendentes durante o processamento do Ollama;
 - feedback visual para importacao, chunking, geracao com Ollama, salvamento e carregamento de cards;
 - fallback de desenvolvimento para gerar cards mockados quando o Ollama falhar;
 - revisao com marcacao de acerto, erro, dificuldade, prioridade e proxima data;
@@ -228,11 +228,10 @@ docs/
 
 ## Proximos passos
 
-1. Evoluir a fila visual de geracao de cards para uma fila em background que nao bloqueie outras areas do app.
-2. Evoluir exportacao Anki para pacote `.apkg`.
-3. Implementar `Meditacao` do leitor por documento.
-4. Implementar categorias e subcategorias de estudo por documento.
-5. Planejar importacao EPUB sem DRM para a versao futura, mantendo AZW3/KPF como conversao ou suporte experimental posterior.
+1. Evoluir exportacao Anki para pacote `.apkg`.
+2. Implementar `Meditacao` do leitor por documento.
+3. Implementar categorias e subcategorias de estudo por documento.
+4. Planejar importacao EPUB sem DRM para a versao futura, mantendo AZW3/KPF como conversao ou suporte experimental posterior.
 
 ## Comandos de desenvolvimento
 

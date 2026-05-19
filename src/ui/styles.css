@@ -302,6 +302,24 @@ h1 {
   box-shadow: 0 18px 50px rgb(24 32 28 / 0.22);
 }
 
+.background-generation-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 18;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  width: min(620px, calc(100% - 48px));
+  padding: 18px;
+  border: 1px solid #bed0c3;
+  border-radius: 8px;
+  color: #18201c;
+  background: #ffffff;
+  box-shadow: 0 14px 40px rgb(24 32 28 / 0.18);
+}
+
 .processing-spinner {
   width: 42px;
   height: 42px;
@@ -316,13 +334,20 @@ h1 {
   font-size: 1.2rem;
 }
 
-.processing-panel p {
+.background-generation-panel h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.processing-panel p,
+.background-generation-panel p {
   margin: 6px 0 0;
   color: #24352b;
   font-weight: 800;
 }
 
-.processing-panel span {
+.processing-panel span,
+.background-generation-panel span {
   display: block;
   margin-top: 6px;
   color: #526256;
@@ -377,7 +402,8 @@ h1 {
   font-weight: 900;
 }
 
-.processing-panel button {
+.processing-panel button,
+.background-generation-panel button {
   min-height: 40px;
   padding: 0 14px;
   border: 1px solid #c9d6cd;
@@ -1543,10 +1569,17 @@ h1 {
   .document-reader-grid,
   .import-row,
   .processing-panel,
+  .background-generation-panel,
   .settings-row,
   .study-goal-header,
   .library-filters {
     grid-template-columns: 1fr;
+  }
+
+  .background-generation-panel {
+    right: 12px;
+    bottom: 12px;
+    width: calc(100% - 24px);
   }
 
   .saved-documents li,

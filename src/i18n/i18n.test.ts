@@ -255,11 +255,17 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.cardGenerationQueueCompleted")).toBe(
       "Concluidos"
     );
+    expect(i18n.getResource("pt", "translation", "library.cardGenerationBackgroundTitle")).toBe(
+      "Geracao de cards em segundo plano"
+    );
     expect(i18n.getResource("en", "translation", "library.generatingCardsWithOllama")).toBe(
       "Generating cards with Ollama."
     );
     expect(i18n.getResource("en", "translation", "library.cardGenerationQueueProgress")).toBe(
       "Queue: {{completed}} completed, {{failed}} failed, {{pending}} pending."
+    );
+    expect(i18n.getResource("en", "translation", "library.cardGenerationBackgroundTitle")).toBe(
+      "Background card generation"
     );
     expect(i18n.getResource("es", "translation", "library.generatingCardsWithOllama")).toBe(
       "Generando cards con Ollama."
@@ -269,6 +275,9 @@ describe("i18n", () => {
     );
     expect(i18n.getResource("es", "translation", "library.cardGenerationQueuePending")).toBe(
       "Pendientes"
+    );
+    expect(i18n.getResource("es", "translation", "library.cardGenerationBackgroundTitle")).toBe(
+      "Generacion de cards en segundo plano"
     );
     expect(i18n.getResource("pt", "translation", "library.operationOverlayTitle")).toBe(
       "Processando arquivo"

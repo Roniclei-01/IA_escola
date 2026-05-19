@@ -1309,6 +1309,39 @@ export function App({
     cardGenerationQueueProgress && cardGenerationQueueProgress.total > 0
       ? Math.round((cardGenerationQueueProcessed / cardGenerationQueueProgress.total) * 100)
       : 0;
+  const isCardGenerationOperation = operationStatus === "generatingCardsWithOllama";
+  const shouldShowBlockingOverlay = Boolean(activeOperationMessage) && !isCardGenerationOperation;
+  const shouldShowBackgroundGenerationPanel =
+    Boolean(activeOperationMessage) && isCardGenerationOperation;
+  const cardGenerationQueuePanel =
+    isCardGenerationOperation && cardGenerationQueueProgress ? (
+      <section className="processing-queue" aria-label={t("library.cardGenerationQueueTitle")}>
+        <div
+          className="processing-queue-bar"
+          role="progressbar"
+          aria-label={t("library.cardGenerationQueueProgressLabel")}
+          aria-valuemin={0}
+          aria-valuemax={cardGenerationQueueProgress.total}
+          aria-valuenow={cardGenerationQueueProcessed}
+        >
+          <span style={{ width: `${cardGenerationQueuePercent}%` }} />
+        </div>
+        <dl>
+          <div>
+            <dt>{t("library.cardGenerationQueueCompleted")}</dt>
+            <dd>{cardGenerationQueueProgress.completed}</dd>
+          </div>
+          <div>
+            <dt>{t("library.cardGenerationQueueFailed")}</dt>
+            <dd>{cardGenerationQueueProgress.failed}</dd>
+          </div>
+          <div>
+            <dt>{t("library.cardGenerationQueuePending")}</dt>
+            <dd>{cardGenerationQueueProgress.pending}</dd>
+          </div>
+        </dl>
+      </section>
+    ) : null;
   const filteredSavedDocuments = filterSavedDocuments(
     savedDocuments,
     sourceTypeFilter,
@@ -3658,7 +3691,27 @@ export function App({
           </section>
         </div>
       </section>
-      {activeOperationMessage ? (
+      {shouldShowBackgroundGenerationPanel ? (
+        <aside
+          className="background-generation-panel"
+          aria-label={t("library.cardGenerationBackgroundTitle")}
+        >
+          <div className="processing-spinner" aria-hidden="true" />
+          <div>
+            <h2>{t("library.cardGenerationBackgroundTitle")}</h2>
+            <p>{activeOperationMessage}</p>
+            {cardGenerationQueuePanel}
+          </div>
+          <button
+            type="button"
+            aria-label={t("library.cancelProcessing")}
+            onClick={handleCancelOperation}
+          >
+            {t("library.cancelOperation")}
+          </button>
+        </aside>
+      ) : null}
+      {shouldShowBlockingOverlay ? (
         <div
           className="processing-overlay"
           role="dialog"
@@ -3671,37 +3724,7 @@ export function App({
               <h2 id="processing-overlay-title">{t("library.operationOverlayTitle")}</h2>
               <p>{activeOperationMessage}</p>
               <span>{t("library.operationOverlayDetail")}</span>
-              {operationStatus === "generatingCardsWithOllama" && cardGenerationQueueProgress ? (
-                <section
-                  className="processing-queue"
-                  aria-label={t("library.cardGenerationQueueTitle")}
-                >
-                  <div
-                    className="processing-queue-bar"
-                    role="progressbar"
-                    aria-label={t("library.cardGenerationQueueProgressLabel")}
-                    aria-valuemin={0}
-                    aria-valuemax={cardGenerationQueueProgress.total}
-                    aria-valuenow={cardGenerationQueueProcessed}
-                  >
-                    <span style={{ width: `${cardGenerationQueuePercent}%` }} />
-                  </div>
-                  <dl>
-                    <div>
-                      <dt>{t("library.cardGenerationQueueCompleted")}</dt>
-                      <dd>{cardGenerationQueueProgress.completed}</dd>
-                    </div>
-                    <div>
-                      <dt>{t("library.cardGenerationQueueFailed")}</dt>
-                      <dd>{cardGenerationQueueProgress.failed}</dd>
-                    </div>
-                    <div>
-                      <dt>{t("library.cardGenerationQueuePending")}</dt>
-                      <dd>{cardGenerationQueueProgress.pending}</dd>
-                    </div>
-                  </dl>
-                </section>
-              ) : null}
+              {cardGenerationQueuePanel}
             </div>
             <button
               type="button"

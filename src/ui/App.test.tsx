@@ -766,6 +766,10 @@ describe("App", () => {
         "Gerando cards com Ollama. Chunk 2 de 3. Fila: 1 concluidos, 0 falharam, 1 pendentes."
       );
     });
+    expect(
+      screen.getByLabelText("Geracao de cards em segundo plano")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Processando arquivo" })).not.toBeInTheDocument();
     const queuePanel = screen.getByLabelText("Fila de geracao de cards");
     expect(screen.getByLabelText("Progresso da fila de cards")).toHaveAttribute(
       "aria-valuenow",

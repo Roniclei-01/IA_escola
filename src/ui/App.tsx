@@ -392,6 +392,99 @@ const ACADEMIC_CATEGORIES = [
     ]
   }
 ] as const;
+const ACADEMIC_CATEGORY_LABEL_KEYS: Record<string, string> = {
+  [DEFAULT_STUDY_CATEGORY]: "library.academicCategories.general",
+  "Linguagens e Comunicacao": "library.academicCategories.languages",
+  "Matematica e Estatistica": "library.academicCategories.math",
+  "Ciencias da Natureza": "library.academicCategories.naturalSciences",
+  "Ciencias Humanas": "library.academicCategories.humanities",
+  "Tecnologia e Computacao": "library.academicCategories.technology",
+  "Engenharia e Arquitetura": "library.academicCategories.engineering",
+  Saude: "library.academicCategories.health",
+  "Negocios e Gestao": "library.academicCategories.business",
+  "Direito e Politicas Publicas": "library.academicCategories.law",
+  "Educacao e Pedagogia": "library.academicCategories.education",
+  "Artes e Cultura": "library.academicCategories.arts",
+  "Pesquisa e Metodologia": "library.academicCategories.research"
+};
+const ACADEMIC_SUBCATEGORY_LABEL_KEYS: Record<string, string> = {
+  [DEFAULT_STUDY_SUBCATEGORY]: "library.academicSubcategories.uncategorized",
+  Portugues: "library.academicSubcategories.portuguese",
+  Redacao: "library.academicSubcategories.writing",
+  Literatura: "library.academicSubcategories.literature",
+  Ingles: "library.academicSubcategories.english",
+  Espanhol: "library.academicSubcategories.spanish",
+  "Comunicacao cientifica": "library.academicSubcategories.scientificCommunication",
+  "Matematica basica": "library.academicSubcategories.basicMath",
+  Algebra: "library.academicSubcategories.algebra",
+  Geometria: "library.academicSubcategories.geometry",
+  Calculo: "library.academicSubcategories.calculus",
+  Estatistica: "library.academicSubcategories.statistics",
+  Probabilidade: "library.academicSubcategories.probability",
+  "Matematica financeira": "library.academicSubcategories.financialMath",
+  Fisica: "library.academicSubcategories.physics",
+  Quimica: "library.academicSubcategories.chemistry",
+  Biologia: "library.academicSubcategories.biology",
+  Astronomia: "library.academicSubcategories.astronomy",
+  Geologia: "library.academicSubcategories.geology",
+  "Ciencias ambientais": "library.academicSubcategories.environmentalSciences",
+  Historia: "library.academicSubcategories.history",
+  Geografia: "library.academicSubcategories.geography",
+  Filosofia: "library.academicSubcategories.philosophy",
+  Sociologia: "library.academicSubcategories.sociology",
+  Antropologia: "library.academicSubcategories.anthropology",
+  Psicologia: "library.academicSubcategories.psychology",
+  Programacao: "library.academicSubcategories.programming",
+  "Redes de computadores": "library.academicSubcategories.computerNetworks",
+  "Banco de dados": "library.academicSubcategories.databases",
+  "Seguranca da informacao": "library.academicSubcategories.informationSecurity",
+  "Inteligencia artificial": "library.academicSubcategories.artificialIntelligence",
+  "Engenharia de software": "library.academicSubcategories.softwareEngineering",
+  "Sistemas operacionais": "library.academicSubcategories.operatingSystems",
+  "Engenharia civil": "library.academicSubcategories.civilEngineering",
+  "Engenharia eletrica": "library.academicSubcategories.electricalEngineering",
+  "Engenharia mecanica": "library.academicSubcategories.mechanicalEngineering",
+  "Engenharia de producao": "library.academicSubcategories.productionEngineering",
+  Arquitetura: "library.academicSubcategories.architecture",
+  "Desenho tecnico": "library.academicSubcategories.technicalDrawing",
+  Anatomia: "library.academicSubcategories.anatomy",
+  Fisiologia: "library.academicSubcategories.physiology",
+  Farmacologia: "library.academicSubcategories.pharmacology",
+  Enfermagem: "library.academicSubcategories.nursing",
+  Medicina: "library.academicSubcategories.medicine",
+  Nutricao: "library.academicSubcategories.nutrition",
+  "Saude publica": "library.academicSubcategories.publicHealth",
+  Administracao: "library.academicSubcategories.administration",
+  Economia: "library.academicSubcategories.economics",
+  Contabilidade: "library.academicSubcategories.accounting",
+  Marketing: "library.academicSubcategories.marketing",
+  Financas: "library.academicSubcategories.finance",
+  Empreendedorismo: "library.academicSubcategories.entrepreneurship",
+  "Direito constitucional": "library.academicSubcategories.constitutionalLaw",
+  "Direito civil": "library.academicSubcategories.civilLaw",
+  "Direito penal": "library.academicSubcategories.criminalLaw",
+  "Direito trabalhista": "library.academicSubcategories.laborLaw",
+  "Direito administrativo": "library.academicSubcategories.administrativeLaw",
+  "Politicas publicas": "library.academicSubcategories.publicPolicy",
+  Didatica: "library.academicSubcategories.didactics",
+  Curriculo: "library.academicSubcategories.curriculum",
+  "Avaliacao educacional": "library.academicSubcategories.educationalAssessment",
+  Psicopedagogia: "library.academicSubcategories.psychopedagogy",
+  "Educacao inclusiva": "library.academicSubcategories.inclusiveEducation",
+  "Tecnologias educacionais": "library.academicSubcategories.educationalTechnologies",
+  "Historia da arte": "library.academicSubcategories.artHistory",
+  Musica: "library.academicSubcategories.music",
+  Design: "library.academicSubcategories.design",
+  Cinema: "library.academicSubcategories.cinema",
+  Teatro: "library.academicSubcategories.theater",
+  Fotografia: "library.academicSubcategories.photography",
+  "Metodologia cientifica": "library.academicSubcategories.scientificMethodology",
+  "Projeto de pesquisa": "library.academicSubcategories.researchProject",
+  "Revisao bibliografica": "library.academicSubcategories.literatureReview",
+  "Normas ABNT/APA": "library.academicSubcategories.abntApaStandards",
+  "Analise de dados": "library.academicSubcategories.dataAnalysis",
+  "Escrita academica": "library.academicSubcategories.academicWriting"
+};
 const LANGUAGE_MARKERS: Record<DocumentLanguage, string[]> = {
   Pt: [
     "que",
@@ -1360,6 +1453,36 @@ function getDefaultSubcategoryForCategory(category: string): string {
   return getAcademicSubcategories(category)[0] ?? DEFAULT_STUDY_SUBCATEGORY;
 }
 
+function translateMappedLabel(
+  value: string,
+  translationKeys: Record<string, string>,
+  translate: (key: string) => string
+): string {
+  const translationKey = translationKeys[value];
+
+  if (!translationKey) {
+    return value;
+  }
+
+  const translatedValue = translate(translationKey);
+
+  return translatedValue === translationKey ? value : translatedValue;
+}
+
+function getAcademicCategoryDisplayName(
+  category: string,
+  translate: (key: string) => string
+): string {
+  return translateMappedLabel(category, ACADEMIC_CATEGORY_LABEL_KEYS, translate);
+}
+
+function getAcademicSubcategoryDisplayName(
+  subcategory: string,
+  translate: (key: string) => string
+): string {
+  return translateMappedLabel(subcategory, ACADEMIC_SUBCATEGORY_LABEL_KEYS, translate);
+}
+
 function categoryOptionsFromMetadata(metadataByDocumentId: Record<string, DocumentStudyMetadata>) {
   return uniqueSortedValues(
     [
@@ -1696,10 +1819,16 @@ export function App({
       importSubcategory
     ]
   );
+  const selectedCategoryLabel = selectedCategoryFilter.trim()
+    ? getAcademicCategoryDisplayName(selectedCategoryFilter, t)
+    : "";
+  const selectedSubcategoryLabel = selectedSubcategoryFilter.trim()
+    ? getAcademicSubcategoryDisplayName(selectedSubcategoryFilter, t)
+    : "";
   const breadcrumbItems = [
     t("layout.library"),
-    selectedCategoryFilter.trim(),
-    selectedSubcategoryFilter.trim(),
+    selectedCategoryLabel,
+    selectedSubcategoryLabel,
     document ? getDocumentTitle(document) : ""
   ].filter((item) => item.length > 0);
   const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
@@ -2625,9 +2754,9 @@ export function App({
         currentImportCategory,
         currentImportSubcategory,
         importCategoryDescriptionDraft.trim() ||
-          t("library.importedCategoryDescription", {
-            category: currentImportCategory,
-            subcategory: currentImportSubcategory
+        t("library.importedCategoryDescription", {
+            category: getAcademicCategoryDisplayName(currentImportCategory, t),
+            subcategory: getAcademicSubcategoryDisplayName(currentImportSubcategory, t)
           })
       );
       if (!isCurrentOperation(operationToken)) {
@@ -3695,7 +3824,8 @@ export function App({
         <h3 id="document-study-metadata-title">{t("study.categoryTitle")}</h3>
         {documentStudyMetadata ? (
           <span>
-            {documentStudyMetadata.category} / {documentStudyMetadata.subcategory}
+            {getAcademicCategoryDisplayName(documentStudyMetadata.category, t)} /{" "}
+            {getAcademicSubcategoryDisplayName(documentStudyMetadata.subcategory, t)}
           </span>
         ) : (
           <span>{t("study.categoryMetadataEmpty")}</span>
@@ -3969,7 +4099,7 @@ export function App({
                     <option value="">{t("library.allCategories")}</option>
                     {categoryOptions.map((category) => (
                       <option key={category} value={category}>
-                        {category}
+                        {getAcademicCategoryDisplayName(category, t)}
                       </option>
                     ))}
                   </select>
@@ -3985,7 +4115,7 @@ export function App({
                     <option value="">{t("library.allSubcategories")}</option>
                     {subcategoryOptions.map((subcategory) => (
                       <option key={subcategory} value={subcategory}>
-                        {subcategory}
+                        {getAcademicSubcategoryDisplayName(subcategory, t)}
                       </option>
                     ))}
                   </select>
@@ -4077,7 +4207,7 @@ export function App({
                     >
                       {categoryOptions.map((category) => (
                         <option key={category} value={category}>
-                          {category}
+                          {getAcademicCategoryDisplayName(category, t)}
                         </option>
                       ))}
                     </select>
@@ -4092,7 +4222,7 @@ export function App({
                     >
                       {importSubcategoryOptions.map((subcategory) => (
                         <option key={subcategory} value={subcategory}>
-                          {subcategory}
+                          {getAcademicSubcategoryDisplayName(subcategory, t)}
                         </option>
                       ))}
                     </select>
@@ -4149,7 +4279,8 @@ export function App({
                           <strong>{getDocumentTitle(savedDocument)}</strong>
                           {metadata ? (
                             <span>
-                              {metadata.category} / {metadata.subcategory}
+                              {getAcademicCategoryDisplayName(metadata.category, t)} /{" "}
+                              {getAcademicSubcategoryDisplayName(metadata.subcategory, t)}
                             </span>
                           ) : null}
                         </button>
@@ -4241,7 +4372,7 @@ export function App({
                   {categoryOptions.map((category) => (
                     <li key={category}>
                       <button type="button" onClick={() => handleLibraryCategoryChange(category)}>
-                        <strong>{category}</strong>
+                        <strong>{getAcademicCategoryDisplayName(category, t)}</strong>
                         <span>
                           {t("library.categoryBookCount", {
                             count: countDocumentsByCategory(
@@ -4257,7 +4388,7 @@ export function App({
                 </ul>
               ) : (
                 <div className="subcategory-navigation">
-                  <h3>{selectedCategoryFilter}</h3>
+                  <h3>{getAcademicCategoryDisplayName(selectedCategoryFilter, t)}</h3>
                   <ul className="subcategory-grid">
                     <li>
                       <button
@@ -4286,7 +4417,7 @@ export function App({
                           }
                           onClick={() => setSelectedSubcategoryFilter(subcategory)}
                         >
-                          <strong>{subcategory}</strong>
+                          <strong>{getAcademicSubcategoryDisplayName(subcategory, t)}</strong>
                           <span>
                             {t("library.categoryBookCount", {
                               count: countDocumentsByCategory(

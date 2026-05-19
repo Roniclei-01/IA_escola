@@ -220,6 +220,9 @@ describe("App", () => {
 
     expect(await screen.findByRole("heading", { name: "Import and AI" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Library" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Technology and Computing" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Technology and Computing/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Tecnologia e Computacao/ })).not.toBeInTheDocument();
     expect(window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY)).toBe("en");
 
     fireEvent.change(screen.getByLabelText("Interface language"), {
@@ -227,6 +230,8 @@ describe("App", () => {
     });
 
     expect(await screen.findByRole("heading", { name: "Importacion e IA" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Tecnologia y Computacion" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tecnologia y Computacion/ })).toBeInTheDocument();
     expect(window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY)).toBe("es");
   });
 

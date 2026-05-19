@@ -30,6 +30,21 @@ describe("i18n", () => {
     expect(i18n.getResource("es", "translation", "library.import")).toBe("Importar");
   });
 
+  it("has academic category labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "library.academicCategories.technology")).toBe(
+      "Tecnologia e Computacao"
+    );
+    expect(i18n.getResource("en", "translation", "library.academicCategories.technology")).toBe(
+      "Technology and Computing"
+    );
+    expect(i18n.getResource("es", "translation", "library.academicCategories.technology")).toBe(
+      "Tecnologia y Computacion"
+    );
+    expect(
+      i18n.getResource("en", "translation", "library.academicSubcategories.computerNetworks")
+    ).toBe("Computer networks");
+  });
+
   it("has document reader labels in every supported language", () => {
     expect(i18n.getResource("pt", "translation", "library.readerTitle")).toBe(
       "Leitura do documento"

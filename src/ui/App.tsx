@@ -1704,7 +1704,8 @@ export function App({
       })
       .catch(() => {
         if (pdfReaderPreferenceTokenRef.current === preferenceToken) {
-          setError(t("library.pdfReaderPreferenceLoadError"));
+          setPdfReaderPage(1);
+          setPdfReaderZoom(1);
         }
       })
       .finally(() => {

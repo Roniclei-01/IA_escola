@@ -1706,6 +1706,51 @@ describe("App", () => {
     });
   });
 
+  it("keeps an imported PDF available when reader preference loading fails", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-pdf-preference-fallback",
+      book_id: "book-pdf-preference-fallback",
+      content: "Texto extraido via OCR.",
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/ocr-fallback.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const loadPdfReaderPreference = vi.fn().mockRejectedValue(new Error("storage failed"));
+    const renderPdfPage = vi.fn().mockResolvedValue({
+      page: 1,
+      page_count: 1,
+      image_data_url: "data:image/png;base64,UEFHSU5BMQ=="
+    });
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      loadPdfReaderPreference,
+      renderPdfPage
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/ocr-fallback.pdf" }
+    });
+    fireEvent.click(screen.getByLabelText("Ativar OCR para PDF digitalizado"));
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "PDF original" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(loadPdfReaderPreference).toHaveBeenCalledWith("document-pdf-preference-fallback");
+    });
+    expect(
+      screen.queryByText("Nao foi possivel carregar a posicao do leitor PDF.")
+    ).not.toBeInTheDocument();
+    expect(await screen.findByAltText("Pagina PDF 1")).toBeInTheDocument();
+    expect(renderPdfPage).toHaveBeenCalledWith({
+      file_path: "/tmp/ocr-fallback.pdf",
+      page: 1,
+      dpi: 144
+    });
+  });
+
   it("paginates the full imported document in the reader", async () => {
     const finalLine = "Fim integral do livro.";
     const textIncludes = (text: string) => (_content: string, node: Element | null) =>

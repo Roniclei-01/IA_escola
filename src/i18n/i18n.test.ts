@@ -178,6 +178,9 @@ describe("i18n", () => {
       "Nao foi possivel exportar o arquivo."
     );
     expect(i18n.getResource("pt", "translation", "study.meditationTitle")).toBe("Meditacao");
+    expect(i18n.getResource("pt", "translation", "study.openMeditation")).toBe(
+      "Escrever meditacao"
+    );
     expect(i18n.getResource("pt", "translation", "study.meditationSaved")).toBe(
       "Meditacao salva."
     );

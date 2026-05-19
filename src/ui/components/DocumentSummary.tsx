@@ -72,6 +72,7 @@ interface DocumentSummaryProps {
   onReaderTargetLanguageChange: (language: ImportTextBookResponse["language"]) => void;
   onReaderPageChange: (request: ReaderPageTranslationRequest) => void;
   onTranslateDocument: (request: ReaderPageTranslationRequest) => void;
+  meditationSlot?: ReactNode;
   children?: ReactNode;
 }
 
@@ -97,6 +98,7 @@ export function DocumentSummary({
   onReaderTargetLanguageChange,
   onReaderPageChange,
   onTranslateDocument,
+  meditationSlot,
   children
 }: DocumentSummaryProps) {
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
@@ -313,6 +315,7 @@ export function DocumentSummary({
             )}
           </article>
         </div>
+        {meditationSlot}
       </section>
       {cardCount > 0 ? children : null}
       <section className="document-extracted-text" aria-labelledby="document-extracted-text-title">

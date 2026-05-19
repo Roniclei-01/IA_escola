@@ -1293,6 +1293,7 @@ export function App({
   >({});
   const [meditationNote, setMeditationNote] = useState("");
   const [meditationDraft, setMeditationDraft] = useState("");
+  const [isMeditationEditorOpen, setIsMeditationEditorOpen] = useState(false);
   const [isLoadingMeditationNote, setIsLoadingMeditationNote] = useState(false);
   const [isSavingMeditationNote, setIsSavingMeditationNote] = useState(false);
   const [meditationStatus, setMeditationStatus] = useState<string | null>(null);
@@ -1677,6 +1678,7 @@ export function App({
     meditationLoadTokenRef.current = loadToken;
     setMeditationNote("");
     setMeditationDraft("");
+    setIsMeditationEditorOpen(false);
     setMeditationStatus(null);
 
     if (!document) {
@@ -3133,6 +3135,7 @@ export function App({
 
       setMeditationNote(savedNote.content);
       setMeditationDraft(savedNote.content);
+      setIsMeditationEditorOpen(false);
       setMeditationStatus(t("study.meditationSaved"));
     } catch (unknownError) {
       setError(getErrorMessage(unknownError, t("study.meditationSaveError")));
@@ -3140,6 +3143,71 @@ export function App({
       setIsSavingMeditationNote(false);
     }
   }
+
+  const meditationActionLabel = isMeditationEditorOpen
+    ? t("study.closeMeditation")
+    : meditationNote.trim()
+      ? t("study.editMeditation")
+      : t("study.openMeditation");
+  const meditationSlot = document ? (
+    <section className="meditation-note meditation-note-reader" aria-labelledby="meditation-note-title">
+      <div className="meditation-note-summary">
+        <div>
+          <h4 id="meditation-note-title">{t("study.meditationTitle")}</h4>
+          {meditationNote.trim() ? (
+            <p>{meditationNote}</p>
+          ) : (
+            <p className="reader-placeholder">{t("study.meditationEmpty")}</p>
+          )}
+        </div>
+        <button
+          type="button"
+          disabled={isLoadingMeditationNote}
+          onClick={() => {
+            setMeditationDraft(meditationNote);
+            setMeditationStatus(null);
+            setIsMeditationEditorOpen((currentValue) => !currentValue);
+          }}
+        >
+          {meditationActionLabel}
+        </button>
+      </div>
+      {isMeditationEditorOpen ? (
+        <>
+          <label htmlFor="meditation-note-content">{t("study.meditationLabel")}</label>
+          <textarea
+            id="meditation-note-content"
+            value={meditationDraft}
+            disabled={isLoadingMeditationNote}
+            placeholder={t("study.meditationPlaceholder")}
+            onChange={(event) => {
+              setMeditationDraft(event.target.value);
+              setMeditationStatus(null);
+            }}
+          />
+          <div className="meditation-note-actions">
+            <button
+              type="button"
+              disabled={
+                isLoadingMeditationNote ||
+                isSavingMeditationNote ||
+                meditationDraft === meditationNote
+              }
+              onClick={() => {
+                void handleSaveMeditationNote();
+              }}
+            >
+              {isSavingMeditationNote ? t("study.savingMeditation") : t("study.saveMeditation")}
+            </button>
+          </div>
+        </>
+      ) : null}
+      {isLoadingMeditationNote ? (
+        <span role="status">{t("study.loadingMeditation")}</span>
+      ) : null}
+      {meditationStatus ? <span role="status">{meditationStatus}</span> : null}
+    </section>
+  ) : null;
 
   return (
     <main className="app-shell">
@@ -3430,6 +3498,7 @@ export function App({
             onTranslateDocument={(request) => {
               void handleTranslateActiveDocument(request);
             }}
+            meditationSlot={meditationSlot}
           >
             <div className="document-actions">
               <button type="button" onClick={handleExportAnkiPackage}>
@@ -3788,39 +3857,6 @@ export function App({
               </section>
             ) : null}
           </DocumentSummary>
-          <section className="meditation-note" aria-labelledby="meditation-note-title">
-            <h3 id="meditation-note-title">{t("study.meditationTitle")}</h3>
-            <label htmlFor="meditation-note-content">{t("study.meditationLabel")}</label>
-            <textarea
-              id="meditation-note-content"
-              value={meditationDraft}
-              disabled={isLoadingMeditationNote}
-              placeholder={t("study.meditationPlaceholder")}
-              onChange={(event) => {
-                setMeditationDraft(event.target.value);
-                setMeditationStatus(null);
-              }}
-            />
-            <div className="meditation-note-actions">
-              <button
-                type="button"
-                disabled={
-                  isLoadingMeditationNote ||
-                  isSavingMeditationNote ||
-                  meditationDraft === meditationNote
-                }
-                onClick={() => {
-                  void handleSaveMeditationNote();
-                }}
-              >
-                {isSavingMeditationNote ? t("study.savingMeditation") : t("study.saveMeditation")}
-              </button>
-              {isLoadingMeditationNote ? (
-                <span role="status">{t("study.loadingMeditation")}</span>
-              ) : null}
-              {meditationStatus ? <span role="status">{meditationStatus}</span> : null}
-            </div>
-          </section>
               </>
         ) : (
           <section className="empty-state" aria-label={t("library.emptyStateLabel")}>

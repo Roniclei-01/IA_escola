@@ -3637,9 +3637,17 @@ describe("App", () => {
     });
 
     fireEvent.click(await screen.findByRole("button", { name: /Conteudo sobre redes/ }));
-    expect(await screen.findByLabelText("Meditacao do documento")).toHaveValue(
-      "Resumo inicial do leitor."
-    );
+    const readerHeading = await screen.findByRole("heading", { name: "Leitura do documento" });
+    const reader = readerHeading.closest(".document-reader");
+    expect(reader).not.toBeNull();
+    const readerQueries = within(reader as HTMLElement);
+
+    expect(readerQueries.getByText("Meditacao")).toBeInTheDocument();
+    expect(readerQueries.getByText("Resumo inicial do leitor.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Meditacao do documento")).not.toBeInTheDocument();
+
+    fireEvent.click(readerQueries.getByRole("button", { name: "Editar meditacao" }));
+    expect(screen.getByLabelText("Meditacao do documento")).toHaveValue("Resumo inicial do leitor.");
 
     fireEvent.change(screen.getByLabelText("Meditacao do documento"), {
       target: { value: "Agora entendi os conceitos principais." }
@@ -3653,9 +3661,8 @@ describe("App", () => {
       );
     });
     expect(await screen.findByText("Meditacao salva.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Meditacao do documento")).toHaveValue(
-      "Agora entendi os conceitos principais."
-    );
+    expect(screen.queryByLabelText("Meditacao do documento")).not.toBeInTheDocument();
+    expect(readerQueries.getByText("Agora entendi os conceitos principais.")).toBeInTheDocument();
   });
 
   it("deletes generated cards from the active document after confirmation", async () => {

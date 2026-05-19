@@ -1419,6 +1419,8 @@ describe("App", () => {
       });
     });
     expect(await screen.findByText("Translated text for reading.")).toBeInTheDocument();
+    expect(screen.getByText("Traducao gerada agora e salva localmente.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retraduzir pagina" })).toBeInTheDocument();
   });
 
   it("uses a cached translated reader page before calling the model", async () => {
@@ -1439,7 +1441,12 @@ describe("App", () => {
         translated_content: "Cached translated page."
       }
     });
-    const translateDocument = vi.fn();
+    const translateDocument = vi.fn().mockResolvedValue({
+      document_id: "document-cached-reader",
+      source_language: "Pt",
+      target_language: "En",
+      translated_content: "Updated translated page."
+    });
 
     renderApp({
       importTextBook,
@@ -1461,6 +1468,73 @@ describe("App", () => {
     });
     expect(translateDocument).not.toHaveBeenCalled();
     expect(await screen.findByText("Cached translated page.")).toBeInTheDocument();
+    expect(screen.getByText("Traducao carregada do cache local.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retraduzir pagina" }));
+
+    await waitFor(() => {
+      expect(translateDocument).toHaveBeenCalledWith({
+        document_id: "document-cached-reader",
+        content: "Texto original em cache.",
+        source_language: "Pt",
+        target_language: "En",
+        page_index: 0
+      });
+    });
+    expect(await screen.findByText("Updated translated page.")).toBeInTheDocument();
+    expect(screen.getByText("Traducao gerada agora e salva localmente.")).toBeInTheDocument();
+  });
+
+  it("loads a cached translated page automatically when navigating the reader", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-reader-navigation-cache",
+      book_id: "book-reader-navigation-cache",
+      content: `${"Primeira pagina longa para leitura. ".repeat(140)}\n\nSegunda pagina.`,
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/navigation-cache.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const loadDocumentTranslation = vi.fn().mockImplementation(
+      async (_documentId: string, _targetLanguage: string, pageIndex?: number) => ({
+        translation:
+          pageIndex === 1
+            ? {
+                document_id: "document-reader-navigation-cache",
+                source_language: "Pt",
+                target_language: "En",
+                translated_content: "Cached translated second reader page."
+              }
+            : null
+      })
+    );
+    const translateDocument = vi.fn();
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      loadDocumentTranslation,
+      translateDocument
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/navigation-cache.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Proxima pagina" }));
+
+    await waitFor(() => {
+      expect(loadDocumentTranslation).toHaveBeenCalledWith(
+        "document-reader-navigation-cache",
+        "En",
+        1
+      );
+    });
+    expect(translateDocument).not.toHaveBeenCalled();
+    expect(await screen.findByText("Cached translated second reader page.")).toBeInTheDocument();
+    expect(screen.getByText("Traducao carregada do cache local.")).toBeInTheDocument();
   });
 
   it("renders the original PDF page with navigation and zoom controls", async () => {

@@ -724,6 +724,17 @@ h1 {
   font-weight: 700;
 }
 
+.reader-translation-status {
+  width: fit-content;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #cfe0d4;
+  border-radius: 6px;
+  color: #174c34;
+  background: #e8f5ed;
+  font-weight: 700;
+}
+
 .reader-pagination {
   display: flex;
   align-items: center;

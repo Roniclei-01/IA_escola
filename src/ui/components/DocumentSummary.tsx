@@ -8,7 +8,10 @@ const READER_PAGE_LENGTH = 2_200;
 export interface ReaderPageTranslationRequest {
   pageIndex: number;
   pageContent: string;
+  forceRefresh?: boolean;
 }
+
+export type ReaderPageTranslationSource = "cache" | "generated";
 
 interface DocumentSummaryProps {
   document: ImportTextBookResponse;
@@ -35,7 +38,10 @@ interface DocumentSummaryProps {
     translatedPaneTitle: string;
     translationPlaceholder: string;
     translationSameLanguage: string;
+    translationStatusCached: string;
+    translationStatusGenerated: string;
     translateDocument: string;
+    retranslateDocument: string;
     translatingDocument: string;
     previousReaderPage: string;
     nextReaderPage: string;
@@ -51,6 +57,7 @@ interface DocumentSummaryProps {
   originalLanguage: ImportTextBookResponse["language"];
   readerTargetLanguage: ImportTextBookResponse["language"];
   translatedPagesByIndex: Record<number, string>;
+  translatedPageSourcesByIndex: Record<number, ReaderPageTranslationSource>;
   renderedPdfPage: RenderPdfPageResponse | null;
   isRenderingPdfPage?: boolean;
   pdfReaderPage: number;
@@ -61,6 +68,7 @@ interface DocumentSummaryProps {
   onPdfReaderZoomChange: (zoom: number) => void;
   onGenerateCards?: () => void;
   onReaderTargetLanguageChange: (language: ImportTextBookResponse["language"]) => void;
+  onReaderPageChange: (request: ReaderPageTranslationRequest) => void;
   onTranslateDocument: (request: ReaderPageTranslationRequest) => void;
   children?: ReactNode;
 }
@@ -73,6 +81,7 @@ export function DocumentSummary({
   originalLanguage,
   readerTargetLanguage,
   translatedPagesByIndex,
+  translatedPageSourcesByIndex,
   renderedPdfPage,
   isRenderingPdfPage = false,
   pdfReaderPage,
@@ -83,6 +92,7 @@ export function DocumentSummary({
   onPdfReaderZoomChange,
   onGenerateCards,
   onReaderTargetLanguageChange,
+  onReaderPageChange,
   onTranslateDocument,
   children
 }: DocumentSummaryProps) {
@@ -101,6 +111,7 @@ export function DocumentSummary({
   const currentTranslatedPage = isSameLanguage
     ? currentOriginalPage
     : translatedPagesByIndex[currentReaderPage] ?? "";
+  const currentTranslationSource = translatedPageSourcesByIndex[currentReaderPage];
   const isPdfDocument = document.source_type === "pdf" && Boolean(document.source_path);
   const renderedPageCount = renderedPdfPage?.page_count ?? null;
 
@@ -109,11 +120,23 @@ export function DocumentSummary({
   }, [document.document_id, readerTargetLanguage]);
 
   function goToPreviousReaderPage() {
-    setReaderPageIndex((currentPage) => Math.max(currentPage - 1, 0));
+    const nextPage = Math.max(currentReaderPage - 1, 0);
+
+    setReaderPageIndex(nextPage);
+    onReaderPageChange({
+      pageIndex: nextPage,
+      pageContent: originalPages[nextPage] ?? ""
+    });
   }
 
   function goToNextReaderPage() {
-    setReaderPageIndex((currentPage) => Math.min(currentPage + 1, totalReaderPages - 1));
+    const nextPage = Math.min(currentReaderPage + 1, totalReaderPages - 1);
+
+    setReaderPageIndex(nextPage);
+    onReaderPageChange({
+      pageIndex: nextPage,
+      pageContent: originalPages[nextPage] ?? ""
+    });
   }
 
   return (
@@ -219,11 +242,16 @@ export function DocumentSummary({
             onClick={() =>
               onTranslateDocument({
                 pageIndex: currentReaderPage,
-                pageContent: currentOriginalPage
+                pageContent: currentOriginalPage,
+                forceRefresh: Boolean(currentTranslatedPage)
               })
             }
           >
-            {isTranslatingDocument ? labels.translatingDocument : labels.translateDocument}
+            {isTranslatingDocument
+              ? labels.translatingDocument
+              : currentTranslatedPage && !isSameLanguage
+                ? labels.retranslateDocument
+                : labels.translateDocument}
           </button>
         </div>
         {totalReaderPages > 1 ? (
@@ -249,6 +277,13 @@ export function DocumentSummary({
           </div>
         ) : null}
         {isSameLanguage ? <p className="reader-note">{labels.translationSameLanguage}</p> : null}
+        {currentTranslatedPage && !isSameLanguage ? (
+          <p className="reader-translation-status">
+            {currentTranslationSource === "cache"
+              ? labels.translationStatusCached
+              : labels.translationStatusGenerated}
+          </p>
+        ) : null}
         <div className="document-reader-grid">
           <article className="reader-pane">
             <h4>{labels.originalPaneTitle}</h4>

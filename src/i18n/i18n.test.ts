@@ -43,6 +43,12 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.translateDocument")).toBe(
       "Traduzir pagina atual"
     );
+    expect(i18n.getResource("pt", "translation", "library.retranslateDocument")).toBe(
+      "Retraduzir pagina"
+    );
+    expect(i18n.getResource("pt", "translation", "library.translationStatusCached")).toBe(
+      "Traducao carregada do cache local."
+    );
     expect(i18n.getResource("pt", "translation", "library.nextReaderPage")).toBe(
       "Proxima pagina"
     );

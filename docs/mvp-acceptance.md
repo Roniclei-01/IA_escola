@@ -131,22 +131,22 @@ Arquivos gerados:
 
 Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 
-- [ ] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-small.txt`.
-- [ ] Ver previa do conteudo.
-- [ ] Ver quantidade de chunks.
-- [ ] Gerar pelo menos 1 card.
-- [ ] Revelar resposta.
-- [ ] Marcar `Acertei`.
-- [ ] Confirmar resumo com `Acertos: 1`.
+- [x] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-small.txt`.
+- [x] Ver previa do conteudo.
+- [x] Ver quantidade de chunks.
+- [x] Gerar pelo menos 1 card.
+- [x] Revelar resposta.
+- [x] Marcar `Acertei`.
+- [x] Confirmar resumo com `Acertos: 1`.
 - [ ] Fechar e abrir o app.
 - [ ] Confirmar documento e cards persistidos.
 
 ## 4. Fluxo com PDF
 
-- [ ] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-pdf-text.pdf`.
-- [ ] Confirmar origem `PDF`.
-- [ ] Confirmar que a importacao termina sem gerar cards automaticamente.
-- [ ] Clicar em `Gerar cards` para iniciar a IA sob demanda.
+- [x] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-pdf-text.pdf`.
+- [x] Confirmar origem `PDF`.
+- [x] Confirmar que a importacao termina sem gerar cards automaticamente.
+- [x] Clicar em `Gerar cards` para iniciar a IA sob demanda.
 - [ ] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-large.txt` para validar geracao incremental com arquivo maior.
 - [ ] Confirmar limite de geracao sob demanda em documento grande.
 - [ ] Usar `Gerar mais cards`.

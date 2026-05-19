@@ -180,6 +180,11 @@ Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 - [x] Clicar em `Pesquisar` e confirmar filtragem.
 - [x] Confirmar busca por conteudo.
 - [x] Confirmar busca por caminho de origem.
+- [x] Escolher categoria no topo e confirmar que a biblioteca mostra apenas livros dessa categoria.
+- [x] Escolher subcategoria no topo e confirmar que a biblioteca mostra apenas livros dessa subcategoria.
+- [x] Importar documento com categoria/subcategoria selecionada e confirmar classificacao salva.
+- [x] Abrir `Meus Livros` e confirmar lista em modal respeitando os filtros ativos.
+- [x] Clicar em um item de `Meus Livros` e confirmar abertura do documento selecionado.
 
 ## 9. Idioma da interface
 
@@ -208,7 +213,7 @@ Esses itens estao documentados para as proximas fatias e nao bloqueiam o aceite 
 
 - [x] Campo `Anotacao` em modal acionado por `+`, com multiplas entradas, edicao e exclusao.
 - [x] Caixa de idioma original recolhivel por seta no leitor.
-- [x] Categorias e subcategorias de estudo por documento, com descricao da classificacao.
+- [x] Categorias e subcategorias de estudo por documento, com descricao da classificacao, filtro global e lista `Meus Livros`.
 - [x] Exportacao Anki em `.apkg`.
 - [ ] Importacao EPUB sem DRM em versao futura.
 - [ ] Avaliacao de AZW3 sem DRM por conversao local para EPUB.

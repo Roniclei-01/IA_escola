@@ -1125,15 +1125,21 @@ function filterSavedDocuments(
   reviewStatusFilter: ReviewStatusFilter,
   searchQuery: string,
   sortMode: LibrarySortMode,
-  reviewCounts: Record<string, number>
+  reviewCounts: Record<string, number>,
+  metadataByDocumentId: Record<string, DocumentStudyMetadata>,
+  categoryFilter: string,
+  subcategoryFilter: string
 ): ImportTextBookResponse[] {
   const normalizedQuery = searchQuery.trim().toLowerCase();
+  const normalizedCategoryFilter = categoryFilter.trim().toLowerCase();
+  const normalizedSubcategoryFilter = subcategoryFilter.trim().toLowerCase();
 
   return documents
     .map((savedDocument, originalIndex) => ({ savedDocument, originalIndex }))
     .filter(({ savedDocument }) => {
       const sourceType = savedDocument.source_type ?? "txt";
       const reviewCount = reviewCounts[savedDocument.document_id] ?? 0;
+      const metadata = metadataByDocumentId[savedDocument.document_id] ?? null;
       const searchableText =
         `${savedDocument.content} ${savedDocument.source_path ?? ""}`.toLowerCase();
 
@@ -1142,6 +1148,20 @@ function filterSavedDocuments(
       }
 
       if (normalizedQuery && !searchableText.includes(normalizedQuery)) {
+        return false;
+      }
+
+      if (
+        normalizedCategoryFilter &&
+        metadata?.category.trim().toLowerCase() !== normalizedCategoryFilter
+      ) {
+        return false;
+      }
+
+      if (
+        normalizedSubcategoryFilter &&
+        metadata?.subcategory.trim().toLowerCase() !== normalizedSubcategoryFilter
+      ) {
         return false;
       }
 
@@ -1175,6 +1195,35 @@ function filterSavedDocuments(
       return firstItem.originalIndex - secondItem.originalIndex;
     })
     .map(({ savedDocument }) => savedDocument);
+}
+
+function uniqueSortedValues(values: string[]): string[] {
+  return Array.from(
+    new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))
+  ).sort((firstValue, secondValue) => firstValue.localeCompare(secondValue));
+}
+
+function categoryOptionsFromMetadata(metadataByDocumentId: Record<string, DocumentStudyMetadata>) {
+  return uniqueSortedValues(
+    Object.values(metadataByDocumentId).map((metadata) => metadata.category)
+  );
+}
+
+function subcategoryOptionsFromMetadata(
+  metadataByDocumentId: Record<string, DocumentStudyMetadata>,
+  categoryFilter: string
+) {
+  const normalizedCategoryFilter = categoryFilter.trim().toLowerCase();
+
+  return uniqueSortedValues(
+    Object.values(metadataByDocumentId)
+      .filter(
+        (metadata) =>
+          !normalizedCategoryFilter ||
+          metadata.category.trim().toLowerCase() === normalizedCategoryFilter
+      )
+      .map((metadata) => metadata.subcategory)
+  );
 }
 
 function shouldEnableMockAiFallback() {
@@ -1255,6 +1304,7 @@ export function App({
   const pdfReaderPreferenceTokenRef = useRef(0);
   const meditationLoadTokenRef = useRef(0);
   const documentStudyMetadataLoadTokenRef = useRef(0);
+  const activeStudyPanelRef = useRef<HTMLElement | null>(null);
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>(() =>
     normalizeUiLanguage(i18n.language)
   );
@@ -1294,6 +1344,13 @@ export function App({
   const [documentProgressSummaries, setDocumentProgressSummaries] = useState<
     DocumentProgressSummary[]
   >([]);
+  const [documentStudyMetadataById, setDocumentStudyMetadataById] = useState<
+    Record<string, DocumentStudyMetadata>
+  >({});
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("");
+  const [selectedSubcategoryFilter, setSelectedSubcategoryFilter] = useState("");
+  const [importCategoryDescriptionDraft, setImportCategoryDescriptionDraft] = useState("");
+  const [isBooksPanelOpen, setIsBooksPanelOpen] = useState(false);
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
   const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatusFilter>("all");
   const [librarySearchQuery, setLibrarySearchQuery] = useState("");
@@ -1416,7 +1473,19 @@ export function App({
     reviewStatusFilter,
     librarySearchQuery,
     librarySortMode,
-    documentReviewCounts
+    documentReviewCounts,
+    documentStudyMetadataById,
+    selectedCategoryFilter,
+    selectedSubcategoryFilter
+  );
+  const visibleDocumentIds = new Set(filteredSavedDocuments.map((savedDocument) => savedDocument.document_id));
+  const visibleDocumentProgressSummaries = documentProgressSummaries.filter((summary) =>
+    visibleDocumentIds.has(summary.documentId)
+  );
+  const categoryOptions = categoryOptionsFromMetadata(documentStudyMetadataById);
+  const subcategoryOptions = subcategoryOptionsFromMetadata(
+    documentStudyMetadataById,
+    selectedCategoryFilter
   );
   const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
   const isWorkspaceBusy = isImporting || operationStatus !== null;
@@ -1687,12 +1756,28 @@ export function App({
             }
           })
         );
+        const metadataEntries = await Promise.all(
+          response.documents.map(async (savedDocument) => {
+            try {
+              const metadata = await loadDocumentStudyMetadata(savedDocument.document_id);
+              return [savedDocument.document_id, metadata] as const;
+            } catch {
+              return [savedDocument.document_id, null] as const;
+            }
+          })
+        );
         const summariesByDocument = Object.fromEntries(sessionSummaryEntries);
+        const metadataByDocument = Object.fromEntries(
+          metadataEntries.filter((entry): entry is readonly [string, DocumentStudyMetadata] =>
+            Boolean(entry[1])
+          )
+        );
 
         if (isCurrent) {
           setSavedDocuments(response.documents);
           setDocumentReviewCounts(Object.fromEntries(reviewCountEntries));
           setDocumentSessionSummariesById(summariesByDocument);
+          setDocumentStudyMetadataById(metadataByDocument);
           setDocumentProgressSummaries(
             buildDocumentProgressSummaries(response.documents, summariesByDocument)
           );
@@ -1713,7 +1798,13 @@ export function App({
     return () => {
       isCurrent = false;
     };
-  }, [listImportedDocuments, listStudyReviews, listStudySessionSummaries, t]);
+  }, [
+    listImportedDocuments,
+    listStudyReviews,
+    listStudySessionSummaries,
+    loadDocumentStudyMetadata,
+    t
+  ]);
 
   useEffect(() => {
     const loadToken = documentStudyMetadataLoadTokenRef.current + 1;
@@ -1745,6 +1836,18 @@ export function App({
         setCategoryDraft(metadata?.category ?? "");
         setSubcategoryDraft(metadata?.subcategory ?? "");
         setCategoryDescriptionDraft(metadata?.description ?? "");
+        setDocumentStudyMetadataById((currentMetadataById) => {
+          if (!metadata) {
+            const nextMetadataById = { ...currentMetadataById };
+            delete nextMetadataById[documentId];
+            return nextMetadataById;
+          }
+
+          return {
+            ...currentMetadataById,
+            [documentId]: metadata
+          };
+        });
       } catch {
         if (documentStudyMetadataLoadTokenRef.current === loadToken) {
           setError(t("study.categoryMetadataLoadError"));
@@ -2298,7 +2401,29 @@ export function App({
       if (!isCurrentOperation(operationToken)) {
         return;
       }
+      const importCategory = selectedCategoryFilter.trim();
+      const importSubcategory = selectedSubcategoryFilter.trim() || t("library.defaultSubcategory");
+      const importedMetadata =
+        importCategory.length > 0
+          ? await saveDocumentStudyMetadata(
+              currentImportedDocument.document_id,
+              importCategory,
+              importSubcategory,
+              importCategoryDescriptionDraft.trim() ||
+                t("library.importedCategoryDescription", {
+                  category: importCategory,
+                  subcategory: importSubcategory
+                })
+            )
+          : null;
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
       setDocument(currentImportedDocument);
+      setDocumentStudyMetadata(importedMetadata);
+      setCategoryDraft(importedMetadata?.category ?? "");
+      setSubcategoryDraft(importedMetadata?.subcategory ?? "");
+      setCategoryDescriptionDraft(importedMetadata?.description ?? "");
       invalidateTranslationLoad();
       setReaderTargetLanguage(
         defaultReaderTargetLanguage(inferDocumentLanguage(currentImportedDocument))
@@ -2308,6 +2433,12 @@ export function App({
       setTranslatedReaderPageIndexes([]);
       setDocumentChunks(chunkResponse.chunks);
       setSavedDocuments((currentDocuments) => [...currentDocuments, currentImportedDocument]);
+      if (importedMetadata) {
+        setDocumentStudyMetadataById((currentMetadataById) => ({
+          ...currentMetadataById,
+          [currentImportedDocument.document_id]: importedMetadata
+        }));
+      }
       setDocumentReviewCounts((currentCounts) => ({
         ...currentCounts,
         [currentImportedDocument.document_id]: 0
@@ -2498,6 +2629,16 @@ export function App({
         operationAbortControllerRef.current = null;
       }
     }
+  }
+
+  function handleSelectBookFromPanel(selectedDocument: ImportTextBookResponse) {
+    setIsBooksPanelOpen(false);
+    void handleSelectSavedDocument(selectedDocument);
+    window.setTimeout(() => {
+      if (typeof activeStudyPanelRef.current?.scrollIntoView === "function") {
+        activeStudyPanelRef.current.scrollIntoView({ block: "start" });
+      }
+    }, 0);
   }
 
   async function handleTestOllama(event: FormEvent<HTMLFormElement>) {
@@ -3231,6 +3372,10 @@ export function App({
       setCategoryDraft(metadata.category);
       setSubcategoryDraft(metadata.subcategory);
       setCategoryDescriptionDraft(metadata.description);
+      setDocumentStudyMetadataById((currentMetadataById) => ({
+        ...currentMetadataById,
+        [metadata.document_id]: metadata
+      }));
       setDocumentStudyMetadataStatus(t("study.categoryMetadataSaved"));
     } catch (unknownError) {
       setError(getErrorMessage(unknownError, t("study.categoryMetadataSaveError")));
@@ -3543,9 +3688,108 @@ export function App({
                 <option value="es">{t("settings.uiLanguageSpanish")}</option>
               </select>
             </label>
-            <span className="status-pill">{t("library.status")}</span>
+            <label className="library-category-control" htmlFor="library-category-filter">
+              <span>{t("library.categoryFilterLabel")}</span>
+              <input
+                id="library-category-filter"
+                list="library-category-options"
+                value={selectedCategoryFilter}
+                placeholder={t("library.categoryFilterPlaceholder")}
+                onChange={(event) => {
+                  setSelectedCategoryFilter(event.target.value);
+                  setSelectedSubcategoryFilter("");
+                }}
+              />
+              <datalist id="library-category-options">
+                {categoryOptions.map((category) => (
+                  <option key={category} value={category} />
+                ))}
+              </datalist>
+            </label>
+            <label className="library-category-control" htmlFor="library-subcategory-filter">
+              <span>{t("library.subcategoryFilterLabel")}</span>
+              <input
+                id="library-subcategory-filter"
+                list="library-subcategory-options"
+                value={selectedSubcategoryFilter}
+                placeholder={t("library.subcategoryFilterPlaceholder")}
+                onChange={(event) => setSelectedSubcategoryFilter(event.target.value)}
+              />
+              <datalist id="library-subcategory-options">
+                {subcategoryOptions.map((subcategory) => (
+                  <option key={subcategory} value={subcategory} />
+                ))}
+              </datalist>
+            </label>
+            <label className="library-category-control" htmlFor="library-import-description">
+              <span>{t("library.categoryImportDescriptionLabel")}</span>
+              <input
+                id="library-import-description"
+                value={importCategoryDescriptionDraft}
+                placeholder={t("library.categoryImportDescriptionPlaceholder")}
+                onChange={(event) => setImportCategoryDescriptionDraft(event.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="my-books-button"
+              onClick={() => setIsBooksPanelOpen(true)}
+            >
+              {t("library.myBooks")}
+            </button>
           </div>
         </header>
+
+        {isBooksPanelOpen ? (
+          <div className="my-books-overlay" role="presentation">
+            <section
+              className="my-books-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="my-books-title"
+            >
+              <div className="my-books-panel-header">
+                <div>
+                  <h2 id="my-books-title">{t("library.myBooksTitle")}</h2>
+                  <span>{t("library.myBooksCount", { count: filteredSavedDocuments.length })}</span>
+                </div>
+                <button
+                  type="button"
+                  aria-label={t("library.closeMyBooks")}
+                  onClick={() => setIsBooksPanelOpen(false)}
+                >
+                  x
+                </button>
+              </div>
+              {filteredSavedDocuments.length > 0 ? (
+                <ul className="my-books-list">
+                  {filteredSavedDocuments.map((savedDocument) => {
+                    const metadata = documentStudyMetadataById[savedDocument.document_id] ?? null;
+
+                    return (
+                      <li key={savedDocument.document_id}>
+                        <button
+                          type="button"
+                          disabled={isWorkspaceBusy}
+                          onClick={() => handleSelectBookFromPanel(savedDocument)}
+                        >
+                          <strong>{getDocumentTitle(savedDocument)}</strong>
+                          {metadata ? (
+                            <span>
+                              {metadata.category} / {metadata.subcategory}
+                            </span>
+                          ) : null}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p>{t("library.noBooksInCategory")}</p>
+              )}
+            </section>
+          </div>
+        ) : null}
 
         <div className="workspace-grid">
           <section className="workspace-panel import-settings-panel" aria-labelledby="import-settings-title">
@@ -3635,11 +3879,11 @@ export function App({
 
           <section className="workspace-panel library-panel" aria-labelledby="library-panel-title">
             <h2 id="library-panel-title">{t("layout.library")}</h2>
-            {documentProgressSummaries.length > 0 ? (
+            {visibleDocumentProgressSummaries.length > 0 ? (
               <section className="progress-comparison" aria-labelledby="progress-comparison-title">
                 <h2 id="progress-comparison-title">{t("progress.title")}</h2>
                 <ul>
-                  {documentProgressSummaries.map((summary) => (
+                  {visibleDocumentProgressSummaries.map((summary) => (
                     <li key={summary.documentId}>
                       <div>
                         <span>{summary.isTopReviewed ? t("progress.topReviewed") : t("progress.document")}</span>
@@ -3673,7 +3917,10 @@ export function App({
                 sourceType: sourceTypeFilter,
                 reviewStatus: reviewStatusFilter,
                 searchQuery: librarySearchQuery,
-                sortMode: librarySortMode
+                sortMode: librarySortMode,
+                hasExternalFilter:
+                  selectedCategoryFilter.trim().length > 0 ||
+                  selectedSubcategoryFilter.trim().length > 0
               }}
               labels={{
                 title: t("library.savedDocuments"),
@@ -3732,7 +3979,11 @@ export function App({
             />
           </section>
 
-          <section className="workspace-panel study-panel" aria-labelledby="active-study-title">
+          <section
+            ref={activeStudyPanelRef}
+            className="workspace-panel study-panel"
+            aria-labelledby="active-study-title"
+          >
             <h2 id="active-study-title">{t("layout.activeStudy")}</h2>
             {document ? (
               <>

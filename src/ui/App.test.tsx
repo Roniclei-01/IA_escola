@@ -240,25 +240,27 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("heading", { name: "Classificacao de estudo" })).toBeInTheDocument();
+    const classificationPanel = screen.getByRole("region", { name: "Classificacao de estudo" });
+    const classificationQueries = within(classificationPanel);
     await waitFor(() => {
       expect(loadDocumentStudyMetadata).toHaveBeenCalledWith("document-category");
     });
-    expect(screen.getByLabelText("Categoria")).toHaveValue("Programacao");
-    expect(screen.getByLabelText("Subcategoria")).toHaveValue("Python");
-    expect(screen.getByLabelText("Descricao da classificacao")).toHaveValue(
+    expect(classificationQueries.getByLabelText("Categoria")).toHaveValue("Programacao");
+    expect(classificationQueries.getByLabelText("Subcategoria")).toHaveValue("Python");
+    expect(classificationQueries.getByLabelText("Descricao da classificacao")).toHaveValue(
       "Material para fundamentos de Python."
     );
 
-    fireEvent.change(screen.getByLabelText("Categoria"), {
+    fireEvent.change(classificationQueries.getByLabelText("Categoria"), {
       target: { value: "Redes" }
     });
-    fireEvent.change(screen.getByLabelText("Subcategoria"), {
+    fireEvent.change(classificationQueries.getByLabelText("Subcategoria"), {
       target: { value: "TCP/IP" }
     });
-    fireEvent.change(screen.getByLabelText("Descricao da classificacao"), {
+    fireEvent.change(classificationQueries.getByLabelText("Descricao da classificacao"), {
       target: { value: "Base para revisar redes de computadores." }
     });
-    fireEvent.click(screen.getByRole("button", { name: "Salvar classificacao" }));
+    fireEvent.click(classificationQueries.getByRole("button", { name: "Salvar classificacao" }));
 
     await waitFor(() => {
       expect(saveDocumentStudyMetadata).toHaveBeenCalledWith(
@@ -269,6 +271,127 @@ describe("App", () => {
       );
     });
     expect(await screen.findByText("Classificacao salva.")).toBeInTheDocument();
+  });
+
+  it("saves the selected category metadata when importing a document", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-import-category",
+      book_id: "book-import-category",
+      content: "Livro importado com categoria.",
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/categoria.txt"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const saveDocumentStudyMetadata = vi
+      .fn()
+      .mockImplementation(
+        async (documentId: string, category: string, subcategory: string, description: string) => ({
+          document_id: documentId,
+          category,
+          subcategory,
+          description
+        })
+      );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      saveDocumentStudyMetadata
+    });
+
+    fireEvent.change(screen.getByLabelText("Categoria da biblioteca"), {
+      target: { value: "Programacao" }
+    });
+    fireEvent.change(screen.getByLabelText("Subcategoria da biblioteca"), {
+      target: { value: "Python" }
+    });
+    fireEvent.change(screen.getByLabelText("Descricao para novos livros"), {
+      target: { value: "Trilha inicial de Python." }
+    });
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/categoria.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    await waitFor(() => {
+      expect(saveDocumentStudyMetadata).toHaveBeenCalledWith(
+        "document-import-category",
+        "Programacao",
+        "Python",
+        "Trilha inicial de Python."
+      );
+    });
+  });
+
+  it("filters saved books by category and opens them from Meus Livros", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-python",
+          book_id: "book-python",
+          content: "Python Crash Course",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/python.pdf"
+        },
+        {
+          document_id: "document-network",
+          book_id: "book-network",
+          content: "Computer Networking",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/network.pdf"
+        }
+      ]
+    });
+    const loadDocumentStudyMetadata = vi.fn().mockImplementation(async (documentId: string) => {
+      if (documentId === "document-python") {
+        return {
+          document_id: documentId,
+          category: "Programacao",
+          subcategory: "Python",
+          description: "Programacao com Python."
+        };
+      }
+
+      return {
+        document_id: documentId,
+        category: "Redes",
+        subcategory: "TCP/IP",
+        description: "Fundamentos de redes."
+      };
+    });
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+
+    renderApp({
+      listImportedDocuments,
+      loadDocumentStudyMetadata,
+      listStudyCards: listNoStudyCards,
+      listDocumentChunks
+    });
+
+    expect(await screen.findByText("Python Crash Course")).toBeInTheDocument();
+    expect(await screen.findByText("Computer Networking")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Categoria da biblioteca"), {
+      target: { value: "Redes" }
+    });
+
+    expect(screen.queryByText("Python Crash Course")).not.toBeInTheDocument();
+    expect(screen.getByText("Computer Networking")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Meus Livros" }));
+    const booksDialog = await screen.findByRole("dialog", { name: "Meus Livros" });
+    const booksQueries = within(booksDialog);
+
+    expect(booksQueries.queryByText("Python Crash Course")).not.toBeInTheDocument();
+    fireEvent.click(booksQueries.getByRole("button", { name: /Computer Networking/ }));
+
+    expect(await screen.findByRole("heading", { name: "Previa do conteudo" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(listDocumentChunks).toHaveBeenCalledWith("document-network");
+    });
   });
 
   it("shows comparative progress for saved documents", async () => {

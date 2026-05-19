@@ -9,6 +9,7 @@ interface SavedDocumentsListProps {
     reviewStatus: "all" | "reviewed" | "pending";
     searchQuery: string;
     sortMode: "oldest" | "newest" | "type" | "status";
+    hasExternalFilter?: boolean;
   };
   labels: {
     title: string;
@@ -57,6 +58,7 @@ export function SavedDocumentsList({
   const hasActiveFilters =
     filters.sourceType !== "all" ||
     filters.reviewStatus !== "all" ||
+    Boolean(filters.hasExternalFilter) ||
     filters.searchQuery.trim().length > 0;
 
   return (

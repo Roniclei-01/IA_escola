@@ -274,6 +274,11 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.searchLabel")).toBe(
       "Buscar na biblioteca"
     );
+    expect(i18n.getResource("pt", "translation", "library.categoryFilterLabel")).toBe(
+      "Categoria da biblioteca"
+    );
+    expect(i18n.getResource("pt", "translation", "library.myBooks")).toBe("Meus Livros");
+    expect(i18n.getResource("en", "translation", "library.myBooks")).toBe("My Books");
     expect(i18n.getResource("pt", "translation", "library.searchAction")).toBe("Pesquisar");
     expect(i18n.getResource("pt", "translation", "library.sortLabel")).toBe(
       "Ordenar biblioteca"

@@ -112,6 +112,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - agendamento nativo de lembretes diarios ou semanais com horario configuravel;
 - cancelamento explicito do lembrete agendado ao desativar notificacoes de meta;
 - filtros da biblioteca por tipo de arquivo e status de revisao;
+- filtro global da biblioteca por categoria e subcategoria, reaproveitado para classificar novos livros antes da importacao;
+- lista `Meus Livros` em modal, respeitando os filtros ativos e abrindo o documento selecionado;
 - busca textual na biblioteca por conteudo e caminho de origem;
 - ordenacao da biblioteca por data, tipo e status;
 - sessoes de estudo vinculando novas revisoes a uma rodada ativa;
@@ -121,7 +123,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - previa e exportacao imprimivel em PDF do relatorio de estudo com paginacao, layout de impressao, grafico de desempenho e tendencia por sessao;
 - exportacao local de cards para Anki em `.apkg` pela interface, mantendo TSV com diretivas de importacao, GUID estavel e tags de origem como alternativa;
 - gerador local inicial de pacote Anki `.apkg` no backend, com `collection.anki2`, `media`, ponte TypeScript e testes de estrutura;
-- campo `Meditacao` por documento, com carregamento e salvamento local do resumo pessoal do leitor;
+- campo `Anotacao` por documento em modal, com multiplas entradas, edicao, exclusao e persistencia local;
+- categorias e subcategorias de estudo por documento, com descricao da classificacao;
 - arquivamento de documentos da biblioteca ativa sem exclusao fisica imediata;
 - listagem de documentos arquivados com restauracao para a biblioteca ativa;
 - exclusao definitiva de documentos arquivados com confirmacao e limpeza dos dados de estudo relacionados;
@@ -154,14 +157,16 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 
 1. Instale um modelo leve no Ollama, como `llama3.2:1b`.
 2. Abra o app desktop e clique em `Testar` na secao Ollama.
-3. Importe um arquivo `.txt` ou `.pdf`.
-4. Aguarde a importacao e a divisao em chunks.
-5. Revise a previa do conteudo importado.
-6. Clique em `Gerar cards` quando quiser iniciar a IA.
-7. Se o documento tiver muitos chunks, a acao de geracao processa apenas o lote inicial para evitar travamentos.
-8. Use `Gerar mais cards` para processar os proximos chunks sob demanda.
-9. No painel `Leitura do documento`, use `Proxima pagina` e `Pagina anterior` para ler o arquivo completo, escolha o idioma de leitura e clique em `Gerar leitura traduzida` quando desejar traduzir. Ao reabrir o documento, a traducao salva e reaproveitada.
-10. Revise os cards gerados e acompanhe historico, fila de revisao e metas.
+3. Escolha uma categoria e subcategoria no topo da tela, se quiser classificar o novo livro.
+4. Importe um arquivo `.txt` ou `.pdf`.
+5. Aguarde a importacao e a divisao em chunks.
+6. Revise a previa do conteudo importado.
+7. Clique em `Gerar cards` quando quiser iniciar a IA.
+8. Se o documento tiver muitos chunks, a acao de geracao processa apenas o lote inicial para evitar travamentos.
+9. Use `Gerar mais cards` para processar os proximos chunks sob demanda.
+10. No painel `Leitura do documento`, use `Proxima pagina` e `Pagina anterior` para ler o arquivo completo, escolha o idioma de leitura e clique em `Gerar leitura traduzida` quando desejar traduzir. Ao reabrir o documento, a traducao salva e reaproveitada.
+11. Use `Meus Livros` para abrir rapidamente os documentos da categoria e subcategoria selecionadas.
+12. Revise os cards gerados e acompanhe historico, fila de revisao e metas.
 
 Durante operacoes longas, botoes de geracao e acoes da biblioteca ficam bloqueados para evitar cliques duplicados ou troca de documento no meio do processamento.
 
@@ -171,8 +176,8 @@ Durante operacoes longas, botoes de geracao e acoes da biblioteca ficam bloquead
 - Avaliacao de AZW3 sem DRM em fase posterior, preferencialmente por conversao local para EPUB quando houver ferramenta compativel instalada, como Calibre.
 - KPF deve permanecer fora do escopo imediato; se entrar no produto, sera tratado como importacao experimental ou fluxo de conversao para formato aberto.
 - Melhorias para PDFs digitalizados.
-- Campo `Meditacao` por documento, onde o leitor registra um breve resumo pessoal sobre o que entendeu.
-- Cadastro de categorias de estudo e subcategorias, com descricao do documento dentro dessa classificacao.
+- Busca e exportacao das anotacoes do leitor.
+- Manutencao dedicada de categorias e subcategorias, com modelo padrao por categoria.
 - Exercicios de multipla escolha e perguntas abertas.
 - Resumo por capitulo.
 - Revisao espacada.
@@ -230,8 +235,8 @@ docs/
 
 ## Proximos passos
 
-1. Validar manualmente o campo `Meditacao` por documento.
-2. Implementar categorias e subcategorias de estudo por documento.
+1. Validar manualmente filtro por categoria/subcategoria e modal `Meus Livros`.
+2. Rodar aceite final do MVP apos os ajustes de biblioteca.
 3. Planejar importacao EPUB sem DRM para a versao futura, mantendo AZW3/KPF como conversao ou suporte experimental posterior.
 
 ## Comandos de desenvolvimento

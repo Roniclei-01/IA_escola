@@ -88,9 +88,9 @@ Resultado esperado:
 
 - [x] O app abre fora do `tauri dev`.
 - [x] O smoke test finaliza com `[ok]`.
-- [ ] A biblioteca carrega sem erro.
-- [ ] A secao Ollama testa o modelo `llama3.2:1b`.
-- [ ] A secao OCR mostra `pdftoppm` e `tesseract` quando instalados.
+- [x] A biblioteca carrega sem erro.
+- [x] A secao Ollama testa o modelo `llama3.2:1b`.
+- [x] A secao OCR mostra `pdftoppm` e `tesseract` quando instalados.
 
 Validado em 2026-05-18 com `npm run check:mvp:appimage`. No ambiente atual, o AppImage direto falhou por FUSE e o smoke test abriu corretamente com `APPIMAGE_EXTRACT_AND_RUN=1`.
 
@@ -138,8 +138,8 @@ Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 - [x] Revelar resposta.
 - [x] Marcar `Acertei`.
 - [x] Confirmar resumo com `Acertos: 1`.
-- [ ] Fechar e abrir o app.
-- [ ] Confirmar documento e cards persistidos.
+- [x] Fechar e abrir o app.
+- [x] Confirmar documento e cards persistidos.
 
 ## 4. Fluxo com PDF
 
@@ -147,60 +147,60 @@ Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 - [x] Confirmar origem `PDF`.
 - [x] Confirmar que a importacao termina sem gerar cards automaticamente.
 - [x] Clicar em `Gerar cards` para iniciar a IA sob demanda.
-- [ ] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-large.txt` para validar geracao incremental com arquivo maior.
-- [ ] Confirmar limite de geracao sob demanda em documento grande.
-- [ ] Usar `Gerar mais cards`.
-- [ ] Confirmar que novos cards sao adicionados sem remover os anteriores.
+- [x] Importar `/tmp/estudo-ia-local-mvp-samples/mvp-large.txt` para validar geracao incremental com arquivo maior.
+- [x] Confirmar limite de geracao sob demanda em documento grande.
+- [x] Usar `Gerar mais cards`.
+- [x] Confirmar que novos cards sao adicionados sem remover os anteriores.
 
 ## 5. OCR
 
-- [ ] Importar PDF digitalizado com OCR ativo em Portugues.
-- [ ] Importar PDF digitalizado com OCR ativo em Ingles, se houver arquivo adequado.
-- [ ] Confirmar mensagem de instalacao quando faltar dependencia OCR.
+- [x] Importar PDF digitalizado com OCR ativo em Portugues.
+- [x] Importar PDF digitalizado com OCR ativo em Ingles, se houver arquivo adequado.
+- [x] Confirmar mensagem de instalacao quando faltar dependencia OCR.
 
 ## 6. Falhas controladas
 
-- [ ] Caminho inexistente mostra erro claro.
-- [ ] Ollama parado mostra erro claro.
-- [ ] Modelo inexistente mostra erro claro.
-- [ ] Cancelamento de operacao longa nao perde dados ja salvos.
+- [x] Caminho inexistente mostra erro claro.
+- [x] Ollama parado mostra erro claro.
+- [x] Modelo inexistente mostra erro claro.
+- [x] Cancelamento de operacao longa nao perde dados ja salvos.
 
 ## 7. Exportacoes
 
-- [ ] Exportar relatorio Markdown.
-- [ ] Abrir previa PDF.
-- [ ] Exportar PDF imprimivel.
-- [ ] Exportar deck Anki TSV.
-- [ ] Confirmar que os arquivos exportados pertencem ao documento ativo.
+- [x] Exportar relatorio Markdown.
+- [x] Abrir previa PDF.
+- [x] Exportar PDF imprimivel.
+- [x] Exportar deck Anki TSV.
+- [x] Confirmar que os arquivos exportados pertencem ao documento ativo.
 
 ## 8. Biblioteca
 
-- [ ] Digitar no campo `Buscar na biblioteca`.
-- [ ] Pressionar Enter e confirmar filtragem.
-- [ ] Clicar em `Pesquisar` e confirmar filtragem.
-- [ ] Confirmar busca por conteudo.
-- [ ] Confirmar busca por caminho de origem.
+- [x] Digitar no campo `Buscar na biblioteca`.
+- [x] Pressionar Enter e confirmar filtragem.
+- [x] Clicar em `Pesquisar` e confirmar filtragem.
+- [x] Confirmar busca por conteudo.
+- [x] Confirmar busca por caminho de origem.
 
 ## 9. Idioma da interface
 
-- [ ] Trocar o idioma da interface para `Ingles`.
-- [ ] Confirmar que os rotulos principais mudam sem reiniciar o app.
-- [ ] Fechar e abrir o app.
-- [ ] Confirmar que o idioma escolhido continua aplicado.
-- [ ] Trocar o idioma da interface de volta para `Portugues`.
+- [x] Trocar o idioma da interface para `Ingles`.
+- [x] Confirmar que os rotulos principais mudam sem reiniciar o app.
+- [x] Fechar e abrir o app.
+- [x] Confirmar que o idioma escolhido continua aplicado.
+- [x] Trocar o idioma da interface de volta para `Portugues`.
 
 ## 10. Leitura traduzida
 
-- [ ] Abrir um documento importado.
-- [ ] Confirmar que `Idioma original` e `Idioma escolhido` aparecem lado a lado.
-- [ ] Usar `Proxima pagina` e `Pagina anterior` para confirmar acesso ao arquivo completo.
-- [ ] Selecionar um idioma diferente do original.
-- [ ] Clicar em `Gerar leitura traduzida`.
-- [ ] Confirmar que a traducao aparece no painel `Idioma escolhido`.
-- [ ] Confirmar que documentos longos sao traduzidos em lotes sem travar a janela.
-- [ ] Fechar e abrir o app ou selecionar o documento novamente.
-- [ ] Confirmar que a traducao salva reaparece sem precisar gerar novamente.
-- [ ] Confirmar que a importacao nao gera traducao automaticamente.
+- [x] Abrir um documento importado.
+- [x] Confirmar que `Idioma original` e `Idioma escolhido` aparecem lado a lado.
+- [x] Usar `Proxima pagina` e `Pagina anterior` para confirmar acesso ao arquivo completo.
+- [x] Selecionar um idioma diferente do original.
+- [x] Clicar em `Gerar leitura traduzida`.
+- [x] Confirmar que a traducao aparece no painel `Idioma escolhido`.
+- [x] Confirmar que documentos longos sao traduzidos em lotes sem travar a janela.
+- [x] Fechar e abrir o app ou selecionar o documento novamente.
+- [x] Confirmar que a traducao salva reaparece sem precisar gerar novamente.
+- [x] Confirmar que a importacao nao gera traducao automaticamente.
 
 ## 11. Funcionalidades futuras registradas
 
@@ -214,7 +214,7 @@ Esses itens estao documentados para as proximas fatias e nao bloqueiam o aceite 
 
 Status:
 
-- [ ] Aprovado.
+- [x] Aprovado.
 - [ ] Aprovado com ressalvas.
 - [ ] Reprovado.
 
@@ -222,5 +222,7 @@ Observacoes:
 
 ```text
 Fechamento tecnico automatizado em 2026-05-19 concluido com sucesso.
-Pendente confirmacao manual dos fluxos listados acima antes de marcar o MVP como aprovado para uso real.
+Aceite manual final executado em 2026-05-19 com TXT, PDF, geracao incremental,
+OCR, falhas controladas, exportacoes, biblioteca, idioma, leitura traduzida e
+persistencia apos reabertura aprovados.
 ```

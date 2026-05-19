@@ -140,7 +140,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - leitura paginada lado a lado do documento original e da versao em idioma escolhido;
 - traducao sob demanda do conteudo ativo via Ollama em lotes menores, sem gerar automaticamente durante a importacao;
 - persistencia das traducoes geradas por documento para reutilizacao offline ao reabrir o material;
-- tela principal organizada em areas de `Importacao e IA`, `Biblioteca` e `Estudo ativo`;
+- tela principal dedicada a `Importacao e IA` e `Biblioteca`, com `Estudo ativo` aberto em pagina secundaria;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
 ## Funcionalidades por fase
@@ -161,8 +161,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 2. Abra o app desktop e clique em `Testar` na secao Ollama.
 3. Navegue pela biblioteca escolhendo uma categoria academica e, se necessario, uma subcategoria.
 4. Clique em `Importar livro`, escolha categoria/subcategoria e importe um arquivo `.txt` ou `.pdf`.
-5. Aguarde a importacao e a divisao em chunks.
-6. Revise a previa do conteudo importado.
+5. Aguarde a importacao e a divisao em chunks; o app abre a pagina secundaria de estudo do documento.
+6. Revise a previa do conteudo importado e use `Voltar para biblioteca` quando quiser retornar a navegacao principal.
 7. Clique em `Gerar cards` quando quiser iniciar a IA.
 8. Se o documento tiver muitos chunks, a acao de geracao processa apenas o lote inicial para evitar travamentos.
 9. Use `Gerar mais cards` para processar os proximos chunks sob demanda.

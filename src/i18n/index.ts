@@ -44,7 +44,9 @@ export const resources = {
         categoryBookCount_one: "{{count}} livro",
         categoryBookCount_other: "{{count}} livros",
         backToCategories: "Voltar para categorias",
+        backToLibrary: "Voltar para biblioteca",
         breadcrumbLabel: "Caminho da biblioteca",
+        studyPageNavigation: "Navegacao do estudo",
         openImportDialog: "Importar livro",
         importDialogTitle: "Importar livro",
         importDialogDescription:
@@ -384,7 +386,9 @@ export const resources = {
         categoryBookCount_one: "{{count}} book",
         categoryBookCount_other: "{{count}} books",
         backToCategories: "Back to categories",
+        backToLibrary: "Back to library",
         breadcrumbLabel: "Library path",
+        studyPageNavigation: "Study navigation",
         openImportDialog: "Import book",
         importDialogTitle: "Import book",
         importDialogDescription:
@@ -724,7 +728,9 @@ export const resources = {
         categoryBookCount_one: "{{count}} libro",
         categoryBookCount_other: "{{count}} libros",
         backToCategories: "Volver a categorias",
+        backToLibrary: "Volver a la biblioteca",
         breadcrumbLabel: "Ruta de la biblioteca",
+        studyPageNavigation: "Navegacion del estudio",
         openImportDialog: "Importar libro",
         importDialogTitle: "Importar libro",
         importDialogDescription:

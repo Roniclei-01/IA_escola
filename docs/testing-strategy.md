@@ -177,11 +177,13 @@ Execute este roteiro no app desktop com `npm run tauri dev` e registre o resulta
 2. Selecionar categoria e subcategoria e confirmar que apenas livros do contexto aparecem.
 3. Confirmar que o caminho curto mostra biblioteca, categoria, subcategoria e documento ativo.
 4. Abrir `Importar livro`, escolher categoria/subcategoria e confirmar que o documento importado fica no contexto escolhido.
-5. Abrir `Meus Livros` e confirmar que a lista sobreposta respeita categoria, subcategoria e filtros ativos.
-6. Digitar no campo `Buscar na biblioteca`.
-7. Pressionar Enter e confirmar que os documentos sao filtrados.
-8. Clicar no botao `Pesquisar` e confirmar o mesmo comportamento.
-9. Confirmar que a busca considera conteudo e caminho de origem.
+5. Confirmar que o estudo ativo abre em pagina secundaria apos importar ou selecionar um livro, sem ficar na tela inicial.
+6. Clicar em `Voltar para biblioteca` e confirmar retorno para categorias/importacao.
+7. Abrir `Meus Livros` e confirmar que a lista sobreposta respeita categoria, subcategoria e filtros ativos.
+8. Digitar no campo `Buscar na biblioteca`.
+9. Pressionar Enter e confirmar que os documentos sao filtrados.
+10. Clicar no botao `Pesquisar` e confirmar o mesmo comportamento.
+11. Confirmar que a busca considera conteudo e caminho de origem.
 
 ### Leitura traduzida
 

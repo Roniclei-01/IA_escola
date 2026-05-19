@@ -175,9 +175,40 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Estudo IA Local" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Importacao e IA" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Biblioteca" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Estudo ativo" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Estudo ativo" })).not.toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Categorias academicas" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Geral/ })).toBeInTheDocument();
+  });
+
+  it("opens the active study in a secondary page and returns to the library", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-secondary-page",
+      book_id: "book-secondary-page",
+      content: "Conteudo para tela secundaria.",
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/secundario.txt"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+
+    renderApp({ importTextBook, chunkTextDocument });
+
+    expect(screen.getByRole("heading", { name: "Importacao e IA" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Estudo ativo" })).not.toBeInTheDocument();
+
+    fillImportFilePath("/tmp/secundario.txt");
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "Estudo ativo" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Previa do conteudo" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Importacao e IA" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Biblioteca" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Voltar para biblioteca" }));
+
+    expect(await screen.findByRole("heading", { name: "Importacao e IA" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Biblioteca" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Estudo ativo" })).not.toBeInTheDocument();
   });
 
   it("changes the interface language and persists the selected option", async () => {

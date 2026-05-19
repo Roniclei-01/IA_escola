@@ -182,6 +182,8 @@ Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 - [ ] Confirmar o caminho curto da biblioteca com categoria, subcategoria e documento ativo.
 - [ ] Abrir `Importar livro` e confirmar que categoria/subcategoria sao escolhidas antes da importacao.
 - [ ] Confirmar que o livro importado entra automaticamente na categoria/subcategoria escolhida.
+- [ ] Confirmar que o estudo ativo abre em pagina secundaria apos importar ou selecionar um livro.
+- [ ] Confirmar que `Voltar para biblioteca` retorna para a tela principal sem manter `Estudo ativo` na mesma aba.
 - [ ] Abrir `Meus Livros` e confirmar que a lista sobreposta respeita a categoria/subcategoria ativa.
 - [x] Digitar no campo `Buscar na biblioteca`.
 - [x] Pressionar Enter e confirmar filtragem.

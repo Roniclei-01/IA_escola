@@ -246,6 +246,7 @@ type LibrarySortMode = "oldest" | "newest" | "type" | "status";
 type MetricPeriodFilter = "all" | "last7" | "last30";
 type StudyGoalRecurrence = StudyGoal["recurrence"];
 type DocumentLanguage = ImportTextBookResponse["language"];
+type AppView = "library" | "study";
 const INITIAL_CARD_GENERATION_CHUNK_LIMIT = 3;
 const STUDY_GOAL_REMINDER_NOTIFICATION_ID = 1001;
 const DEFAULT_STUDY_CATEGORY = "Geral";
@@ -1503,6 +1504,7 @@ export function App({
     normalizeUiLanguage(i18n.language)
   );
   const [filePath, setFilePath] = useState("");
+  const [currentView, setCurrentView] = useState<AppView>("library");
   const [isOcrEnabled, setIsOcrEnabled] = useState(false);
   const [ocrLanguage, setOcrLanguage] = useState<"por" | "eng" | "spa">("por");
   const [isImporting, setIsImporting] = useState(false);
@@ -1702,6 +1704,7 @@ export function App({
   ].filter((item) => item.length > 0);
   const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
   const isWorkspaceBusy = isImporting || operationStatus !== null;
+  const isLibraryView = currentView === "library";
   const isTranslatingDocument = operationStatus === "translatingDocument";
   const isCardGenerationBusy =
     operationStatus === "chunkingDocument" ||
@@ -2651,6 +2654,7 @@ export function App({
       setSelectedCategoryFilter(currentImportCategory);
       setSelectedSubcategoryFilter(currentImportSubcategory);
       setIsImportDialogOpen(false);
+      setCurrentView("study");
       setDocumentReviewCounts((currentCounts) => ({
         ...currentCounts,
         [currentImportedDocument.document_id]: 0
@@ -2709,6 +2713,7 @@ export function App({
   async function handleSelectSavedDocument(selectedDocument: ImportTextBookResponse) {
     const targetLanguage = defaultReaderTargetLanguage(inferDocumentLanguage(selectedDocument));
 
+    setCurrentView("study");
     setDocument(selectedDocument);
     setReaderTargetLanguage(targetLanguage);
     setTranslatedDocumentPages({});
@@ -3899,6 +3904,34 @@ export function App({
     </div>
   ) : null;
 
+  const workspaceFeedback =
+    error || warning || operationStatus ? (
+      <div className="workspace-feedback" aria-live="polite">
+        {error ? (
+          <p className="message error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        {warning ? (
+          <p className="message warning" role="alert">
+            {warning}
+          </p>
+        ) : null}
+
+        {operationStatus ? (
+          <div className="operation-status">
+            <p className="message info" role="status">
+              {activeOperationMessage}
+            </p>
+            <button type="button" onClick={handleCancelOperation}>
+              {t("library.cancelOperation")}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    ) : null;
+
   return (
     <main className="app-shell">
       <section className="workspace" aria-labelledby="app-title">
@@ -3922,54 +3955,58 @@ export function App({
                 <option value="es">{t("settings.uiLanguageSpanish")}</option>
               </select>
             </label>
-            <label className="library-category-control" htmlFor="library-category-filter">
-              <span>{t("library.categoryFilterLabel")}</span>
-              <select
-                id="library-category-filter"
-                value={selectedCategoryFilter}
-                onChange={(event) => {
-                  handleLibraryCategoryChange(event.target.value);
-                }}
-              >
-                <option value="">{t("library.allCategories")}</option>
-                {categoryOptions.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="library-category-control" htmlFor="library-subcategory-filter">
-              <span>{t("library.subcategoryFilterLabel")}</span>
-              <select
-                id="library-subcategory-filter"
-                value={selectedSubcategoryFilter}
-                disabled={!selectedCategoryFilter}
-                onChange={(event) => setSelectedSubcategoryFilter(event.target.value)}
-              >
-                <option value="">{t("library.allSubcategories")}</option>
-                {subcategoryOptions.map((subcategory) => (
-                  <option key={subcategory} value={subcategory}>
-                    {subcategory}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              className="primary-header-button"
-              disabled={isWorkspaceBusy}
-              onClick={openImportDialog}
-            >
-              {t("library.openImportDialog")}
-            </button>
-            <button
-              type="button"
-              className="my-books-button"
-              onClick={() => setIsBooksPanelOpen(true)}
-            >
-              {t("library.myBooks")}
-            </button>
+            {isLibraryView ? (
+              <>
+                <label className="library-category-control" htmlFor="library-category-filter">
+                  <span>{t("library.categoryFilterLabel")}</span>
+                  <select
+                    id="library-category-filter"
+                    value={selectedCategoryFilter}
+                    onChange={(event) => {
+                      handleLibraryCategoryChange(event.target.value);
+                    }}
+                  >
+                    <option value="">{t("library.allCategories")}</option>
+                    {categoryOptions.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="library-category-control" htmlFor="library-subcategory-filter">
+                  <span>{t("library.subcategoryFilterLabel")}</span>
+                  <select
+                    id="library-subcategory-filter"
+                    value={selectedSubcategoryFilter}
+                    disabled={!selectedCategoryFilter}
+                    onChange={(event) => setSelectedSubcategoryFilter(event.target.value)}
+                  >
+                    <option value="">{t("library.allSubcategories")}</option>
+                    {subcategoryOptions.map((subcategory) => (
+                      <option key={subcategory} value={subcategory}>
+                        {subcategory}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="primary-header-button"
+                  disabled={isWorkspaceBusy}
+                  onClick={openImportDialog}
+                >
+                  {t("library.openImportDialog")}
+                </button>
+                <button
+                  type="button"
+                  className="my-books-button"
+                  onClick={() => setIsBooksPanelOpen(true)}
+                >
+                  {t("library.myBooks")}
+                </button>
+              </>
+            ) : null}
           </div>
         </header>
 
@@ -4127,7 +4164,11 @@ export function App({
           </div>
         ) : null}
 
-        <div className="workspace-grid">
+        {workspaceFeedback}
+
+        <div className={isLibraryView ? "workspace-grid" : "study-page"}>
+          {isLibraryView ? (
+            <>
           <section className="workspace-panel import-settings-panel" aria-labelledby="import-settings-title">
             <h2 id="import-settings-title">{t("layout.importAndAi")}</h2>
             <button
@@ -4138,29 +4179,6 @@ export function App({
             >
               {t("library.openImportDialog")}
             </button>
-
-            {error ? (
-              <p className="message error" role="alert">
-                {error}
-              </p>
-            ) : null}
-
-            {warning ? (
-              <p className="message warning" role="alert">
-                {warning}
-              </p>
-            ) : null}
-
-            {operationStatus ? (
-              <div className="operation-status">
-                <p className="message info" role="status">
-                  {activeOperationMessage}
-                </p>
-                <button type="button" onClick={handleCancelOperation}>
-                  {t("library.cancelOperation")}
-                </button>
-              </div>
-            ) : null}
 
             <OllamaSettingsPanel
               baseUrl={ollamaBaseUrl}
@@ -4389,6 +4407,23 @@ export function App({
             />
           </section>
 
+            </>
+          ) : null}
+
+          {!isLibraryView ? (
+            <section className="study-page-toolbar" aria-label={t("library.studyPageNavigation")}>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setCurrentView("library")}
+              >
+                {t("library.backToLibrary")}
+              </button>
+              <strong>{document ? getDocumentTitle(document) : t("layout.activeStudy")}</strong>
+            </section>
+          ) : null}
+
+          {!isLibraryView ? (
           <section
             ref={activeStudyPanelRef}
             className="workspace-panel study-panel"
@@ -4841,6 +4876,7 @@ export function App({
           </section>
         )}
           </section>
+          ) : null}
         </div>
       </section>
       {shouldShowBackgroundGenerationPanel ? (

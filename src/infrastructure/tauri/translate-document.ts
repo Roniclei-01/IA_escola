@@ -7,6 +7,7 @@ export interface TranslateDocumentRequest {
   source_language: ImportTextBookResponse["language"];
   target_language: ImportTextBookResponse["language"];
   persist?: boolean;
+  page_index?: number;
 }
 
 export interface TranslateDocumentResponse {
@@ -14,6 +15,7 @@ export interface TranslateDocumentResponse {
   source_language: ImportTextBookResponse["language"];
   target_language: ImportTextBookResponse["language"];
   translated_content: string;
+  page_index?: number;
 }
 
 export async function translateDocument(

@@ -1,7 +1,7 @@
 use std::{collections::HashSet, path::Path};
 
 use rusqlite::{params, Connection};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -66,6 +66,8 @@ pub enum StorageError {
     InvalidChunkDocumentId(#[source] uuid::Error),
     #[error("stored translation has invalid document id")]
     InvalidTranslationDocumentId(#[source] uuid::Error),
+    #[error("stored page translation is invalid")]
+    InvalidDocumentPageTranslation(#[source] serde_json::Error),
     #[error("stored chunk position is invalid")]
     InvalidChunkPosition(i64),
     #[error("stored chunk token estimate is invalid")]
@@ -451,6 +453,49 @@ impl SQLiteStorage {
                 .get(3)
                 .map_err(StorageError::LoadDocumentTranslationFailed)?,
         };
+
+        raw_translation.try_into().map(Some)
+    }
+
+    pub fn save_document_page_translation(
+        &self,
+        document_id: Uuid,
+        source_language: &Language,
+        target_language: &Language,
+        page_index: u32,
+        translated_content: &str,
+    ) -> Result<(), StorageError> {
+        let translation = RawDocumentTranslation {
+            document_id: document_id.to_string(),
+            source_language: language_to_code(source_language).to_owned(),
+            target_language: language_to_code(target_language).to_owned(),
+            translated_content: translated_content.to_owned(),
+        };
+        let value = serde_json::to_string(&translation)
+            .map_err(StorageError::InvalidDocumentPageTranslation)?;
+
+        self.save_setting(
+            &document_page_translation_key(document_id, target_language, page_index),
+            &value,
+        )
+    }
+
+    pub fn load_document_page_translation(
+        &self,
+        document_id: Uuid,
+        target_language: &Language,
+        page_index: u32,
+    ) -> Result<Option<DocumentTranslationRecord>, StorageError> {
+        let Some(value) = self.load_setting(&document_page_translation_key(
+            document_id,
+            target_language,
+            page_index,
+        ))?
+        else {
+            return Ok(None);
+        };
+        let raw_translation = serde_json::from_str::<RawDocumentTranslation>(&value)
+            .map_err(StorageError::InvalidDocumentPageTranslation)?;
 
         raw_translation.try_into().map(Some)
     }
@@ -981,6 +1026,7 @@ struct RawDocumentChunk {
     token_estimate: i64,
 }
 
+#[derive(Deserialize, Serialize)]
 struct RawDocumentTranslation {
     document_id: String,
     source_language: String,
@@ -1159,6 +1205,19 @@ fn language_from_code(code: &str) -> Result<Language, StorageError> {
         "es" => Ok(Language::Es),
         value => Err(StorageError::InvalidLanguage(value.to_owned())),
     }
+}
+
+fn document_page_translation_key(
+    document_id: Uuid,
+    target_language: &Language,
+    page_index: u32,
+) -> String {
+    format!(
+        "document_translation.page.{}.{}.{}",
+        document_id,
+        language_to_code(target_language),
+        page_index
+    )
 }
 
 fn source_type_to_code(source_type: &DocumentSourceType) -> &'static str {
@@ -1530,6 +1589,57 @@ mod tests {
             .unwrap();
 
         assert_eq!(translation.translated_content, "Updated version.");
+    }
+
+    #[test]
+    fn saves_and_loads_document_page_translation() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let document_id = Uuid::new_v4();
+
+        storage
+            .save_document_page_translation(
+                document_id,
+                &Language::Pt,
+                &Language::En,
+                3,
+                "Translated page 3.",
+            )
+            .unwrap();
+
+        let translation = storage
+            .load_document_page_translation(document_id, &Language::En, 3)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(translation.document_id, document_id);
+        assert_eq!(translation.source_language, Language::Pt);
+        assert_eq!(translation.target_language, Language::En);
+        assert_eq!(translation.translated_content, "Translated page 3.");
+    }
+
+    #[test]
+    fn keeps_document_page_translations_separated_by_page() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let document_id = Uuid::new_v4();
+
+        storage
+            .save_document_page_translation(document_id, &Language::Pt, &Language::En, 0, "Page 0.")
+            .unwrap();
+        storage
+            .save_document_page_translation(document_id, &Language::Pt, &Language::En, 1, "Page 1.")
+            .unwrap();
+
+        let first_page = storage
+            .load_document_page_translation(document_id, &Language::En, 0)
+            .unwrap()
+            .unwrap();
+        let second_page = storage
+            .load_document_page_translation(document_id, &Language::En, 1)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(first_page.translated_content, "Page 0.");
+        assert_eq!(second_page.translated_content, "Page 1.");
     }
 
     #[test]

@@ -10,6 +10,7 @@ use crate::{
 pub struct LoadDocumentTranslationRequest {
     pub document_id: Uuid,
     pub target_language: Language,
+    pub page_index: Option<u32>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize)]
@@ -21,10 +22,18 @@ pub fn load_document_translation_from_storage(
     storage: &SQLiteStorage,
     request: LoadDocumentTranslationRequest,
 ) -> Result<LoadDocumentTranslationResponse, String> {
-    storage
-        .load_document_translation(request.document_id, &request.target_language)
-        .map(|translation| LoadDocumentTranslationResponse { translation })
-        .map_err(format_storage_error)
+    let translation = if let Some(page_index) = request.page_index {
+        storage.load_document_page_translation(
+            request.document_id,
+            &request.target_language,
+            page_index,
+        )
+    } else {
+        storage.load_document_translation(request.document_id, &request.target_language)
+    }
+    .map_err(format_storage_error)?;
+
+    Ok(LoadDocumentTranslationResponse { translation })
 }
 
 #[cfg(feature = "tauri-app")]
@@ -67,6 +76,7 @@ mod tests {
             LoadDocumentTranslationRequest {
                 document_id,
                 target_language: Language::En,
+                page_index: None,
             },
         )
         .unwrap();
@@ -86,10 +96,41 @@ mod tests {
             LoadDocumentTranslationRequest {
                 document_id: Uuid::new_v4(),
                 target_language: Language::En,
+                page_index: None,
             },
         )
         .unwrap();
 
         assert_eq!(response.translation, None);
+    }
+
+    #[test]
+    fn loads_persisted_document_page_translation() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let document_id = Uuid::new_v4();
+        storage
+            .save_document_page_translation(
+                document_id,
+                &Language::Pt,
+                &Language::En,
+                4,
+                "Saved page translation.",
+            )
+            .unwrap();
+
+        let response = load_document_translation_from_storage(
+            &storage,
+            LoadDocumentTranslationRequest {
+                document_id,
+                target_language: Language::En,
+                page_index: Some(4),
+            },
+        )
+        .unwrap();
+
+        assert_eq!(
+            response.translation.unwrap().translated_content,
+            "Saved page translation."
+        );
     }
 }

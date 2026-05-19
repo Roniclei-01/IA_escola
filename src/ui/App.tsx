@@ -144,7 +144,8 @@ interface AppProps {
   savePdfReaderPreference?: (preference: PdfReaderPreference) => Promise<PdfReaderPreference>;
   loadDocumentTranslation?: (
     documentId: string,
-    targetLanguage: ImportTextBookResponse["language"]
+    targetLanguage: ImportTextBookResponse["language"],
+    pageIndex?: number
   ) => Promise<LoadDocumentTranslationResponse>;
   saveStudyCards?: (cards: StudyCard[]) => Promise<StudyCard[]>;
   deleteStudyCards?: (documentId: string) => Promise<{ document_id: string; deleted_cards: number }>;
@@ -1769,7 +1770,11 @@ export function App({
     }
 
     try {
-      const response = await loadDocumentTranslation(selectedDocument.document_id, targetLanguage);
+      const response = await loadDocumentTranslation(
+        selectedDocument.document_id,
+        targetLanguage,
+        0
+      );
 
       if (!isCurrentTranslationLoad(translationLoadToken)) {
         return;
@@ -1811,6 +1816,10 @@ export function App({
       return;
     }
 
+    if (translatedDocumentPages[pageIndex]) {
+      return;
+    }
+
     setError(null);
     setWarning(null);
     setOperationStatus("translatingDocument");
@@ -1822,12 +1831,29 @@ export function App({
         return;
       }
 
+      const cachedTranslation = await loadDocumentTranslation(
+        document.document_id,
+        readerTargetLanguage,
+        pageIndex
+      );
+      if (!isCurrentOperation(operationToken)) {
+        return;
+      }
+
+      if (cachedTranslation.translation) {
+        setTranslatedDocumentPages((currentPages) => ({
+          ...currentPages,
+          [pageIndex]: cachedTranslation.translation?.translated_content ?? ""
+        }));
+        return;
+      }
+
       const response = await translateDocument({
         document_id: document.document_id,
         content: pageContent,
         source_language: sourceLanguage,
         target_language: readerTargetLanguage,
-        persist: false
+        page_index: pageIndex
       });
       if (!isCurrentOperation(operationToken)) {
         return;

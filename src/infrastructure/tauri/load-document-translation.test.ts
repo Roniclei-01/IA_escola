@@ -33,4 +33,26 @@ describe("loadDocumentTranslation", () => {
     });
     expect(result.translation?.translated_content).toBe("Saved translation.");
   });
+
+  it("passes an optional reader page index", async () => {
+    invokeMock.mockResolvedValue({
+      translation: {
+        document_id: "document-1",
+        source_language: "Pt",
+        target_language: "En",
+        translated_content: "Saved page translation."
+      }
+    });
+
+    const result = await loadDocumentTranslation("document-1", "En", 3);
+
+    expect(invokeMock).toHaveBeenCalledWith("load_document_translation", {
+      request: {
+        document_id: "document-1",
+        target_language: "En",
+        page_index: 3
+      }
+    });
+    expect(result.translation?.translated_content).toBe("Saved page translation.");
+  });
 });

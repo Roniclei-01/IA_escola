@@ -8,12 +8,14 @@ export interface LoadDocumentTranslationResponse {
 
 export async function loadDocumentTranslation(
   documentId: string,
-  targetLanguage: ImportTextBookResponse["language"]
+  targetLanguage: ImportTextBookResponse["language"],
+  pageIndex?: number
 ): Promise<LoadDocumentTranslationResponse> {
   return invoke<LoadDocumentTranslationResponse>("load_document_translation", {
     request: {
       document_id: documentId,
-      target_language: targetLanguage
+      target_language: targetLanguage,
+      ...(pageIndex === undefined ? {} : { page_index: pageIndex })
     }
   });
 }

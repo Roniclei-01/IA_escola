@@ -16,6 +16,7 @@ pub struct TranslateDocumentRequest {
     pub source_language: Language,
     pub target_language: Language,
     pub persist: Option<bool>,
+    pub page_index: Option<u32>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize)]
@@ -24,6 +25,7 @@ pub struct TranslateDocumentResponse {
     pub source_language: Language,
     pub target_language: Language,
     pub translated_content: String,
+    pub page_index: Option<u32>,
 }
 
 pub fn translate_document_with_adapter(
@@ -49,6 +51,7 @@ pub fn translate_document_with_adapter(
         source_language: request.source_language,
         target_language: request.target_language,
         translated_content,
+        page_index: request.page_index,
     })
 }
 
@@ -63,14 +66,26 @@ pub fn translate_document_with_adapter_and_storage(
         .map_err(|_| "Documento invalido para traducao.".to_owned())?;
 
     if should_persist {
-        storage
-            .save_document_translation(
-                document_id,
-                &response.source_language,
-                &response.target_language,
-                &response.translated_content,
-            )
-            .map_err(format_storage_error)?;
+        if let Some(page_index) = response.page_index {
+            storage
+                .save_document_page_translation(
+                    document_id,
+                    &response.source_language,
+                    &response.target_language,
+                    page_index,
+                    &response.translated_content,
+                )
+                .map_err(format_storage_error)?;
+        } else {
+            storage
+                .save_document_translation(
+                    document_id,
+                    &response.source_language,
+                    &response.target_language,
+                    &response.translated_content,
+                )
+                .map_err(format_storage_error)?;
+        }
     }
 
     Ok(response)
@@ -156,6 +171,7 @@ mod tests {
             source_language: Language::Pt,
             target_language: Language::En,
             persist: None,
+            page_index: None,
         }
     }
 
@@ -167,6 +183,7 @@ mod tests {
         assert_eq!(response.document_id, "00000000-0000-0000-0000-000000000001");
         assert_eq!(response.source_language, Language::Pt);
         assert_eq!(response.target_language, Language::En);
+        assert_eq!(response.page_index, None);
         assert!(response.translated_content.contains("Translated:"));
     }
 
@@ -213,6 +230,7 @@ mod tests {
         let storage = SQLiteStorage::open_in_memory().unwrap();
         let mut request = request();
         request.persist = Some(false);
+        request.page_index = Some(0);
 
         let response = super::translate_document_with_adapter_and_storage(
             request,
@@ -226,5 +244,31 @@ mod tests {
             .unwrap();
 
         assert!(persisted.is_none());
+    }
+
+    #[test]
+    fn saves_page_scoped_translation_when_storage_is_provided() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let mut request = request();
+        request.page_index = Some(2);
+
+        let response = super::translate_document_with_adapter_and_storage(
+            request,
+            &FakeModelAdapter { fail: false },
+            &storage,
+        )
+        .unwrap();
+
+        let persisted = storage
+            .load_document_page_translation(response.document_id.parse().unwrap(), &Language::En, 2)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(response.page_index, Some(2));
+        assert_eq!(persisted.translated_content, response.translated_content);
+        assert!(storage
+            .load_document_translation(response.document_id.parse().unwrap(), &Language::En)
+            .unwrap()
+            .is_none());
     }
 }

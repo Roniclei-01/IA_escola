@@ -38,4 +38,33 @@ describe("translateDocument", () => {
     });
     expect(result.translated_content).toBe("Translated content.");
   });
+
+  it("passes an optional reader page index", async () => {
+    invokeMock.mockResolvedValue({
+      document_id: "document-1",
+      source_language: "Pt",
+      target_language: "En",
+      translated_content: "Translated page.",
+      page_index: 2
+    });
+
+    const result = await translateDocument({
+      document_id: "document-1",
+      content: "Pagina original.",
+      source_language: "Pt",
+      target_language: "En",
+      page_index: 2
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("translate_document", {
+      request: {
+        document_id: "document-1",
+        content: "Pagina original.",
+        source_language: "Pt",
+        target_language: "En",
+        page_index: 2
+      }
+    });
+    expect(result.page_index).toBe(2);
+  });
 });

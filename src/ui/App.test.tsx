@@ -1415,10 +1415,52 @@ describe("App", () => {
         content: "Texto original para leitura.",
         source_language: "Pt",
         target_language: "En",
-        persist: false
+        page_index: 0
       });
     });
     expect(await screen.findByText("Translated text for reading.")).toBeInTheDocument();
+  });
+
+  it("uses a cached translated reader page before calling the model", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-cached-reader",
+      book_id: "book-cached-reader",
+      content: "Texto original em cache.",
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/cached.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const loadDocumentTranslation = vi.fn().mockResolvedValue({
+      translation: {
+        document_id: "document-cached-reader",
+        source_language: "Pt",
+        target_language: "En",
+        translated_content: "Cached translated page."
+      }
+    });
+    const translateDocument = vi.fn();
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      loadDocumentTranslation,
+      translateDocument
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/cached.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Traduzir pagina atual" }));
+
+    await waitFor(() => {
+      expect(loadDocumentTranslation).toHaveBeenCalledWith("document-cached-reader", "En", 0);
+    });
+    expect(translateDocument).not.toHaveBeenCalled();
+    expect(await screen.findByText("Cached translated page.")).toBeInTheDocument();
   });
 
   it("renders the original PDF page with navigation and zoom controls", async () => {
@@ -1643,7 +1685,7 @@ describe("App", () => {
           "This book is dedicated to all the people and this content is for study with technical notes.",
         source_language: "En",
         target_language: "Pt",
-        persist: false
+        page_index: 0
       });
     });
     expect(await screen.findByText("Texto traduzido para leitura.")).toBeInTheDocument();
@@ -1696,7 +1738,7 @@ describe("App", () => {
     expect(translateDocument).toHaveBeenCalledWith(
       expect.objectContaining({
         content: expect.not.stringContaining(finalLine),
-        persist: false
+        page_index: 0
       })
     );
     expect(screen.getByRole("button", { name: "Proxima pagina" })).toBeEnabled();
@@ -1748,7 +1790,7 @@ describe("App", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
     await waitFor(() => {
-      expect(loadDocumentTranslation).toHaveBeenCalledWith("document-translated", "En");
+      expect(loadDocumentTranslation).toHaveBeenCalledWith("document-translated", "En", 0);
     });
     expect(await screen.findByText("Previously saved translation.")).toBeInTheDocument();
     expect(translateDocument).not.toHaveBeenCalled();

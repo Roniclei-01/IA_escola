@@ -42,6 +42,7 @@ Devem cobrir:
 - salvar chunks e cards;
 - executar `GenerateFlashcards` com `MockModelAdapter`;
 - tratar falha de IA;
+- exibir progresso de fila por chunk durante geracao de cards com IA;
 - tratar arquivo invalido;
 - preservar dados apos migracao simples.
 

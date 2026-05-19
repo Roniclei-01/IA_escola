@@ -1302,6 +1302,13 @@ export function App({
       : operationStatus
         ? t(`library.${operationStatus}`)
         : null;
+  const cardGenerationQueueProcessed = cardGenerationQueueProgress
+    ? cardGenerationQueueProgress.completed + cardGenerationQueueProgress.failed
+    : 0;
+  const cardGenerationQueuePercent =
+    cardGenerationQueueProgress && cardGenerationQueueProgress.total > 0
+      ? Math.round((cardGenerationQueueProcessed / cardGenerationQueueProgress.total) * 100)
+      : 0;
   const filteredSavedDocuments = filterSavedDocuments(
     savedDocuments,
     sourceTypeFilter,
@@ -3664,6 +3671,37 @@ export function App({
               <h2 id="processing-overlay-title">{t("library.operationOverlayTitle")}</h2>
               <p>{activeOperationMessage}</p>
               <span>{t("library.operationOverlayDetail")}</span>
+              {operationStatus === "generatingCardsWithOllama" && cardGenerationQueueProgress ? (
+                <section
+                  className="processing-queue"
+                  aria-label={t("library.cardGenerationQueueTitle")}
+                >
+                  <div
+                    className="processing-queue-bar"
+                    role="progressbar"
+                    aria-label={t("library.cardGenerationQueueProgressLabel")}
+                    aria-valuemin={0}
+                    aria-valuemax={cardGenerationQueueProgress.total}
+                    aria-valuenow={cardGenerationQueueProcessed}
+                  >
+                    <span style={{ width: `${cardGenerationQueuePercent}%` }} />
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>{t("library.cardGenerationQueueCompleted")}</dt>
+                      <dd>{cardGenerationQueueProgress.completed}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("library.cardGenerationQueueFailed")}</dt>
+                      <dd>{cardGenerationQueueProgress.failed}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("library.cardGenerationQueuePending")}</dt>
+                      <dd>{cardGenerationQueueProgress.pending}</dd>
+                    </div>
+                  </dl>
+                </section>
+              ) : null}
             </div>
             <button
               type="button"

@@ -766,6 +766,14 @@ describe("App", () => {
         "Gerando cards com Ollama. Chunk 2 de 3. Fila: 1 concluidos, 0 falharam, 1 pendentes."
       );
     });
+    const queuePanel = screen.getByLabelText("Fila de geracao de cards");
+    expect(screen.getByLabelText("Progresso da fila de cards")).toHaveAttribute(
+      "aria-valuenow",
+      "1"
+    );
+    expect(within(queuePanel).getByText("Concluidos")).toBeInTheDocument();
+    expect(within(queuePanel).getByText("Falhas")).toBeInTheDocument();
+    expect(within(queuePanel).getByText("Pendentes")).toBeInTheDocument();
   });
 
   it("aborts the active card generation request when canceling", async () => {

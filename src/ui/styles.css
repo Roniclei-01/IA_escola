@@ -330,6 +330,53 @@ h1 {
   font-weight: 700;
 }
 
+.processing-queue {
+  margin-top: 14px;
+}
+
+.processing-queue-bar {
+  overflow: hidden;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #dce7df;
+}
+
+.processing-queue-bar span {
+  display: block;
+  height: 100%;
+  margin: 0;
+  border-radius: inherit;
+  background: #276f4e;
+}
+
+.processing-queue dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.processing-queue div {
+  padding: 8px;
+  border: 1px solid #d5e1d8;
+  border-radius: 6px;
+  background: #f7faf8;
+}
+
+.processing-queue dt {
+  color: #526256;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.processing-queue dd {
+  margin: 2px 0 0;
+  color: #18201c;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
 .processing-panel button {
   min-height: 40px;
   padding: 0 14px;

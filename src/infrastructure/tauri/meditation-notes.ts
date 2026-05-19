@@ -1,21 +1,27 @@
 import { invoke } from "@tauri-apps/api/core";
 
 export interface MeditationNote {
-  document_id: string;
+  id: string;
   content: string;
+  created_at: string;
 }
 
-export async function loadMeditationNote(documentId: string): Promise<MeditationNote> {
-  return invoke<MeditationNote>("load_meditation_note", {
+export interface MeditationNotesResponse {
+  document_id: string;
+  notes: MeditationNote[];
+}
+
+export async function loadMeditationNotes(documentId: string): Promise<MeditationNotesResponse> {
+  return invoke<MeditationNotesResponse>("load_meditation_notes", {
     documentId
   });
 }
 
-export async function saveMeditationNote(
+export async function addMeditationNote(
   documentId: string,
   content: string
-): Promise<MeditationNote> {
-  return invoke<MeditationNote>("save_meditation_note", {
+): Promise<MeditationNotesResponse> {
+  return invoke<MeditationNotesResponse>("add_meditation_note", {
     request: {
       document_id: documentId,
       content

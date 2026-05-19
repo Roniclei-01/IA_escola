@@ -206,7 +206,7 @@ Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 
 Esses itens estao documentados para as proximas fatias e nao bloqueiam o aceite do MVP 0.1:
 
-- [ ] Campo `Meditacao` para resumo pessoal do leitor.
+- [x] Campo `Meditacao` com multiplas entradas de resumo pessoal do leitor.
 - [ ] Categorias e subcategorias de estudo por documento, com descricao da classificacao.
 - [x] Exportacao Anki em `.apkg`.
 - [ ] Importacao EPUB sem DRM em versao futura.

@@ -111,9 +111,10 @@ import {
 } from "../infrastructure/tauri/export-anki-package";
 import { exportTextFile as defaultExportTextFile } from "../infrastructure/tauri/export-text-file";
 import {
-  loadMeditationNote as defaultLoadMeditationNote,
-  saveMeditationNote as defaultSaveMeditationNote,
-  type MeditationNote
+  addMeditationNote as defaultAddMeditationNote,
+  loadMeditationNotes as defaultLoadMeditationNotes,
+  type MeditationNote,
+  type MeditationNotesResponse
 } from "../infrastructure/tauri/meditation-notes";
 import {
   SUPPORTED_UI_LANGUAGES,
@@ -198,8 +199,8 @@ interface AppProps {
     deckName: string,
     cards: StudyCard[]
   ) => Promise<ExportAnkiPackageResponse | null> | ExportAnkiPackageResponse | null;
-  loadMeditationNote?: (documentId: string) => Promise<MeditationNote>;
-  saveMeditationNote?: (documentId: string, content: string) => Promise<MeditationNote>;
+  loadMeditationNotes?: (documentId: string) => Promise<MeditationNotesResponse>;
+  addMeditationNote?: (documentId: string, content: string) => Promise<MeditationNotesResponse>;
   downloadTextFile?: (fileName: string, content: string) => Promise<void> | void;
   printStudySessionReport?: (fileName: string, html: string) => void;
   notifyStudyGoalReminder?: (notification: StudyGoalReminderNotification) => Promise<void> | void;
@@ -1210,8 +1211,8 @@ export function App({
   saveNotificationSettings = defaultSaveNotificationSettings,
   testOcrDependencies = defaultTestOcrDependencies,
   exportAnkiPackage = defaultExportAnkiPackage,
-  loadMeditationNote = defaultLoadMeditationNote,
-  saveMeditationNote = defaultSaveMeditationNote,
+  loadMeditationNotes = defaultLoadMeditationNotes,
+  addMeditationNote = defaultAddMeditationNote,
   downloadTextFile = defaultDownloadTextFile,
   printStudySessionReport = defaultPrintStudySessionReport,
   notifyStudyGoalReminder = defaultNotifyStudyGoalReminder,
@@ -1291,7 +1292,7 @@ export function App({
   const [cardReviewSchedules, setCardReviewSchedules] = useState<
     Record<string, { priority: number; nextReviewAt: number }>
   >({});
-  const [meditationNote, setMeditationNote] = useState("");
+  const [meditationNotes, setMeditationNotes] = useState<MeditationNote[]>([]);
   const [meditationDraft, setMeditationDraft] = useState("");
   const [isMeditationEditorOpen, setIsMeditationEditorOpen] = useState(false);
   const [isLoadingMeditationNote, setIsLoadingMeditationNote] = useState(false);
@@ -1676,7 +1677,7 @@ export function App({
   useEffect(() => {
     const loadToken = meditationLoadTokenRef.current + 1;
     meditationLoadTokenRef.current = loadToken;
-    setMeditationNote("");
+    setMeditationNotes([]);
     setMeditationDraft("");
     setIsMeditationEditorOpen(false);
     setMeditationStatus(null);
@@ -1692,14 +1693,14 @@ export function App({
       setIsLoadingMeditationNote(true);
 
       try {
-        const note = await loadMeditationNote(documentId);
+        const response = await loadMeditationNotes(documentId);
 
         if (meditationLoadTokenRef.current !== loadToken) {
           return;
         }
 
-        setMeditationNote(note.content);
-        setMeditationDraft(note.content);
+        setMeditationNotes(response.notes);
+        setMeditationDraft("");
       } catch {
         if (meditationLoadTokenRef.current === loadToken) {
           setError(t("study.meditationLoadError"));
@@ -1712,7 +1713,7 @@ export function App({
     }
 
     void loadActiveMeditationNote();
-  }, [document, loadMeditationNote, t]);
+  }, [document, loadMeditationNotes, t]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -3131,12 +3132,12 @@ export function App({
       setError(null);
       setMeditationStatus(null);
       setIsSavingMeditationNote(true);
-      const savedNote = await saveMeditationNote(document.document_id, meditationDraft);
+      const response = await addMeditationNote(document.document_id, meditationDraft);
 
-      setMeditationNote(savedNote.content);
-      setMeditationDraft(savedNote.content);
+      setMeditationNotes(response.notes);
+      setMeditationDraft("");
       setIsMeditationEditorOpen(false);
-      setMeditationStatus(t("study.meditationSaved"));
+      setMeditationStatus(t("study.meditationAdded"));
     } catch (unknownError) {
       setError(getErrorMessage(unknownError, t("study.meditationSaveError")));
     } finally {
@@ -3146,16 +3147,21 @@ export function App({
 
   const meditationActionLabel = isMeditationEditorOpen
     ? t("study.closeMeditation")
-    : meditationNote.trim()
-      ? t("study.editMeditation")
-      : t("study.openMeditation");
+    : t("study.addMeditation");
   const meditationSlot = document ? (
     <section className="meditation-note meditation-note-reader" aria-labelledby="meditation-note-title">
       <div className="meditation-note-summary">
         <div>
           <h4 id="meditation-note-title">{t("study.meditationTitle")}</h4>
-          {meditationNote.trim() ? (
-            <p>{meditationNote}</p>
+          {meditationNotes.length > 0 ? (
+            <ol className="meditation-note-list">
+              {meditationNotes.map((note, index) => (
+                <li key={note.id}>
+                  <strong>{t("study.meditationEntryLabel", { number: index + 1 })}</strong>
+                  <p>{note.content}</p>
+                </li>
+              ))}
+            </ol>
           ) : (
             <p className="reader-placeholder">{t("study.meditationEmpty")}</p>
           )}
@@ -3164,7 +3170,7 @@ export function App({
           type="button"
           disabled={isLoadingMeditationNote}
           onClick={() => {
-            setMeditationDraft(meditationNote);
+            setMeditationDraft("");
             setMeditationStatus(null);
             setIsMeditationEditorOpen((currentValue) => !currentValue);
           }}
@@ -3191,7 +3197,7 @@ export function App({
               disabled={
                 isLoadingMeditationNote ||
                 isSavingMeditationNote ||
-                meditationDraft === meditationNote
+                meditationDraft.trim().length === 0
               }
               onClick={() => {
                 void handleSaveMeditationNote();

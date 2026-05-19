@@ -1330,6 +1330,28 @@ h1 {
   margin: 8px 0 0;
 }
 
+.meditation-note-list {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meditation-note-list li {
+  padding: 10px 12px;
+  border: 1px solid #d8e1da;
+  border-radius: 6px;
+  background: #fbfdfb;
+}
+
+.meditation-note-list strong {
+  display: block;
+  color: #526256;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
 .meditation-note label {
   color: #526256;
   font-size: 0.82rem;

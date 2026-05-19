@@ -50,13 +50,19 @@ const testOcrDependencies = vi.fn().mockResolvedValue({
 });
 const loadNoDocumentTranslation = vi.fn().mockResolvedValue({ translation: null });
 const listNoDocumentPageTranslations = vi.fn().mockResolvedValue({ page_indexes: [] });
-const loadNoMeditationNote = vi.fn().mockResolvedValue({
+const loadNoMeditationNotes = vi.fn().mockResolvedValue({
   document_id: "document-1",
-  content: ""
+  notes: []
 });
-const saveMeditationNote = vi.fn().mockImplementation(async (documentId: string, content: string) => ({
+const addMeditationNote = vi.fn().mockImplementation(async (documentId: string, content: string) => ({
   document_id: documentId,
-  content
+  notes: [
+    {
+      id: "note-1",
+      content,
+      created_at: "2026-05-19T14:00:00Z"
+    }
+  ]
 }));
 const renderDefaultPdfPage = vi.fn().mockResolvedValue({
   page: 1,
@@ -89,8 +95,8 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       testOcrDependencies={testOcrDependencies}
       loadDocumentTranslation={loadNoDocumentTranslation}
       listDocumentPageTranslations={listNoDocumentPageTranslations}
-      loadMeditationNote={loadNoMeditationNote}
-      saveMeditationNote={saveMeditationNote}
+      loadMeditationNotes={loadNoMeditationNotes}
+      addMeditationNote={addMeditationNote}
       renderPdfPage={renderDefaultPdfPage}
       loadPdfReaderPreference={loadDefaultPdfReaderPreference}
       savePdfReaderPreference={saveDefaultPdfReaderPreference}
@@ -109,8 +115,8 @@ describe("App", () => {
     loadDefaultPdfReaderPreference.mockClear();
     saveDefaultPdfReaderPreference.mockClear();
     listNoDocumentPageTranslations.mockClear();
-    loadNoMeditationNote.mockClear();
-    saveMeditationNote.mockClear();
+    loadNoMeditationNotes.mockClear();
+    addMeditationNote.mockClear();
   });
 
   it("renders the product name", async () => {
@@ -3608,14 +3614,31 @@ describe("App", () => {
     );
   });
 
-  it("loads and saves a meditation note for the active document", async () => {
-    const loadMeditationNote = vi.fn().mockResolvedValue({
+  it("loads and adds meditation notes for the active document", async () => {
+    const loadMeditationNotes = vi.fn().mockResolvedValue({
       document_id: "document-meditation",
-      content: "Resumo inicial do leitor."
+      notes: [
+        {
+          id: "note-1",
+          content: "Resumo inicial do leitor.",
+          created_at: "2026-05-19T14:00:00Z"
+        }
+      ]
     });
-    const saveMeditationNote = vi.fn().mockResolvedValue({
+    const addMeditationNote = vi.fn().mockResolvedValue({
       document_id: "document-meditation",
-      content: "Agora entendi os conceitos principais."
+      notes: [
+        {
+          id: "note-1",
+          content: "Resumo inicial do leitor.",
+          created_at: "2026-05-19T14:00:00Z"
+        },
+        {
+          id: "note-2",
+          content: "Agora entendi os conceitos principais.",
+          created_at: "2026-05-19T14:20:00Z"
+        }
+      ]
     });
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [
@@ -3632,8 +3655,8 @@ describe("App", () => {
 
     renderApp({
       listImportedDocuments,
-      loadMeditationNote,
-      saveMeditationNote
+      loadMeditationNotes,
+      addMeditationNote
     });
 
     fireEvent.click(await screen.findByRole("button", { name: /Conteudo sobre redes/ }));
@@ -3643,11 +3666,12 @@ describe("App", () => {
     const readerQueries = within(reader as HTMLElement);
 
     expect(readerQueries.getByText("Meditacao")).toBeInTheDocument();
+    expect(readerQueries.getByText("Meditacao 1")).toBeInTheDocument();
     expect(readerQueries.getByText("Resumo inicial do leitor.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Meditacao do documento")).not.toBeInTheDocument();
 
-    fireEvent.click(readerQueries.getByRole("button", { name: "Editar meditacao" }));
-    expect(screen.getByLabelText("Meditacao do documento")).toHaveValue("Resumo inicial do leitor.");
+    fireEvent.click(readerQueries.getByRole("button", { name: "Adicionar meditacao" }));
+    expect(screen.getByLabelText("Meditacao do documento")).toHaveValue("");
 
     fireEvent.change(screen.getByLabelText("Meditacao do documento"), {
       target: { value: "Agora entendi os conceitos principais." }
@@ -3655,13 +3679,14 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar meditacao" }));
 
     await waitFor(() => {
-      expect(saveMeditationNote).toHaveBeenCalledWith(
+      expect(addMeditationNote).toHaveBeenCalledWith(
         "document-meditation",
         "Agora entendi os conceitos principais."
       );
     });
-    expect(await screen.findByText("Meditacao salva.")).toBeInTheDocument();
+    expect(await screen.findByText("Meditacao adicionada.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Meditacao do documento")).not.toBeInTheDocument();
+    expect(readerQueries.getByText("Meditacao 2")).toBeInTheDocument();
     expect(readerQueries.getByText("Agora entendi os conceitos principais.")).toBeInTheDocument();
   });
 

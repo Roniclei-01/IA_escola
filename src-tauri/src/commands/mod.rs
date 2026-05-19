@@ -63,7 +63,7 @@ pub use list_study_session_summaries::list_study_session_summaries;
 #[cfg(feature = "tauri-app")]
 pub use load_document_translation::load_document_translation;
 #[cfg(feature = "tauri-app")]
-pub use meditation_notes::{load_meditation_note, save_meditation_note};
+pub use meditation_notes::{add_meditation_note, load_meditation_notes};
 #[cfg(feature = "tauri-app")]
 pub use notification_settings::{load_notification_settings, save_notification_settings};
 #[cfg(feature = "tauri-app")]
@@ -133,8 +133,8 @@ pub use load_document_translation::{
     LoadDocumentTranslationResponse,
 };
 pub use meditation_notes::{
-    load_meditation_note_from_storage, save_meditation_note_with_storage, MeditationNoteResponse,
-    SaveMeditationNoteRequest,
+    add_meditation_note_with_storage, load_meditation_notes_from_storage,
+    AddMeditationNoteRequest, MeditationNoteResponse, MeditationNotesResponse,
 };
 pub use notification_settings::{
     default_notification_settings, load_notification_settings_from_storage,

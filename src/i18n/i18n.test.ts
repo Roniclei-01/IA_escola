@@ -178,11 +178,14 @@ describe("i18n", () => {
       "Nao foi possivel exportar o arquivo."
     );
     expect(i18n.getResource("pt", "translation", "study.meditationTitle")).toBe("Meditacao");
-    expect(i18n.getResource("pt", "translation", "study.openMeditation")).toBe(
-      "Escrever meditacao"
+    expect(i18n.getResource("pt", "translation", "study.addMeditation")).toBe(
+      "Adicionar meditacao"
     );
-    expect(i18n.getResource("pt", "translation", "study.meditationSaved")).toBe(
-      "Meditacao salva."
+    expect(i18n.getResource("pt", "translation", "study.meditationEntryLabel")).toBe(
+      "Meditacao {{number}}"
+    );
+    expect(i18n.getResource("pt", "translation", "study.meditationAdded")).toBe(
+      "Meditacao adicionada."
     );
     expect(i18n.getResource("en", "translation", "study.meditationTitle")).toBe("Meditation");
     expect(i18n.getResource("es", "translation", "study.meditationTitle")).toBe("Meditacion");

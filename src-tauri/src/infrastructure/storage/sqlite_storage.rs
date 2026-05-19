@@ -68,6 +68,8 @@ pub enum StorageError {
     InvalidTranslationDocumentId(#[source] uuid::Error),
     #[error("stored page translation is invalid")]
     InvalidDocumentPageTranslation(#[source] serde_json::Error),
+    #[error("stored meditation notes are invalid")]
+    InvalidMeditationNotes(#[source] serde_json::Error),
     #[error("stored chunk position is invalid")]
     InvalidChunkPosition(i64),
     #[error("stored chunk token estimate is invalid")]
@@ -114,6 +116,13 @@ pub struct DocumentTranslationRecord {
     pub source_language: Language,
     pub target_language: Language,
     pub translated_content: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct MeditationNoteRecord {
+    pub id: Uuid,
+    pub content: String,
+    pub created_at: String,
 }
 
 impl SQLiteStorage {
@@ -892,16 +901,55 @@ impl SQLiteStorage {
         Ok(Some((target_reviews, recurrence)))
     }
 
-    pub fn save_meditation_note(
+    pub fn save_meditation_notes(
         &self,
         document_id: Uuid,
-        content: &str,
+        notes: &[MeditationNoteRecord],
     ) -> Result<(), StorageError> {
-        self.save_setting(&meditation_note_setting_key(document_id), content)
+        let serialized_notes =
+            serde_json::to_string(notes).map_err(StorageError::InvalidMeditationNotes)?;
+
+        self.save_setting(&meditation_notes_setting_key(document_id), &serialized_notes)
     }
 
-    pub fn load_meditation_note(&self, document_id: Uuid) -> Result<Option<String>, StorageError> {
-        self.load_setting(&meditation_note_setting_key(document_id))
+    pub fn load_meditation_notes(
+        &self,
+        document_id: Uuid,
+    ) -> Result<Vec<MeditationNoteRecord>, StorageError> {
+        if let Some(value) = self.load_setting(&meditation_notes_setting_key(document_id))? {
+            let notes = serde_json::from_str::<Vec<MeditationNoteRecord>>(&value)
+                .map_err(StorageError::InvalidMeditationNotes)?;
+
+            return Ok(notes);
+        }
+
+        let Some(legacy_content) = self.load_setting(&meditation_note_setting_key(document_id))?
+        else {
+            return Ok(Vec::new());
+        };
+        let content = legacy_content.trim().to_owned();
+
+        if content.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        Ok(vec![MeditationNoteRecord {
+            id: Uuid::new_v4(),
+            content,
+            created_at: String::new(),
+        }])
+    }
+
+    pub fn add_meditation_note(
+        &self,
+        document_id: Uuid,
+        note: MeditationNoteRecord,
+    ) -> Result<Vec<MeditationNoteRecord>, StorageError> {
+        let mut notes = self.load_meditation_notes(document_id)?;
+        notes.push(note);
+        self.save_meditation_notes(document_id, &notes)?;
+
+        Ok(notes)
     }
 
     fn migrate(&self) -> Result<(), StorageError> {
@@ -1312,6 +1360,10 @@ fn study_goal_recurrence_setting_key(document_id: Uuid) -> String {
 
 fn meditation_note_setting_key(document_id: Uuid) -> String {
     format!("meditation_note.{document_id}.content")
+}
+
+fn meditation_notes_setting_key(document_id: Uuid) -> String {
+    format!("meditation_notes.{document_id}.items")
 }
 
 fn is_valid_study_goal_recurrence(recurrence: &str) -> bool {

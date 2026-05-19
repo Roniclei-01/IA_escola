@@ -50,6 +50,14 @@ const testOcrDependencies = vi.fn().mockResolvedValue({
 });
 const loadNoDocumentTranslation = vi.fn().mockResolvedValue({ translation: null });
 const listNoDocumentPageTranslations = vi.fn().mockResolvedValue({ page_indexes: [] });
+const loadNoMeditationNote = vi.fn().mockResolvedValue({
+  document_id: "document-1",
+  content: ""
+});
+const saveMeditationNote = vi.fn().mockImplementation(async (documentId: string, content: string) => ({
+  document_id: documentId,
+  content
+}));
 const renderDefaultPdfPage = vi.fn().mockResolvedValue({
   page: 1,
   page_count: 1,
@@ -81,6 +89,8 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       testOcrDependencies={testOcrDependencies}
       loadDocumentTranslation={loadNoDocumentTranslation}
       listDocumentPageTranslations={listNoDocumentPageTranslations}
+      loadMeditationNote={loadNoMeditationNote}
+      saveMeditationNote={saveMeditationNote}
       renderPdfPage={renderDefaultPdfPage}
       loadPdfReaderPreference={loadDefaultPdfReaderPreference}
       savePdfReaderPreference={saveDefaultPdfReaderPreference}
@@ -99,6 +109,8 @@ describe("App", () => {
     loadDefaultPdfReaderPreference.mockClear();
     saveDefaultPdfReaderPreference.mockClear();
     listNoDocumentPageTranslations.mockClear();
+    loadNoMeditationNote.mockClear();
+    saveMeditationNote.mockClear();
   });
 
   it("renders the product name", async () => {
@@ -3593,6 +3605,56 @@ describe("App", () => {
         "estudo_ia_local_card-1\tO que e celula? Explique.\tUnidade basica da vida.\testudo_ia_local document_document-anki source_txt biologia celula_animal",
         "estudo_ia_local_card-2\tFuncao da mitocondria?\tProduzir energia.\testudo_ia_local document_document-anki source_txt biologia"
       ].join("\n")
+    );
+  });
+
+  it("loads and saves a meditation note for the active document", async () => {
+    const loadMeditationNote = vi.fn().mockResolvedValue({
+      document_id: "document-meditation",
+      content: "Resumo inicial do leitor."
+    });
+    const saveMeditationNote = vi.fn().mockResolvedValue({
+      document_id: "document-meditation",
+      content: "Agora entendi os conceitos principais."
+    });
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-meditation",
+          book_id: "book-meditation",
+          content: "Conteudo sobre redes.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/redes.txt"
+        }
+      ]
+    });
+
+    renderApp({
+      listImportedDocuments,
+      loadMeditationNote,
+      saveMeditationNote
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Conteudo sobre redes/ }));
+    expect(await screen.findByLabelText("Meditacao do documento")).toHaveValue(
+      "Resumo inicial do leitor."
+    );
+
+    fireEvent.change(screen.getByLabelText("Meditacao do documento"), {
+      target: { value: "Agora entendi os conceitos principais." }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar meditacao" }));
+
+    await waitFor(() => {
+      expect(saveMeditationNote).toHaveBeenCalledWith(
+        "document-meditation",
+        "Agora entendi os conceitos principais."
+      );
+    });
+    expect(await screen.findByText("Meditacao salva.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Meditacao do documento")).toHaveValue(
+      "Agora entendi os conceitos principais."
     );
   });
 

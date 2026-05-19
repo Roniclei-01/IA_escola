@@ -177,6 +177,12 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.exportFileError")).toBe(
       "Nao foi possivel exportar o arquivo."
     );
+    expect(i18n.getResource("pt", "translation", "study.meditationTitle")).toBe("Meditacao");
+    expect(i18n.getResource("pt", "translation", "study.meditationSaved")).toBe(
+      "Meditacao salva."
+    );
+    expect(i18n.getResource("en", "translation", "study.meditationTitle")).toBe("Meditation");
+    expect(i18n.getResource("es", "translation", "study.meditationTitle")).toBe("Meditacion");
     expect(i18n.getResource("pt", "translation", "study.deleteCards")).toBe("Excluir cards");
     expect(i18n.getResource("pt", "translation", "progress.title")).toBe(
       "Progresso por documento"

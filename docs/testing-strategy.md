@@ -47,6 +47,7 @@ Devem cobrir:
 - exibir progresso de fila por chunk em painel de segundo plano durante geracao de cards com IA;
 - gerar pacote Anki `.apkg` com `collection.anki2`, arquivo `media` e quantidade correta de cards;
 - acionar exportacao Anki `.apkg` e TSV pela interface sem misturar os formatos;
+- salvar, carregar e exibir o campo `Meditacao` por documento;
 - tratar arquivo invalido;
 - preservar dados apos migracao simples.
 
@@ -193,12 +194,11 @@ Execute este roteiro no app desktop com `npm run tauri dev` e registre o resulta
 
 Esses itens nao bloqueiam o MVP 0.1, mas devem seguir a regra test-first quando forem implementados:
 
-1. Campo `Meditacao` para registrar o resumo pessoal do leitor sobre o documento.
-2. Categorias e subcategorias de estudo com descricao do documento dentro da classificacao.
-3. Busca semantica futura sem substituir a busca textual atual.
-4. Importacao EPUB sem DRM com testes de capitulos, texto extraido, imagens quando houver leitor visual e persistencia local.
-5. Importacao AZW3 sem DRM apenas se houver conversao local confiavel para EPUB, com teste explicito para ausencia de ferramenta externa.
-6. KPF como suporte experimental futuro, sem compromisso de leitura nativa na primeira versao pos-MVP.
+1. Categorias e subcategorias de estudo com descricao do documento dentro da classificacao.
+2. Busca semantica futura sem substituir a busca textual atual.
+3. Importacao EPUB sem DRM com testes de capitulos, texto extraido, imagens quando houver leitor visual e persistencia local.
+4. Importacao AZW3 sem DRM apenas se houver conversao local confiavel para EPUB, com teste explicito para ausencia de ferramenta externa.
+5. KPF como suporte experimental futuro, sem compromisso de leitura nativa na primeira versao pos-MVP.
 
 ### Criterio de aprovacao manual
 

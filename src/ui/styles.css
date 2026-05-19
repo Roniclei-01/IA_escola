@@ -1113,6 +1113,7 @@ h1 {
 .retention-metrics,
 .study-metric-period,
 .study-goal,
+.meditation-note,
 .session-trend,
 .hard-card-trend,
 .session-history {
@@ -1128,6 +1129,7 @@ h1 {
 .retention-metrics h3,
 .study-metric-period h3,
 .study-goal h3,
+.meditation-note h3,
 .session-trend h3,
 .hard-card-trend h3,
 .session-history h3 {
@@ -1305,6 +1307,58 @@ h1 {
   background: #ffffff;
   font-weight: 700;
   cursor: pointer;
+}
+
+.meditation-note {
+  display: grid;
+  gap: 10px;
+}
+
+.meditation-note label {
+  color: #526256;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.meditation-note textarea {
+  min-height: 120px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid #cbd8ce;
+  border-radius: 6px;
+  color: #1d2a22;
+  background: #ffffff;
+  font: inherit;
+  line-height: 1.5;
+}
+
+.meditation-note-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.meditation-note-actions button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #c9d6cd;
+  border-radius: 6px;
+  color: #23352b;
+  background: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.meditation-note-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.meditation-note-actions span {
+  color: #276f4e;
+  font-size: 0.88rem;
+  font-weight: 800;
 }
 
 .study-goal-toggle {

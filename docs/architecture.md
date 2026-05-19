@@ -154,8 +154,8 @@ Tabelas ja iniciadas:
 `document_translations` guarda a leitura traduzida por documento e idioma de destino, permitindo reutilizacao offline sem chamar o Ollama novamente ao reabrir o material. A traducao de documentos longos deve ser feita em lotes menores para respeitar limite de contexto do modelo local e evitar bloqueios perceptiveis da janela.
 `study_reviews` guarda `rating`, `priority`, `next_review_at` e `session_id`, formando a base para revisao espacada, filas de estudo por prioridade, metricas de retencao, cards mais dificeis, filtros de periodo, tendencia por sessao, evolucao semanal de dificuldade e agrupamento de rodadas.
 `study_sessions` registra o documento estudado e o inicio da rodada.
-`app_settings` guarda configuracoes locais e metas de revisao por documento, incluindo recorrencia geral, diaria ou semanal.
-A UI usa esses dados para exibir historico visual por documento, uma fila de cards vencidos, filtros, busca textual, ordenacao da biblioteca, comparativo de progresso entre documentos, resumo filtravel de metricas por periodo, metas persistidas e recorrentes de revisao por documento com alerta visual de pendencia, preferencia de lembretes, horario configuravel e notificacao nativa agendada do Tauri quando aplicavel, resumo de desempenho por sessao, tendencia temporal de retencao, evolucao de cards dificeis por periodo, exportacao local de relatorio Markdown, previa e relatorio imprimivel em PDF com paginacao, grafico de desempenho e tendencia por sessao, exportacao de cards para Anki em `.apkg` pela interface, TSV com diretivas de importacao, GUID estavel e tags de origem, e geracao local inicial de pacote Anki `.apkg` no backend.
+`app_settings` guarda configuracoes locais, metas de revisao por documento, incluindo recorrencia geral, diaria ou semanal, e o campo `Meditacao` com o resumo pessoal do leitor por documento.
+A UI usa esses dados para exibir historico visual por documento, uma fila de cards vencidos, filtros, busca textual, ordenacao da biblioteca, comparativo de progresso entre documentos, resumo filtravel de metricas por periodo, metas persistidas e recorrentes de revisao por documento com alerta visual de pendencia, campo `Meditacao` por documento, preferencia de lembretes, horario configuravel e notificacao nativa agendada do Tauri quando aplicavel, resumo de desempenho por sessao, tendencia temporal de retencao, evolucao de cards dificeis por periodo, exportacao local de relatorio Markdown, previa e relatorio imprimivel em PDF com paginacao, grafico de desempenho e tendencia por sessao, exportacao de cards para Anki em `.apkg` pela interface, TSV com diretivas de importacao, GUID estavel e tags de origem, e geracao local inicial de pacote Anki `.apkg` no backend.
 
 Tabelas futuras:
 
@@ -163,7 +163,6 @@ Tabelas futuras:
 - `model_profiles`.
 - `study_categories`.
 - `document_study_metadata`.
-- `meditation_notes`.
 - `exercises`.
 - `review_events`.
 - `semantic_index`.

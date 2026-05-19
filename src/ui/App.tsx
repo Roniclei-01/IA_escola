@@ -111,6 +111,11 @@ import {
 } from "../infrastructure/tauri/export-anki-package";
 import { exportTextFile as defaultExportTextFile } from "../infrastructure/tauri/export-text-file";
 import {
+  loadMeditationNote as defaultLoadMeditationNote,
+  saveMeditationNote as defaultSaveMeditationNote,
+  type MeditationNote
+} from "../infrastructure/tauri/meditation-notes";
+import {
   SUPPORTED_UI_LANGUAGES,
   UI_LANGUAGE_STORAGE_KEY,
   type UiLanguage
@@ -193,6 +198,8 @@ interface AppProps {
     deckName: string,
     cards: StudyCard[]
   ) => Promise<ExportAnkiPackageResponse | null> | ExportAnkiPackageResponse | null;
+  loadMeditationNote?: (documentId: string) => Promise<MeditationNote>;
+  saveMeditationNote?: (documentId: string, content: string) => Promise<MeditationNote>;
   downloadTextFile?: (fileName: string, content: string) => Promise<void> | void;
   printStudySessionReport?: (fileName: string, html: string) => void;
   notifyStudyGoalReminder?: (notification: StudyGoalReminderNotification) => Promise<void> | void;
@@ -1203,6 +1210,8 @@ export function App({
   saveNotificationSettings = defaultSaveNotificationSettings,
   testOcrDependencies = defaultTestOcrDependencies,
   exportAnkiPackage = defaultExportAnkiPackage,
+  loadMeditationNote = defaultLoadMeditationNote,
+  saveMeditationNote = defaultSaveMeditationNote,
   downloadTextFile = defaultDownloadTextFile,
   printStudySessionReport = defaultPrintStudySessionReport,
   notifyStudyGoalReminder = defaultNotifyStudyGoalReminder,
@@ -1216,6 +1225,7 @@ export function App({
   const translationLoadTokenRef = useRef(0);
   const translatedPageIndexesLoadTokenRef = useRef(0);
   const pdfReaderPreferenceTokenRef = useRef(0);
+  const meditationLoadTokenRef = useRef(0);
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>(() =>
     normalizeUiLanguage(i18n.language)
   );
@@ -1281,6 +1291,11 @@ export function App({
   const [cardReviewSchedules, setCardReviewSchedules] = useState<
     Record<string, { priority: number; nextReviewAt: number }>
   >({});
+  const [meditationNote, setMeditationNote] = useState("");
+  const [meditationDraft, setMeditationDraft] = useState("");
+  const [isLoadingMeditationNote, setIsLoadingMeditationNote] = useState(false);
+  const [isSavingMeditationNote, setIsSavingMeditationNote] = useState(false);
+  const [meditationStatus, setMeditationStatus] = useState<string | null>(null);
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://127.0.0.1:11434");
   const [ollamaModel, setOllamaModel] = useState("llama3.2:1b");
   const [isStudyGoalNotificationEnabled, setIsStudyGoalNotificationEnabled] = useState(true);
@@ -1656,6 +1671,46 @@ export function App({
       isCurrent = false;
     };
   }, [listImportedDocuments, listStudyReviews, listStudySessionSummaries, t]);
+
+  useEffect(() => {
+    const loadToken = meditationLoadTokenRef.current + 1;
+    meditationLoadTokenRef.current = loadToken;
+    setMeditationNote("");
+    setMeditationDraft("");
+    setMeditationStatus(null);
+
+    if (!document) {
+      setIsLoadingMeditationNote(false);
+      return;
+    }
+
+    const documentId = document.document_id;
+
+    async function loadActiveMeditationNote() {
+      setIsLoadingMeditationNote(true);
+
+      try {
+        const note = await loadMeditationNote(documentId);
+
+        if (meditationLoadTokenRef.current !== loadToken) {
+          return;
+        }
+
+        setMeditationNote(note.content);
+        setMeditationDraft(note.content);
+      } catch {
+        if (meditationLoadTokenRef.current === loadToken) {
+          setError(t("study.meditationLoadError"));
+        }
+      } finally {
+        if (meditationLoadTokenRef.current === loadToken) {
+          setIsLoadingMeditationNote(false);
+        }
+      }
+    }
+
+    void loadActiveMeditationNote();
+  }, [document, loadMeditationNote, t]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -3065,6 +3120,27 @@ export function App({
     }
   }
 
+  async function handleSaveMeditationNote() {
+    if (!document) {
+      return;
+    }
+
+    try {
+      setError(null);
+      setMeditationStatus(null);
+      setIsSavingMeditationNote(true);
+      const savedNote = await saveMeditationNote(document.document_id, meditationDraft);
+
+      setMeditationNote(savedNote.content);
+      setMeditationDraft(savedNote.content);
+      setMeditationStatus(t("study.meditationSaved"));
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("study.meditationSaveError")));
+    } finally {
+      setIsSavingMeditationNote(false);
+    }
+  }
+
   return (
     <main className="app-shell">
       <section className="workspace" aria-labelledby="app-title">
@@ -3280,6 +3356,7 @@ export function App({
           <section className="workspace-panel study-panel" aria-labelledby="active-study-title">
             <h2 id="active-study-title">{t("layout.activeStudy")}</h2>
             {document ? (
+              <>
           <DocumentSummary
             document={document}
             chunkCount={chunkCount}
@@ -3711,6 +3788,40 @@ export function App({
               </section>
             ) : null}
           </DocumentSummary>
+          <section className="meditation-note" aria-labelledby="meditation-note-title">
+            <h3 id="meditation-note-title">{t("study.meditationTitle")}</h3>
+            <label htmlFor="meditation-note-content">{t("study.meditationLabel")}</label>
+            <textarea
+              id="meditation-note-content"
+              value={meditationDraft}
+              disabled={isLoadingMeditationNote}
+              placeholder={t("study.meditationPlaceholder")}
+              onChange={(event) => {
+                setMeditationDraft(event.target.value);
+                setMeditationStatus(null);
+              }}
+            />
+            <div className="meditation-note-actions">
+              <button
+                type="button"
+                disabled={
+                  isLoadingMeditationNote ||
+                  isSavingMeditationNote ||
+                  meditationDraft === meditationNote
+                }
+                onClick={() => {
+                  void handleSaveMeditationNote();
+                }}
+              >
+                {isSavingMeditationNote ? t("study.savingMeditation") : t("study.saveMeditation")}
+              </button>
+              {isLoadingMeditationNote ? (
+                <span role="status">{t("study.loadingMeditation")}</span>
+              ) : null}
+              {meditationStatus ? <span role="status">{meditationStatus}</span> : null}
+            </div>
+          </section>
+              </>
         ) : (
           <section className="empty-state" aria-label={t("library.emptyStateLabel")}>
             <p>{t("library.emptyState")}</p>

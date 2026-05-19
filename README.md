@@ -121,6 +121,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - previa e exportacao imprimivel em PDF do relatorio de estudo com paginacao, layout de impressao, grafico de desempenho e tendencia por sessao;
 - exportacao local de cards para Anki em `.apkg` pela interface, mantendo TSV com diretivas de importacao, GUID estavel e tags de origem como alternativa;
 - gerador local inicial de pacote Anki `.apkg` no backend, com `collection.anki2`, `media`, ponte TypeScript e testes de estrutura;
+- campo `Meditacao` por documento, com carregamento e salvamento local do resumo pessoal do leitor;
 - arquivamento de documentos da biblioteca ativa sem exclusao fisica imediata;
 - listagem de documentos arquivados com restauracao para a biblioteca ativa;
 - exclusao definitiva de documentos arquivados com confirmacao e limpeza dos dados de estudo relacionados;
@@ -229,10 +230,9 @@ docs/
 
 ## Proximos passos
 
-1. Validar manualmente a importacao do pacote `.apkg` no Anki desktop.
-2. Implementar `Meditacao` do leitor por documento.
-3. Implementar categorias e subcategorias de estudo por documento.
-4. Planejar importacao EPUB sem DRM para a versao futura, mantendo AZW3/KPF como conversao ou suporte experimental posterior.
+1. Validar manualmente o campo `Meditacao` por documento.
+2. Implementar categorias e subcategorias de estudo por documento.
+3. Planejar importacao EPUB sem DRM para a versao futura, mantendo AZW3/KPF como conversao ou suporte experimental posterior.
 
 ## Comandos de desenvolvimento
 

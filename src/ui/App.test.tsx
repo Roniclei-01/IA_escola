@@ -423,7 +423,7 @@ describe("App", () => {
     renderApp({ listArchivedDocuments, restoreImportedDocument });
 
     expect(await screen.findByText("Documentos arquivados")).toBeInTheDocument();
-    expect(screen.getByText("Documento arquivado para restaurar.")).toBeInTheDocument();
+    expect(await screen.findByText("Documento arquivado para restaurar.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Restaurar" }));
 
@@ -1374,6 +1374,57 @@ describe("App", () => {
       });
     });
     expect(await screen.findByText("Translated text for reading.")).toBeInTheDocument();
+  });
+
+  it("keeps translation available when the imported document language metadata is wrong", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-english",
+      book_id: "book-english",
+      content:
+        "This book is dedicated to all the people and this content is for study with technical notes.",
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/english-book.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const translateDocument = vi.fn().mockResolvedValue({
+      document_id: "document-english",
+      source_language: "En",
+      target_language: "Pt",
+      translated_content: "Texto traduzido para leitura."
+    });
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      translateDocument
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/english-book.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Idioma de leitura")).toHaveValue("Pt");
+    expect(
+      screen.queryByText("O idioma escolhido e o mesmo do documento original.")
+    ).not.toBeInTheDocument();
+
+    const translateButton = screen.getByRole("button", { name: "Gerar leitura traduzida" });
+    expect(translateButton).toBeEnabled();
+    fireEvent.click(translateButton);
+
+    await waitFor(() => {
+      expect(translateDocument).toHaveBeenCalledWith({
+        document_id: "document-english",
+        content:
+          "This book is dedicated to all the people and this content is for study with technical notes.",
+        source_language: "En",
+        target_language: "Pt"
+      });
+    });
+    expect(await screen.findByText("Texto traduzido para leitura.")).toBeInTheDocument();
   });
 
   it("loads a persisted translation when selecting a saved document", async () => {

@@ -178,8 +178,42 @@ type ReviewStatusFilter = "all" | "reviewed" | "pending";
 type LibrarySortMode = "oldest" | "newest" | "type" | "status";
 type MetricPeriodFilter = "all" | "last7" | "last30";
 type StudyGoalRecurrence = StudyGoal["recurrence"];
+type DocumentLanguage = ImportTextBookResponse["language"];
 const INITIAL_CARD_GENERATION_CHUNK_LIMIT = 3;
 const STUDY_GOAL_REMINDER_NOTIFICATION_ID = 1001;
+const LANGUAGE_MARKERS: Record<DocumentLanguage, string[]> = {
+  Pt: [
+    "que",
+    "para",
+    "com",
+    "uma",
+    "um",
+    "de",
+    "do",
+    "da",
+    "nao",
+    "livro",
+    "conteudo",
+    "pessoas"
+  ],
+  En: [
+    "the",
+    "and",
+    "of",
+    "to",
+    "in",
+    "that",
+    "this",
+    "is",
+    "are",
+    "with",
+    "from",
+    "for",
+    "book",
+    "people"
+  ],
+  Es: ["que", "para", "con", "una", "un", "de", "del", "libro", "contenido", "personas"]
+};
 
 function normalizeUiLanguage(language: string): UiLanguage {
   const shortLanguage = language.split("-")[0] as UiLanguage;
@@ -199,6 +233,39 @@ function defaultReaderTargetLanguage(
   sourceLanguage: ImportTextBookResponse["language"]
 ): ImportTextBookResponse["language"] {
   return sourceLanguage === "En" ? "Pt" : "En";
+}
+
+function inferDocumentLanguage(document: ImportTextBookResponse): DocumentLanguage {
+  const words = document.content
+    .toLowerCase()
+    .replace(/[^a-z]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return document.language;
+  }
+
+  const wordCounts: Record<string, number> = {};
+  for (const word of words) {
+    wordCounts[word] = (wordCounts[word] ?? 0) + 1;
+  }
+
+  const scores = Object.fromEntries(
+    Object.entries(LANGUAGE_MARKERS).map(([language, markers]) => [
+      language,
+      markers.reduce((score, marker) => score + (wordCounts[marker] ?? 0), 0)
+    ])
+  ) as Record<DocumentLanguage, number>;
+  const inferredLanguage = (Object.keys(scores) as DocumentLanguage[]).reduce(
+    (bestLanguage, language) => (scores[language] > scores[bestLanguage] ? language : bestLanguage)
+  );
+
+  return scores[inferredLanguage] >= 4 &&
+    scores[inferredLanguage] >= scores[document.language] + 2
+    ? inferredLanguage
+    : document.language;
 }
 
 interface StudyGoalReminderNotification {
@@ -1162,6 +1229,7 @@ export function App({
   const [isLoadingOcrDependencies, setIsLoadingOcrDependencies] = useState(true);
 
   const activeCard = cards[activeCardIndex] ?? null;
+  const activeDocumentLanguage = document ? inferDocumentLanguage(document) : null;
   const activeOperationMessage =
     operationStatus === "generatingCardsWithOllama" && cardGenerationProgress
       ? `${t(`library.${operationStatus}`)} ${t("library.cardGenerationProgress", {
@@ -1558,7 +1626,9 @@ export function App({
   ) {
     const translationLoadToken = nextTranslationLoadToken();
 
-    if (targetLanguage === selectedDocument.language) {
+    const sourceLanguage = inferDocumentLanguage(selectedDocument);
+
+    if (targetLanguage === sourceLanguage) {
       setTranslatedDocumentContent(selectedDocument.content);
       return;
     }
@@ -1594,7 +1664,9 @@ export function App({
 
     invalidateTranslationLoad();
 
-    if (readerTargetLanguage === document.language) {
+    const sourceLanguage = inferDocumentLanguage(document);
+
+    if (readerTargetLanguage === sourceLanguage) {
       setTranslatedDocumentContent(document.content);
       return;
     }
@@ -1613,7 +1685,7 @@ export function App({
       const response = await translateDocument({
         document_id: document.document_id,
         content: document.content,
-        source_language: document.language,
+        source_language: sourceLanguage,
         target_language: readerTargetLanguage
       });
       if (!isCurrentOperation(operationToken)) {
@@ -1686,7 +1758,9 @@ export function App({
       }
       setDocument(currentImportedDocument);
       invalidateTranslationLoad();
-      setReaderTargetLanguage(defaultReaderTargetLanguage(currentImportedDocument.language));
+      setReaderTargetLanguage(
+        defaultReaderTargetLanguage(inferDocumentLanguage(currentImportedDocument))
+      );
       setTranslatedDocumentContent(null);
       setDocumentChunks(chunkResponse.chunks);
       setSavedDocuments((currentDocuments) => [...currentDocuments, currentImportedDocument]);
@@ -1743,7 +1817,7 @@ export function App({
   }
 
   async function handleSelectSavedDocument(selectedDocument: ImportTextBookResponse) {
-    const targetLanguage = defaultReaderTargetLanguage(selectedDocument.language);
+    const targetLanguage = defaultReaderTargetLanguage(inferDocumentLanguage(selectedDocument));
 
     setDocument(selectedDocument);
     setReaderTargetLanguage(targetLanguage);
@@ -2808,6 +2882,7 @@ export function App({
               expandPreview: t("library.expandPreview"),
               collapsePreview: t("library.collapsePreview")
             }}
+            originalLanguage={activeDocumentLanguage ?? document.language}
             readerTargetLanguage={readerTargetLanguage}
             translatedContent={translatedDocumentContent}
             isGeneratingCards={isCardGenerationBusy}

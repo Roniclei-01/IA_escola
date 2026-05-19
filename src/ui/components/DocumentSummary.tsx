@@ -29,6 +29,7 @@ interface DocumentSummaryProps {
     translateDocument: string;
     translatingDocument: string;
   };
+  originalLanguage: ImportTextBookResponse["language"];
   readerTargetLanguage: ImportTextBookResponse["language"];
   translatedContent: string | null;
   isGeneratingCards?: boolean;
@@ -44,6 +45,7 @@ export function DocumentSummary({
   chunkCount,
   cardCount,
   labels,
+  originalLanguage,
   readerTargetLanguage,
   translatedContent,
   isGeneratingCards = false,
@@ -59,7 +61,7 @@ export function DocumentSummary({
     shouldCollapsePreview && !isPreviewExpanded
       ? `${document.content.slice(0, COLLAPSED_PREVIEW_LENGTH).trimEnd()}...`
       : document.content;
-  const isSameLanguage = readerTargetLanguage === document.language;
+  const isSameLanguage = readerTargetLanguage === originalLanguage;
   const translatedDisplayContent = isSameLanguage ? document.content : translatedContent;
 
   return (

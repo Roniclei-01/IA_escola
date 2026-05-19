@@ -75,7 +75,7 @@ export function DocumentSummary({
     () => paginateReaderText(translatedDisplayContent ?? ""),
     [translatedDisplayContent]
   );
-  const totalReaderPages = Math.max(originalPages.length, translatedPages.length, 1);
+  const totalReaderPages = Math.max(originalPages.length, 1);
   const currentReaderPage = Math.min(readerPageIndex, totalReaderPages - 1);
   const currentOriginalPage = originalPages[currentReaderPage] ?? "";
   const currentTranslatedPage = translatedPages[currentReaderPage] ?? "";

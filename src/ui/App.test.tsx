@@ -1497,6 +1497,63 @@ describe("App", () => {
     expect(await screen.findByText("Texto traduzido para leitura.")).toBeInTheDocument();
   });
 
+  it("keeps original reader pagination available when translation returns a shorter partial text", async () => {
+    const finalLine = "Final original page remains available.";
+    const textIncludes = (text: string) => (_content: string, node: Element | null) =>
+      node?.textContent?.includes(text) ?? false;
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-partial-translation",
+      book_id: "book-partial-translation",
+      content: `Original beginning.\n\n${"Long original English content for the reader. ".repeat(
+        160
+      )}\n\n${finalLine}`,
+      language: "En",
+      source_type: "pdf",
+      source_path: "/tmp/partial-translation.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const translateDocument = vi.fn().mockResolvedValue({
+      document_id: "document-partial-translation",
+      source_language: "En",
+      target_language: "Pt",
+      translated_content: "Traducao parcial retornada pelo modelo."
+    });
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      translateDocument
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/partial-translation.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    const readerHeading = await screen.findByRole("heading", { name: "Leitura do documento" });
+    const reader = readerHeading.closest(".document-reader");
+    expect(reader).not.toBeNull();
+    const readerQueries = within(reader as HTMLElement);
+
+    fireEvent.change(screen.getByLabelText("Idioma de leitura"), {
+      target: { value: "Pt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Gerar leitura traduzida" }));
+
+    expect(await screen.findByText("Traducao parcial retornada pelo modelo.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Proxima pagina" })).toBeEnabled();
+
+    for (
+      let attempts = 0;
+      attempts < 8 && readerQueries.queryAllByText(textIncludes(finalLine)).length === 0;
+      attempts += 1
+    ) {
+      fireEvent.click(screen.getByRole("button", { name: "Proxima pagina" }));
+    }
+
+    expect(readerQueries.getAllByText(textIncludes(finalLine)).length).toBeGreaterThan(0);
+  });
+
   it("loads a persisted translation when selecting a saved document", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [

@@ -13,6 +13,9 @@ use crate::{
     domain::{DocumentChunk, Language, StudyCard},
 };
 
+const TEXT_GENERATION_NUM_PREDICT: i32 = 2048;
+const FLASHCARD_GENERATION_NUM_PREDICT: i32 = 1024;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OllamaModelConfig {
     pub model: String,
@@ -45,6 +48,13 @@ pub struct OllamaGenerateRequest {
     pub stream: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options: Option<OllamaGenerateOptions>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct OllamaGenerateOptions {
+    pub num_predict: i32,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
@@ -269,6 +279,9 @@ where
                 prompt: prompt.to_owned(),
                 stream: false,
                 format: None,
+                options: Some(OllamaGenerateOptions {
+                    num_predict: TEXT_GENERATION_NUM_PREDICT,
+                }),
             })
             .map_err(map_client_error)?;
 
@@ -287,6 +300,9 @@ where
                 prompt: build_flashcard_prompt(chunks, config),
                 stream: false,
                 format: Some("json".to_owned()),
+                options: Some(OllamaGenerateOptions {
+                    num_predict: FLASHCARD_GENERATION_NUM_PREDICT,
+                }),
             })
             .map_err(map_client_error)?;
 
@@ -561,6 +577,7 @@ mod tests {
         assert_eq!(requests[0].model, "llama3.2");
         assert_eq!(requests[0].prompt, "ola");
         assert!(!requests[0].stream);
+        assert_eq!(requests[0].options.as_ref().map(|options| options.num_predict), Some(2048));
     }
 
     #[test]
@@ -597,6 +614,13 @@ mod tests {
         assert!(adapter.client.requests.borrow()[0]
             .prompt
             .contains("conteudo de estudo"));
+        assert_eq!(
+            adapter.client.requests.borrow()[0]
+                .options
+                .as_ref()
+                .map(|options| options.num_predict),
+            Some(1024)
+        );
     }
 
     #[test]

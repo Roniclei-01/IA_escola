@@ -33,6 +33,7 @@ pub enum TextBookParserError {
 pub struct TextBookParserOptions {
     pub ocr_enabled: bool,
     pub ocr_fallback_enabled: bool,
+    pub pdf_text_extractor_path: PathBuf,
     pub ocr_engine: OcrEngineOptions,
 }
 
@@ -51,6 +52,7 @@ impl Default for TextBookParserOptions {
         Self {
             ocr_enabled: false,
             ocr_fallback_enabled: false,
+            pdf_text_extractor_path: PathBuf::from("pdftotext"),
             ocr_engine: OcrEngineOptions::default(),
         }
     }
@@ -122,6 +124,10 @@ fn extract_pdf_text(
     path: &Path,
     options: &TextBookParserOptions,
 ) -> Result<String, TextBookParserError> {
+    if let Some(extracted_text) = extract_pdf_text_with_pdftotext(path, options) {
+        return Ok(extracted_text);
+    }
+
     let document = match PdfDocument::load(path) {
         Ok(document) => document,
         Err(_) if should_attempt_ocr(options) => {
@@ -148,6 +154,39 @@ fn extract_pdf_text(
     }
 
     Ok(extracted_text)
+}
+
+fn extract_pdf_text_with_pdftotext(
+    path: &Path,
+    options: &TextBookParserOptions,
+) -> Option<String> {
+    let mut command = Command::new(&options.pdf_text_extractor_path);
+    command
+        .arg("-layout")
+        .arg(path)
+        .arg("-")
+        .stderr(std::process::Stdio::null());
+
+    let output = run_command_output_with_timeout(
+        &mut command,
+        Duration::from_secs(options.ocr_engine.command_timeout_seconds),
+    )
+    .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let text = String::from_utf8_lossy(&output.stdout)
+        .replace('\u{000c}', "\n")
+        .trim()
+        .to_owned();
+
+    if text.is_empty() {
+        return None;
+    }
+
+    Some(text)
 }
 
 fn should_attempt_ocr(options: &TextBookParserOptions) -> bool {
@@ -352,6 +391,36 @@ mod tests {
         assert_eq!(document.source_path, path.to_string_lossy());
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn prefers_pdftotext_for_pdf_text_extraction() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("book.pdf");
+        let pdftotext_path = dir.path().join("pdftotext");
+        write_pdf_file(&path, "Texto parcial via lopdf.");
+        write_executable(
+            &pdftotext_path,
+            "#!/bin/sh\nprintf 'Texto completo via pdftotext.\\nPagina final.'\n",
+        );
+
+        let document = parse_text_book_with_options(
+            Uuid::new_v4(),
+            path,
+            Language::Pt,
+            TextBookParserOptions {
+                pdf_text_extractor_path: pdftotext_path,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(
+            document.content,
+            "Texto completo via pdftotext.\nPagina final."
+        );
+        assert_eq!(document.source_type, DocumentSourceType::Pdf);
+    }
+
     #[test]
     fn rejects_non_txt_file() {
         let dir = TempDir::new().unwrap();
@@ -418,6 +487,7 @@ mod tests {
                     language: "por".to_owned(),
                     ..Default::default()
                 },
+                ..Default::default()
             },
         );
 
@@ -454,6 +524,7 @@ mod tests {
                     language: "por".to_owned(),
                     ..Default::default()
                 },
+                ..Default::default()
             },
         )
         .unwrap();
@@ -491,6 +562,7 @@ mod tests {
                     language: "por".to_owned(),
                     ..Default::default()
                 },
+                ..Default::default()
             },
         )
         .unwrap();
@@ -528,6 +600,7 @@ mod tests {
                     language: "por".to_owned(),
                     ..Default::default()
                 },
+                ..Default::default()
             },
         )
         .unwrap();
@@ -565,6 +638,7 @@ mod tests {
                     max_pages: Some(2),
                     command_timeout_seconds: 5,
                 },
+                ..Default::default()
             },
         )
         .unwrap();

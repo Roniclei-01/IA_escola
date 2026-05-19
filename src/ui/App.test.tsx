@@ -718,9 +718,29 @@ describe("App", () => {
     const generateCards = vi.fn(
       (
         _chunks: typeof chunks,
-        options?: { onProgress?: (progress: { current: number; total: number }) => void }
+        options?: {
+          onProgress?: (progress: { current: number; total: number }) => void;
+          onQueueProgress?: (progress: {
+            current: number;
+            total: number;
+            completed: number;
+            failed: number;
+            pending: number;
+            currentChunkId: string;
+            status: "running";
+          }) => void;
+        }
       ) => {
         options?.onProgress?.({ current: 2, total: 3 });
+        options?.onQueueProgress?.({
+          current: 2,
+          total: 3,
+          completed: 1,
+          failed: 0,
+          pending: 1,
+          currentChunkId: "chunk-2",
+          status: "running"
+        });
         return new Promise<StudyCard[]>(() => {
           // Keep generation pending so progress remains visible.
         });
@@ -743,7 +763,7 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent(
-        "Gerando cards com Ollama. Chunk 2 de 3."
+        "Gerando cards com Ollama. Chunk 2 de 3. Fila: 1 concluidos, 0 falharam, 1 pendentes."
       );
     });
   });

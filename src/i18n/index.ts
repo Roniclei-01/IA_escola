@@ -48,6 +48,8 @@ export const resources = {
         chunkingDocument: "Dividindo conteudo em chunks.",
         generatingCardsWithOllama: "Gerando cards com Ollama.",
         cardGenerationProgress: "Chunk {{current}} de {{total}}.",
+        cardGenerationQueueProgress:
+          "Fila: {{completed}} concluidos, {{failed}} falharam, {{pending}} pendentes.",
         savingStudyCards: "Salvando cards de estudo.",
         loadingSavedCards: "Carregando cards salvos.",
         translatingDocument: "Traduzindo pagina atual.",
@@ -307,6 +309,8 @@ export const resources = {
         chunkingDocument: "Splitting content into chunks.",
         generatingCardsWithOllama: "Generating cards with Ollama.",
         cardGenerationProgress: "Chunk {{current}} of {{total}}.",
+        cardGenerationQueueProgress:
+          "Queue: {{completed}} completed, {{failed}} failed, {{pending}} pending.",
         savingStudyCards: "Saving study cards.",
         loadingSavedCards: "Loading saved cards.",
         translatingDocument: "Translating current page.",
@@ -566,6 +570,8 @@ export const resources = {
         chunkingDocument: "Dividiendo contenido en chunks.",
         generatingCardsWithOllama: "Generando cards con Ollama.",
         cardGenerationProgress: "Chunk {{current}} de {{total}}.",
+        cardGenerationQueueProgress:
+          "Cola: {{completed}} concluidos, {{failed}} fallaron, {{pending}} pendientes.",
         savingStudyCards: "Guardando cards de estudio.",
         loadingSavedCards: "Cargando cards guardados.",
         translatingDocument: "Traduciendo pagina actual.",

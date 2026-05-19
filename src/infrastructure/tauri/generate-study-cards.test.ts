@@ -174,6 +174,68 @@ describe("generateStudyCardsWithOllama", () => {
     expect(onProgress).toHaveBeenNthCalledWith(2, { current: 2, total: 2 });
   });
 
+  it("reports queue progress by chunk", async () => {
+    const chunks = [
+      {
+        id: "chunk-1",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 1,
+        content: "primeiro conteudo",
+        token_estimate: 1
+      },
+      {
+        id: "chunk-2",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 2,
+        content: "segundo conteudo",
+        token_estimate: 1
+      }
+    ];
+    const onQueueProgress = vi.fn();
+    invokeMock.mockResolvedValue({ cards: [] });
+
+    await generateStudyCardsWithOllama(chunks, { onQueueProgress });
+
+    expect(onQueueProgress).toHaveBeenNthCalledWith(1, {
+      current: 1,
+      total: 2,
+      completed: 0,
+      failed: 0,
+      pending: 1,
+      currentChunkId: "chunk-1",
+      status: "running"
+    });
+    expect(onQueueProgress).toHaveBeenNthCalledWith(2, {
+      current: 1,
+      total: 2,
+      completed: 1,
+      failed: 0,
+      pending: 1,
+      currentChunkId: "chunk-1",
+      status: "completed"
+    });
+    expect(onQueueProgress).toHaveBeenNthCalledWith(3, {
+      current: 2,
+      total: 2,
+      completed: 1,
+      failed: 0,
+      pending: 0,
+      currentChunkId: "chunk-2",
+      status: "running"
+    });
+    expect(onQueueProgress).toHaveBeenNthCalledWith(4, {
+      current: 2,
+      total: 2,
+      completed: 2,
+      failed: 0,
+      pending: 0,
+      currentChunkId: "chunk-2",
+      status: "completed"
+    });
+  });
+
   it("reports cards generated for each completed chunk", async () => {
     const chunks = [
       {
@@ -314,6 +376,45 @@ describe("generateStudyCardsWithOllama", () => {
     expect(invokeMock).toHaveBeenCalledTimes(4);
     expect(onChunkError).toHaveBeenCalledWith(chunks[1], { current: 2, total: 3 }, chunkError);
     expect(cards.map((card) => card.chunkId)).toEqual(["chunk-1", "chunk-3"]);
+  });
+
+  it("reports failed chunks in queue progress", async () => {
+    const chunks = [
+      {
+        id: "chunk-1",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 1,
+        content: "conteudo que falha",
+        token_estimate: 1
+      }
+    ];
+    const chunkError = new Error("Ollama retornou JSON invalido.");
+    const onQueueProgress = vi.fn();
+    invokeMock.mockRejectedValue(chunkError);
+
+    await expect(
+      generateStudyCardsWithOllama(chunks, { onQueueProgress })
+    ).rejects.toThrow(chunkError);
+
+    expect(onQueueProgress).toHaveBeenNthCalledWith(1, {
+      current: 1,
+      total: 1,
+      completed: 0,
+      failed: 0,
+      pending: 0,
+      currentChunkId: "chunk-1",
+      status: "running"
+    });
+    expect(onQueueProgress).toHaveBeenNthCalledWith(2, {
+      current: 1,
+      total: 1,
+      completed: 0,
+      failed: 1,
+      pending: 0,
+      currentChunkId: "chunk-1",
+      status: "failed"
+    });
   });
 
   it("stops before requesting the next chunk when generation is aborted", async () => {

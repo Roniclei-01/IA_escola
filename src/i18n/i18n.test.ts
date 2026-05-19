@@ -246,11 +246,20 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.generatingCardsWithOllama")).toBe(
       "Gerando cards com Ollama."
     );
+    expect(i18n.getResource("pt", "translation", "library.cardGenerationQueueProgress")).toBe(
+      "Fila: {{completed}} concluidos, {{failed}} falharam, {{pending}} pendentes."
+    );
     expect(i18n.getResource("en", "translation", "library.generatingCardsWithOllama")).toBe(
       "Generating cards with Ollama."
     );
+    expect(i18n.getResource("en", "translation", "library.cardGenerationQueueProgress")).toBe(
+      "Queue: {{completed}} completed, {{failed}} failed, {{pending}} pending."
+    );
     expect(i18n.getResource("es", "translation", "library.generatingCardsWithOllama")).toBe(
       "Generando cards con Ollama."
+    );
+    expect(i18n.getResource("es", "translation", "library.cardGenerationQueueProgress")).toBe(
+      "Cola: {{completed}} concluidos, {{failed}} fallaron, {{pending}} pendientes."
     );
     expect(i18n.getResource("pt", "translation", "library.operationOverlayTitle")).toBe(
       "Processando arquivo"

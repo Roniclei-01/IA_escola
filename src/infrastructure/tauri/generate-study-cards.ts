@@ -22,10 +22,23 @@ export interface GenerateStudyCardsProgress {
   total: number;
 }
 
+export type GenerateStudyCardsQueueStatus = "running" | "completed" | "failed";
+
+export interface GenerateStudyCardsQueueProgress {
+  current: number;
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+  currentChunkId: string;
+  status: GenerateStudyCardsQueueStatus;
+}
+
 export interface GenerateStudyCardsOptions {
   timeoutMs?: number;
   maxChunkRetries?: number;
   onProgress?: (progress: GenerateStudyCardsProgress) => void;
+  onQueueProgress?: (progress: GenerateStudyCardsQueueProgress) => void | Promise<void>;
   onChunkCards?: (
     cards: StudyCard[],
     progress: GenerateStudyCardsProgress
@@ -50,6 +63,8 @@ export async function generateStudyCardsWithOllama(
   const maxChunkRetries = options.maxChunkRetries ?? 1;
   const cards: StudyCard[] = [];
   let lastChunkError: unknown = null;
+  let completedChunkCount = 0;
+  let failedChunkCount = 0;
 
   for (const [index, chunk] of chunks.entries()) {
     throwIfAborted(options.signal);
@@ -60,6 +75,9 @@ export async function generateStudyCardsWithOllama(
     };
 
     options.onProgress?.(progress);
+    await options.onQueueProgress?.(
+      buildQueueProgress(chunk, progress, completedChunkCount, failedChunkCount, "running")
+    );
 
     let chunkCards: StudyCard[] | null = null;
 
@@ -86,10 +104,18 @@ export async function generateStudyCardsWithOllama(
     }
 
     if (chunkCards === null) {
+      failedChunkCount += 1;
+      await options.onQueueProgress?.(
+        buildQueueProgress(chunk, progress, completedChunkCount, failedChunkCount, "failed")
+      );
       await options.onChunkError?.(chunk, progress, lastChunkError);
       continue;
     }
 
+    completedChunkCount += 1;
+    await options.onQueueProgress?.(
+      buildQueueProgress(chunk, progress, completedChunkCount, failedChunkCount, "completed")
+    );
     await options.onChunkCards?.(chunkCards, progress);
     cards.push(...chunkCards);
   }
@@ -99,6 +125,26 @@ export async function generateStudyCardsWithOllama(
   }
 
   return cards;
+}
+
+function buildQueueProgress(
+  chunk: ImportedDocumentChunk,
+  progress: GenerateStudyCardsProgress,
+  completed: number,
+  failed: number,
+  status: GenerateStudyCardsQueueStatus
+): GenerateStudyCardsQueueProgress {
+  const activeChunkCount = status === "running" ? 1 : 0;
+  const pending = Math.max(0, progress.total - completed - failed - activeChunkCount);
+
+  return {
+    ...progress,
+    completed,
+    failed,
+    pending,
+    currentChunkId: chunk.id,
+    status
+  };
 }
 
 function throwIfAborted(signal?: AbortSignal): void {

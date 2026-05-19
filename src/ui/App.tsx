@@ -38,7 +38,8 @@ import { generateStudyCards } from "../app/generate-study-cards";
 import {
   generateStudyCardsWithOllama,
   type GenerateStudyCardsOptions,
-  type GenerateStudyCardsProgress
+  type GenerateStudyCardsProgress,
+  type GenerateStudyCardsQueueProgress
 } from "../infrastructure/tauri/generate-study-cards";
 import {
   translateDocument as defaultTranslateDocument,
@@ -1217,6 +1218,8 @@ export function App({
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
   const [cardGenerationProgress, setCardGenerationProgress] =
     useState<GenerateStudyCardsProgress | null>(null);
+  const [cardGenerationQueueProgress, setCardGenerationQueueProgress] =
+    useState<GenerateStudyCardsQueueProgress | null>(null);
   const [document, setDocument] = useState<ImportTextBookResponse | null>(null);
   const [readerTargetLanguage, setReaderTargetLanguage] =
     useState<ImportTextBookResponse["language"]>("En");
@@ -1281,10 +1284,21 @@ export function App({
   const activeDocumentLanguage = document ? inferDocumentLanguage(document) : null;
   const activeOperationMessage =
     operationStatus === "generatingCardsWithOllama" && cardGenerationProgress
-      ? `${t(`library.${operationStatus}`)} ${t("library.cardGenerationProgress", {
-          current: cardGenerationProgress.current,
-          total: cardGenerationProgress.total
-        })}`
+      ? [
+          `${t(`library.${operationStatus}`)} ${t("library.cardGenerationProgress", {
+            current: cardGenerationProgress.current,
+            total: cardGenerationProgress.total
+          })}`,
+          cardGenerationQueueProgress
+            ? t("library.cardGenerationQueueProgress", {
+                completed: cardGenerationQueueProgress.completed,
+                failed: cardGenerationQueueProgress.failed,
+                pending: cardGenerationQueueProgress.pending
+              })
+            : null
+        ]
+          .filter(Boolean)
+          .join(" ")
       : operationStatus
         ? t(`library.${operationStatus}`)
         : null;
@@ -1399,6 +1413,7 @@ export function App({
     setIsImporting(false);
     setOperationStatus(null);
     setCardGenerationProgress(null);
+    setCardGenerationQueueProgress(null);
     setWarning(t("library.operationCanceled"));
   }
 
@@ -1410,6 +1425,7 @@ export function App({
     const chunksForGeneration = chunks.slice(0, INITIAL_CARD_GENERATION_CHUNK_LIMIT);
     let skippedChunkCount = 0;
     setCardGenerationProgress(null);
+    setCardGenerationQueueProgress(null);
 
     if (chunks.length > INITIAL_CARD_GENERATION_CHUNK_LIMIT) {
       setWarning(
@@ -1425,6 +1441,11 @@ export function App({
         onProgress: (progress) => {
           if (isCurrentOperation(operationToken)) {
             setCardGenerationProgress(progress);
+          }
+        },
+        onQueueProgress: (progress) => {
+          if (isCurrentOperation(operationToken)) {
+            setCardGenerationQueueProgress(progress);
           }
         },
         onChunkCards: options.onChunkCards,
@@ -1458,6 +1479,7 @@ export function App({
 
       setWarning(t("library.mockGenerationFallback"));
       setCardGenerationProgress(null);
+      setCardGenerationQueueProgress(null);
       return fallbackCards;
     }
   }
@@ -2060,6 +2082,7 @@ export function App({
     setPrintableReportPreviewHtml(null);
     setCardReviewSchedules({});
     setCardGenerationProgress(null);
+    setCardGenerationQueueProgress(null);
     const operationToken = startCancellableOperation();
 
     try {
@@ -2138,6 +2161,7 @@ export function App({
         setIsImporting(false);
         setOperationStatus(null);
         setCardGenerationProgress(null);
+        setCardGenerationQueueProgress(null);
         operationAbortControllerRef.current = null;
       }
     }
@@ -2164,6 +2188,7 @@ export function App({
     setStudySessionSummaries([]);
     setCardReviewSchedules({});
     setCardGenerationProgress(null);
+    setCardGenerationQueueProgress(null);
     setError(null);
     setWarning(null);
     setOperationStatus("loadingSavedCards");
@@ -2273,6 +2298,7 @@ export function App({
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
         setCardGenerationProgress(null);
+        setCardGenerationQueueProgress(null);
         operationAbortControllerRef.current = null;
       }
     }
@@ -2330,6 +2356,7 @@ export function App({
     setWarning(null);
     setOperationStatus("chunkingDocument");
     setCardGenerationProgress(null);
+    setCardGenerationQueueProgress(null);
     const operationToken = startCancellableOperation();
     const partiallySavedCards: StudyCard[] = [];
     const incrementallySavedCardIds = new Set<string>();
@@ -2388,6 +2415,7 @@ export function App({
       }
       setOperationStatus("savingStudyCards");
       setCardGenerationProgress(null);
+      setCardGenerationQueueProgress(null);
       const unsavedGeneratedCards = generatedCards.filter(
         (generatedCard) => !incrementallySavedCardIds.has(generatedCard.id)
       );
@@ -2439,6 +2467,7 @@ export function App({
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
         setCardGenerationProgress(null);
+        setCardGenerationQueueProgress(null);
         operationAbortControllerRef.current = null;
       }
     }
@@ -2453,6 +2482,7 @@ export function App({
     setWarning(null);
     setOperationStatus("chunkingDocument");
     setCardGenerationProgress(null);
+    setCardGenerationQueueProgress(null);
     const operationToken = startCancellableOperation();
     const partiallySavedCards: StudyCard[] = [];
 
@@ -2503,6 +2533,7 @@ export function App({
       }
       setOperationStatus("savingStudyCards");
       setCardGenerationProgress(null);
+      setCardGenerationQueueProgress(null);
       const unsavedGeneratedCards = generatedCards.filter(
         (generatedCard) => !incrementallySavedCardIds.has(generatedCard.id)
       );
@@ -2541,6 +2572,7 @@ export function App({
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
         setCardGenerationProgress(null);
+        setCardGenerationQueueProgress(null);
         operationAbortControllerRef.current = null;
       }
     }

@@ -4,6 +4,7 @@ pub mod archive_imported_document;
 pub mod chunk_text_document;
 pub mod delete_imported_document;
 pub mod delete_study_cards;
+pub mod document_study_metadata;
 pub mod export_anki_package;
 pub mod export_text_file;
 pub mod generate_study_cards;
@@ -38,6 +39,8 @@ pub use chunk_text_document::chunk_text_document;
 pub use delete_imported_document::delete_imported_document;
 #[cfg(feature = "tauri-app")]
 pub use delete_study_cards::delete_study_cards;
+#[cfg(feature = "tauri-app")]
+pub use document_study_metadata::{load_document_study_metadata, save_document_study_metadata};
 #[cfg(feature = "tauri-app")]
 pub use export_anki_package::export_anki_package;
 #[cfg(feature = "tauri-app")]
@@ -103,6 +106,10 @@ pub use delete_imported_document::{
     DeleteImportedDocumentResponse,
 };
 pub use delete_study_cards::{delete_study_cards_with_storage, DeleteStudyCardsResponse};
+pub use document_study_metadata::{
+    load_document_study_metadata_from_storage, save_document_study_metadata_with_storage,
+    DocumentStudyMetadataResponse, SaveDocumentStudyMetadataRequest,
+};
 pub use export_anki_package::{
     export_anki_package_to_path, ExportAnkiPackageCard, ExportAnkiPackageRequest,
     ExportAnkiPackageResponse,

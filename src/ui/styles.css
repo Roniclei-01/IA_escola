@@ -1134,6 +1134,97 @@ h1 {
   white-space: pre-wrap;
 }
 
+.document-study-metadata {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #d8ddd4;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.document-study-metadata-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.document-study-metadata h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.document-study-metadata-header span {
+  max-width: 50%;
+  color: #526256;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.document-study-metadata-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.document-study-metadata label {
+  display: grid;
+  gap: 6px;
+  color: #2d3932;
+  font-weight: 700;
+}
+
+.document-study-metadata input,
+.document-study-metadata textarea {
+  width: 100%;
+  border: 1px solid #cfd7d1;
+  border-radius: 6px;
+  color: #18201c;
+  background: #ffffff;
+  font: inherit;
+}
+
+.document-study-metadata input {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.document-study-metadata textarea {
+  min-height: 96px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.document-study-metadata-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.document-study-metadata-actions button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #c9d6cd;
+  border-radius: 6px;
+  color: #23352b;
+  background: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.document-study-metadata-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.document-study-metadata-actions span {
+  color: #0d4b38;
+  font-weight: 700;
+}
+
 .card-preview {
   margin-top: 20px;
   padding: 16px;
@@ -1827,8 +1918,18 @@ h1 {
   .background-generation-panel,
   .settings-row,
   .study-goal-header,
+  .document-study-metadata-fields,
   .library-filters {
     grid-template-columns: 1fr;
+  }
+
+  .document-study-metadata-header {
+    display: grid;
+  }
+
+  .document-study-metadata-header span {
+    max-width: none;
+    text-align: left;
   }
 
   .background-generation-panel {

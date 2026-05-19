@@ -76,6 +76,7 @@ interface DocumentSummaryProps {
   onReaderTargetLanguageChange: (language: ImportTextBookResponse["language"]) => void;
   onReaderPageChange: (request: ReaderPageTranslationRequest) => void;
   onTranslateDocument: (request: ReaderPageTranslationRequest) => void;
+  documentStudyMetadataSlot?: ReactNode;
   meditationSlot?: ReactNode;
   children?: ReactNode;
 }
@@ -102,6 +103,7 @@ export function DocumentSummary({
   onReaderTargetLanguageChange,
   onReaderPageChange,
   onTranslateDocument,
+  documentStudyMetadataSlot,
   meditationSlot,
   children
 }: DocumentSummaryProps) {
@@ -353,6 +355,7 @@ export function DocumentSummary({
           </article>
         </div>
       </section>
+      {documentStudyMetadataSlot}
       {cardCount > 0 ? children : null}
       <section className="document-extracted-text" aria-labelledby="document-extracted-text-title">
         <div>

@@ -195,11 +195,10 @@ Execute este roteiro no app desktop com `npm run tauri dev` e registre o resulta
 
 Esses itens nao bloqueiam o MVP 0.1, mas devem seguir a regra test-first quando forem implementados:
 
-1. Categorias e subcategorias de estudo com descricao do documento dentro da classificacao.
-2. Busca semantica futura sem substituir a busca textual atual.
-3. Importacao EPUB sem DRM com testes de capitulos, texto extraido, imagens quando houver leitor visual e persistencia local.
-4. Importacao AZW3 sem DRM apenas se houver conversao local confiavel para EPUB, com teste explicito para ausencia de ferramenta externa.
-5. KPF como suporte experimental futuro, sem compromisso de leitura nativa na primeira versao pos-MVP.
+1. Busca semantica futura sem substituir a busca textual atual.
+2. Importacao EPUB sem DRM com testes de capitulos, texto extraido, imagens quando houver leitor visual e persistencia local.
+3. Importacao AZW3 sem DRM apenas se houver conversao local confiavel para EPUB, com teste explicito para ausencia de ferramenta externa.
+4. KPF como suporte experimental futuro, sem compromisso de leitura nativa na primeira versao pos-MVP.
 
 ### Criterio de aprovacao manual
 

@@ -208,7 +208,7 @@ Esses itens estao documentados para as proximas fatias e nao bloqueiam o aceite 
 
 - [x] Campo `Anotacao` em modal acionado por `+`, com multiplas entradas, edicao e exclusao.
 - [x] Caixa de idioma original recolhivel por seta no leitor.
-- [ ] Categorias e subcategorias de estudo por documento, com descricao da classificacao.
+- [x] Categorias e subcategorias de estudo por documento, com descricao da classificacao.
 - [x] Exportacao Anki em `.apkg`.
 - [ ] Importacao EPUB sem DRM em versao futura.
 - [ ] Avaliacao de AZW3 sem DRM por conversao local para EPUB.

@@ -12,6 +12,15 @@ const listNoStudyCards = vi.fn().mockResolvedValue([]);
 const listNoStudyReviews = vi.fn().mockResolvedValue([]);
 const listNoStudySessionSummaries = vi.fn().mockResolvedValue([]);
 const loadNoStudyGoal = vi.fn().mockResolvedValue(null);
+const loadNoDocumentStudyMetadata = vi.fn().mockResolvedValue(null);
+const saveDocumentStudyMetadata = vi.fn().mockImplementation(
+  async (documentId: string, category: string, subcategory: string, description: string) => ({
+    document_id: documentId,
+    category,
+    subcategory,
+    description
+  })
+);
 const saveStudyGoal = vi
   .fn()
   .mockImplementation(async (documentId: string, targetReviews: number, recurrence: string) => ({
@@ -100,6 +109,8 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       listStudyReviews={listNoStudyReviews}
       listStudySessionSummaries={listNoStudySessionSummaries}
       loadStudyGoal={loadNoStudyGoal}
+      loadDocumentStudyMetadata={loadNoDocumentStudyMetadata}
+      saveDocumentStudyMetadata={saveDocumentStudyMetadata}
       saveStudyGoal={saveStudyGoal}
       saveStudyReview={saveStudyReview}
       startStudySession={startStudySession}
@@ -133,6 +144,8 @@ describe("App", () => {
     loadDefaultPdfReaderPreference.mockClear();
     saveDefaultPdfReaderPreference.mockClear();
     listNoDocumentPageTranslations.mockClear();
+    loadNoDocumentStudyMetadata.mockClear();
+    saveDocumentStudyMetadata.mockClear();
     loadNoMeditationNotes.mockClear();
     addMeditationNote.mockClear();
     updateMeditationNote.mockClear();
@@ -185,6 +198,77 @@ describe("App", () => {
     expect(listImportedDocuments).toHaveBeenCalled();
     expect(await screen.findByText("Documentos salvos")).toBeInTheDocument();
     expect(await screen.findByText("Documento salvo anteriormente.")).toBeInTheDocument();
+  });
+
+  it("loads and saves study classification for the active document", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-category",
+      book_id: "book-category",
+      content: "Livro de Python para estudo.",
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/python.txt"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const loadDocumentStudyMetadata = vi.fn().mockResolvedValue({
+      document_id: "document-category",
+      category: "Programacao",
+      subcategory: "Python",
+      description: "Material para fundamentos de Python."
+    });
+    const saveDocumentStudyMetadata = vi
+      .fn()
+      .mockImplementation(
+        async (documentId: string, category: string, subcategory: string, description: string) => ({
+          document_id: documentId,
+          category,
+          subcategory,
+          description
+        })
+      );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      loadDocumentStudyMetadata,
+      saveDocumentStudyMetadata
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/python.txt" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "Classificacao de estudo" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(loadDocumentStudyMetadata).toHaveBeenCalledWith("document-category");
+    });
+    expect(screen.getByLabelText("Categoria")).toHaveValue("Programacao");
+    expect(screen.getByLabelText("Subcategoria")).toHaveValue("Python");
+    expect(screen.getByLabelText("Descricao da classificacao")).toHaveValue(
+      "Material para fundamentos de Python."
+    );
+
+    fireEvent.change(screen.getByLabelText("Categoria"), {
+      target: { value: "Redes" }
+    });
+    fireEvent.change(screen.getByLabelText("Subcategoria"), {
+      target: { value: "TCP/IP" }
+    });
+    fireEvent.change(screen.getByLabelText("Descricao da classificacao"), {
+      target: { value: "Base para revisar redes de computadores." }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar classificacao" }));
+
+    await waitFor(() => {
+      expect(saveDocumentStudyMetadata).toHaveBeenCalledWith(
+        "document-category",
+        "Redes",
+        "TCP/IP",
+        "Base para revisar redes de computadores."
+      );
+    });
+    expect(await screen.findByText("Classificacao salva.")).toBeInTheDocument();
   });
 
   it("shows comparative progress for saved documents", async () => {

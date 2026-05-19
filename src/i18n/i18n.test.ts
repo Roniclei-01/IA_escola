@@ -241,6 +241,12 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.goalNotificationTimeLabel")).toBe(
       "Horario do lembrete"
     );
+    expect(i18n.getResource("pt", "translation", "study.categoryTitle")).toBe(
+      "Classificacao de estudo"
+    );
+    expect(i18n.getResource("pt", "translation", "study.saveCategoryMetadata")).toBe(
+      "Salvar classificacao"
+    );
     expect(i18n.getResource("pt", "translation", "study.sessionTrendTitle")).toBe(
       "Tendencia por sessao"
     );

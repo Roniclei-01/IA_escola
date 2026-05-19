@@ -18,6 +18,8 @@ pub fn run() {
             health_check,
             commands::archive_imported_document::archive_imported_document,
             commands::delete_imported_document::delete_imported_document,
+            commands::document_study_metadata::load_document_study_metadata,
+            commands::document_study_metadata::save_document_study_metadata,
             commands::import_text_book::import_text_book,
             commands::list_archived_documents::list_archived_documents,
             commands::list_document_page_translations::list_document_page_translations,

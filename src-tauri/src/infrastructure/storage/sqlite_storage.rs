@@ -70,6 +70,8 @@ pub enum StorageError {
     InvalidDocumentPageTranslation(#[source] serde_json::Error),
     #[error("stored meditation notes are invalid")]
     InvalidMeditationNotes(#[source] serde_json::Error),
+    #[error("stored document study metadata is invalid")]
+    InvalidDocumentStudyMetadata(#[source] serde_json::Error),
     #[error("stored chunk position is invalid")]
     InvalidChunkPosition(i64),
     #[error("stored chunk token estimate is invalid")]
@@ -123,6 +125,13 @@ pub struct MeditationNoteRecord {
     pub id: Uuid,
     pub content: String,
     pub created_at: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct DocumentStudyMetadataRecord {
+    pub category: String,
+    pub subcategory: String,
+    pub description: String,
 }
 
 impl SQLiteStorage {
@@ -901,6 +910,35 @@ impl SQLiteStorage {
         Ok(Some((target_reviews, recurrence)))
     }
 
+    pub fn save_document_study_metadata(
+        &self,
+        document_id: Uuid,
+        metadata: &DocumentStudyMetadataRecord,
+    ) -> Result<(), StorageError> {
+        let serialized_metadata =
+            serde_json::to_string(metadata).map_err(StorageError::InvalidDocumentStudyMetadata)?;
+
+        self.save_setting(
+            &document_study_metadata_setting_key(document_id),
+            &serialized_metadata,
+        )
+    }
+
+    pub fn load_document_study_metadata(
+        &self,
+        document_id: Uuid,
+    ) -> Result<Option<DocumentStudyMetadataRecord>, StorageError> {
+        let Some(value) = self.load_setting(&document_study_metadata_setting_key(document_id))?
+        else {
+            return Ok(None);
+        };
+
+        let metadata = serde_json::from_str::<DocumentStudyMetadataRecord>(&value)
+            .map_err(StorageError::InvalidDocumentStudyMetadata)?;
+
+        Ok(Some(metadata))
+    }
+
     pub fn save_meditation_notes(
         &self,
         document_id: Uuid,
@@ -1366,6 +1404,10 @@ fn meditation_notes_setting_key(document_id: Uuid) -> String {
     format!("meditation_notes.{document_id}.items")
 }
 
+fn document_study_metadata_setting_key(document_id: Uuid) -> String {
+    format!("document_study_metadata.{document_id}.classification")
+}
+
 fn is_valid_study_goal_recurrence(recurrence: &str) -> bool {
     matches!(recurrence, "all" | "daily" | "weekly")
 }
@@ -1376,7 +1418,7 @@ mod tests {
     use tempfile::TempDir;
     use uuid::Uuid;
 
-    use super::SQLiteStorage;
+    use super::{DocumentStudyMetadataRecord, SQLiteStorage};
     use crate::domain::{
         Document, DocumentChunk, DocumentSourceType, Language, StudyCard, StudyReview,
         StudyReviewRating, StudySession, StudySessionSummary,
@@ -2124,6 +2166,35 @@ mod tests {
         assert_eq!(
             storage.load_setting("ollama.model").unwrap(),
             Some("mistral".to_owned())
+        );
+    }
+
+    #[test]
+    fn saves_and_loads_document_study_metadata() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let document_id = Uuid::new_v4();
+
+        storage
+            .save_document_study_metadata(
+                document_id,
+                &DocumentStudyMetadataRecord {
+                    category: "Programacao".to_owned(),
+                    subcategory: "Python".to_owned(),
+                    description: "Livro para praticar fundamentos da linguagem.".to_owned(),
+                },
+            )
+            .unwrap();
+
+        let metadata = storage
+            .load_document_study_metadata(document_id)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(metadata.category, "Programacao");
+        assert_eq!(metadata.subcategory, "Python");
+        assert_eq!(
+            metadata.description,
+            "Livro para praticar fundamentos da linguagem."
         );
     }
 }

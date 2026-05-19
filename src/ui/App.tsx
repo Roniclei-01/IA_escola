@@ -86,6 +86,11 @@ import {
   saveStudyGoal as defaultSaveStudyGoal,
   type StudyGoal
 } from "../infrastructure/tauri/study-goals";
+import {
+  loadDocumentStudyMetadata as defaultLoadDocumentStudyMetadata,
+  saveDocumentStudyMetadata as defaultSaveDocumentStudyMetadata,
+  type DocumentStudyMetadata
+} from "../infrastructure/tauri/document-study-metadata";
 import { selectStudyFile as defaultSelectStudyFile } from "../infrastructure/tauri/file-dialog";
 import {
   testOllamaConnection as defaultTestOllamaConnection,
@@ -186,6 +191,13 @@ interface AppProps {
     targetReviews: number,
     recurrence: StudyGoalRecurrence
   ) => Promise<StudyGoal>;
+  loadDocumentStudyMetadata?: (documentId: string) => Promise<DocumentStudyMetadata | null>;
+  saveDocumentStudyMetadata?: (
+    documentId: string,
+    category: string,
+    subcategory: string,
+    description: string
+  ) => Promise<DocumentStudyMetadata>;
   selectStudyFile?: () => Promise<string | null>;
   testOllamaConnection?: (request: {
     model: string;
@@ -1214,6 +1226,8 @@ export function App({
   listStudySessionSummaries = defaultListStudySessionSummaries,
   loadStudyGoal = defaultLoadStudyGoal,
   saveStudyGoal = defaultSaveStudyGoal,
+  loadDocumentStudyMetadata = defaultLoadDocumentStudyMetadata,
+  saveDocumentStudyMetadata = defaultSaveDocumentStudyMetadata,
   selectStudyFile = defaultSelectStudyFile,
   testOllamaConnection = defaultTestOllamaConnection,
   loadOllamaSettings = defaultLoadOllamaSettings,
@@ -1240,6 +1254,7 @@ export function App({
   const translatedPageIndexesLoadTokenRef = useRef(0);
   const pdfReaderPreferenceTokenRef = useRef(0);
   const meditationLoadTokenRef = useRef(0);
+  const documentStudyMetadataLoadTokenRef = useRef(0);
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>(() =>
     normalizeUiLanguage(i18n.language)
   );
@@ -1305,6 +1320,16 @@ export function App({
   const [cardReviewSchedules, setCardReviewSchedules] = useState<
     Record<string, { priority: number; nextReviewAt: number }>
   >({});
+  const [documentStudyMetadata, setDocumentStudyMetadata] =
+    useState<DocumentStudyMetadata | null>(null);
+  const [categoryDraft, setCategoryDraft] = useState("");
+  const [subcategoryDraft, setSubcategoryDraft] = useState("");
+  const [categoryDescriptionDraft, setCategoryDescriptionDraft] = useState("");
+  const [isLoadingDocumentStudyMetadata, setIsLoadingDocumentStudyMetadata] = useState(false);
+  const [isSavingDocumentStudyMetadata, setIsSavingDocumentStudyMetadata] = useState(false);
+  const [documentStudyMetadataStatus, setDocumentStudyMetadataStatus] = useState<string | null>(
+    null
+  );
   const [meditationNotes, setMeditationNotes] = useState<MeditationNote[]>([]);
   const [meditationDraft, setMeditationDraft] = useState("");
   const [editingMeditationNoteId, setEditingMeditationNoteId] = useState<string | null>(null);
@@ -1689,6 +1714,50 @@ export function App({
       isCurrent = false;
     };
   }, [listImportedDocuments, listStudyReviews, listStudySessionSummaries, t]);
+
+  useEffect(() => {
+    const loadToken = documentStudyMetadataLoadTokenRef.current + 1;
+    documentStudyMetadataLoadTokenRef.current = loadToken;
+    setDocumentStudyMetadata(null);
+    setCategoryDraft("");
+    setSubcategoryDraft("");
+    setCategoryDescriptionDraft("");
+    setDocumentStudyMetadataStatus(null);
+
+    if (!document) {
+      setIsLoadingDocumentStudyMetadata(false);
+      return;
+    }
+
+    const documentId = document.document_id;
+
+    async function loadActiveDocumentStudyMetadata() {
+      setIsLoadingDocumentStudyMetadata(true);
+
+      try {
+        const metadata = await loadDocumentStudyMetadata(documentId);
+
+        if (documentStudyMetadataLoadTokenRef.current !== loadToken) {
+          return;
+        }
+
+        setDocumentStudyMetadata(metadata);
+        setCategoryDraft(metadata?.category ?? "");
+        setSubcategoryDraft(metadata?.subcategory ?? "");
+        setCategoryDescriptionDraft(metadata?.description ?? "");
+      } catch {
+        if (documentStudyMetadataLoadTokenRef.current === loadToken) {
+          setError(t("study.categoryMetadataLoadError"));
+        }
+      } finally {
+        if (documentStudyMetadataLoadTokenRef.current === loadToken) {
+          setIsLoadingDocumentStudyMetadata(false);
+        }
+      }
+    }
+
+    void loadActiveDocumentStudyMetadata();
+  }, [document, loadDocumentStudyMetadata, t]);
 
   useEffect(() => {
     const loadToken = meditationLoadTokenRef.current + 1;
@@ -3142,6 +3211,34 @@ export function App({
     }
   }
 
+  async function handleSaveDocumentStudyMetadata() {
+    if (!document) {
+      return;
+    }
+
+    try {
+      setError(null);
+      setDocumentStudyMetadataStatus(null);
+      setIsSavingDocumentStudyMetadata(true);
+      const metadata = await saveDocumentStudyMetadata(
+        document.document_id,
+        categoryDraft.trim(),
+        subcategoryDraft.trim(),
+        categoryDescriptionDraft.trim()
+      );
+
+      setDocumentStudyMetadata(metadata);
+      setCategoryDraft(metadata.category);
+      setSubcategoryDraft(metadata.subcategory);
+      setCategoryDescriptionDraft(metadata.description);
+      setDocumentStudyMetadataStatus(t("study.categoryMetadataSaved"));
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("study.categoryMetadataSaveError")));
+    } finally {
+      setIsSavingDocumentStudyMetadata(false);
+    }
+  }
+
   async function handleSaveMeditationNote() {
     if (!document) {
       return;
@@ -3197,6 +3294,86 @@ export function App({
   const activeMeditationNote = editingMeditationNoteId
     ? meditationNotes.find((note) => note.id === editingMeditationNoteId)
     : null;
+  const isDocumentStudyMetadataSaveDisabled =
+    isLoadingDocumentStudyMetadata ||
+    isSavingDocumentStudyMetadata ||
+    categoryDraft.trim().length === 0 ||
+    subcategoryDraft.trim().length === 0 ||
+    categoryDescriptionDraft.trim().length === 0 ||
+    (documentStudyMetadata
+      ? categoryDraft.trim() === documentStudyMetadata.category &&
+        subcategoryDraft.trim() === documentStudyMetadata.subcategory &&
+        categoryDescriptionDraft.trim() === documentStudyMetadata.description
+      : false);
+  const documentStudyMetadataSlot = document ? (
+    <section className="document-study-metadata" aria-labelledby="document-study-metadata-title">
+      <div className="document-study-metadata-header">
+        <h3 id="document-study-metadata-title">{t("study.categoryTitle")}</h3>
+        {documentStudyMetadata ? (
+          <span>
+            {documentStudyMetadata.category} / {documentStudyMetadata.subcategory}
+          </span>
+        ) : (
+          <span>{t("study.categoryMetadataEmpty")}</span>
+        )}
+      </div>
+      <div className="document-study-metadata-fields">
+        <label htmlFor="document-study-category">
+          {t("study.categoryLabel")}
+          <input
+            id="document-study-category"
+            value={categoryDraft}
+            disabled={isLoadingDocumentStudyMetadata}
+            placeholder={t("study.categoryPlaceholder")}
+            onChange={(event) => {
+              setCategoryDraft(event.target.value);
+              setDocumentStudyMetadataStatus(null);
+            }}
+          />
+        </label>
+        <label htmlFor="document-study-subcategory">
+          {t("study.subcategoryLabel")}
+          <input
+            id="document-study-subcategory"
+            value={subcategoryDraft}
+            disabled={isLoadingDocumentStudyMetadata}
+            placeholder={t("study.subcategoryPlaceholder")}
+            onChange={(event) => {
+              setSubcategoryDraft(event.target.value);
+              setDocumentStudyMetadataStatus(null);
+            }}
+          />
+        </label>
+      </div>
+      <label htmlFor="document-study-description">
+        {t("study.categoryDescriptionLabel")}
+        <textarea
+          id="document-study-description"
+          value={categoryDescriptionDraft}
+          disabled={isLoadingDocumentStudyMetadata}
+          placeholder={t("study.categoryDescriptionPlaceholder")}
+          onChange={(event) => {
+            setCategoryDescriptionDraft(event.target.value);
+            setDocumentStudyMetadataStatus(null);
+          }}
+        />
+      </label>
+      <div className="document-study-metadata-actions">
+        <button
+          type="button"
+          disabled={isDocumentStudyMetadataSaveDisabled}
+          onClick={() => {
+            void handleSaveDocumentStudyMetadata();
+          }}
+        >
+          {isSavingDocumentStudyMetadata
+            ? t("study.savingCategoryMetadata")
+            : t("study.saveCategoryMetadata")}
+        </button>
+        {documentStudyMetadataStatus ? <span role="status">{documentStudyMetadataStatus}</span> : null}
+      </div>
+    </section>
+  ) : null;
   const isMeditationSaveDisabled =
     isLoadingMeditationNote ||
     isSavingMeditationNote ||
@@ -3636,6 +3813,7 @@ export function App({
             onTranslateDocument={(request) => {
               void handleTranslateActiveDocument(request);
             }}
+            documentStudyMetadataSlot={documentStudyMetadataSlot}
             meditationSlot={meditationSlot}
           >
             <div className="document-actions">

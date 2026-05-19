@@ -6,6 +6,8 @@ Nenhuma funcionalidade de aplicacao deve ser implementada antes de existir pelo 
 
 Essa regra nao exige perfeicao de cobertura no primeiro commit, mas exige que todo comportamento relevante nasca testado. O objetivo e reduzir regressao, proteger a arquitetura modular e permitir monetizacao futura sem fragilizar o produto.
 
+Essa prioridade vale para todas as fases de producao: MVP, pos-MVP, refatoracoes, correcoes de bug e novas integracoes. Quando uma evolucao tocar comportamento ainda nao coberto, o primeiro passo e criar ou ajustar o teste que descreve o resultado esperado.
+
 ## Piramide de testes
 
 ### Testes unitarios

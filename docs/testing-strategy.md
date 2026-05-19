@@ -191,6 +191,9 @@ Esses itens nao bloqueiam o MVP 0.1, mas devem seguir a regra test-first quando 
 1. Campo `Meditacao` para registrar o resumo pessoal do leitor sobre o documento.
 2. Categorias e subcategorias de estudo com descricao do documento dentro da classificacao.
 3. Busca semantica futura sem substituir a busca textual atual.
+4. Importacao EPUB sem DRM com testes de capitulos, texto extraido, imagens quando houver leitor visual e persistencia local.
+5. Importacao AZW3 sem DRM apenas se houver conversao local confiavel para EPUB, com teste explicito para ausencia de ferramenta externa.
+6. KPF como suporte experimental futuro, sem compromisso de leitura nativa na primeira versao pos-MVP.
 
 ### Criterio de aprovacao manual
 

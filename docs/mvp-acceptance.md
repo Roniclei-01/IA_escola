@@ -209,6 +209,9 @@ Esses itens estao documentados para as proximas fatias e nao bloqueiam o aceite 
 - [ ] Campo `Meditacao` para resumo pessoal do leitor.
 - [ ] Categorias e subcategorias de estudo por documento, com descricao da classificacao.
 - [ ] Exportacao Anki em `.apkg`.
+- [ ] Importacao EPUB sem DRM em versao futura.
+- [ ] Avaliacao de AZW3 sem DRM por conversao local para EPUB.
+- [ ] KPF como suporte experimental futuro ou conversao para formato aberto.
 
 ## Resultado final
 

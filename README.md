@@ -164,7 +164,10 @@ Durante operacoes longas, botoes de geracao e acoes da biblioteca ficam bloquead
 
 ### Fase de expansao
 
-- Importacao de EPUB e melhorias para PDFs digitalizados.
+- Importacao de EPUB sem DRM como primeiro formato rico pos-MVP, com extracao de texto, capitulos e suporte posterior a imagens no leitor.
+- Avaliacao de AZW3 sem DRM em fase posterior, preferencialmente por conversao local para EPUB quando houver ferramenta compativel instalada, como Calibre.
+- KPF deve permanecer fora do escopo imediato; se entrar no produto, sera tratado como importacao experimental ou fluxo de conversao para formato aberto.
+- Melhorias para PDFs digitalizados.
 - Campo `Meditacao` por documento, onde o leitor registra um breve resumo pessoal sobre o que entendeu.
 - Cadastro de categorias de estudo e subcategorias, com descricao do documento dentro dessa classificacao.
 - Exercicios de multipla escolha e perguntas abertas.
@@ -231,6 +234,7 @@ docs/
 5. Evoluir exportacao Anki para pacote `.apkg`.
 6. Implementar `Meditacao` do leitor por documento.
 7. Implementar categorias e subcategorias de estudo por documento.
+8. Planejar importacao EPUB sem DRM para a versao futura, mantendo AZW3/KPF como conversao ou suporte experimental posterior.
 
 ## Comandos de desenvolvimento
 

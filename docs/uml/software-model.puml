@@ -172,6 +172,20 @@ package "Infraestrutura" {
     +parse(filePath: String): Document
   }
 
+  class EpubBookParser {
+    +parse(filePath: String): Document
+    +extractChapters(filePath: String): List<DocumentChunk>
+  }
+
+  class EbookConversionService {
+    +convertAzw3ToEpub(filePath: String): String
+    +isAvailable(): Boolean
+  }
+
+  class KpfImportAdapter {
+    +parseExperimental(filePath: String): Document
+  }
+
   class ReaderWindowService {
     +openOriginalAndTranslated(documentId: UUID, targetLanguage: Language): void
   }
@@ -241,6 +255,7 @@ UpdateUserSettings --> StorageRepository
 SQLiteStorage ..|> StorageRepository
 TextBookParser ..|> BookParser
 PdfBookParser ..|> BookParser
+EpubBookParser ..|> BookParser
 OllamaModelAdapter ..|> ModelAdapter
 OllamaModelAdapter ..|> TranslationAdapter
 MockModelAdapter ..|> ModelAdapter

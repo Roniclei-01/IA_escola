@@ -91,6 +91,8 @@ Componentes:
 - `SQLiteStorage`.
 - `TextBookParser` para `.txt` e `.pdf`, com OCR opt-in para PDFs digitalizados via `pdftoppm` e `tesseract`, idioma OCR configuravel por importacao e verificacao visual dessas dependencias na UI.
 - `EpubBookParser` em fase posterior.
+- `EbookConversionService` em fase posterior para formatos proprietarios sem DRM, começando por AZW3 convertido localmente para EPUB quando ferramenta externa compativel estiver disponivel.
+- `KpfImportAdapter` apenas como estudo experimental futuro, evitando acoplamento do MVP a um formato pouco aberto e mais instavel.
 - `OllamaModelAdapter`.
 - `TranslationAdapter` em fase posterior, preferencialmente local-first, para gerar uma versao traduzida do PDF no idioma escolhido.
 - `ReaderWindowService` em fase posterior, para abrir ou organizar duas janelas/paineis: texto original e texto traduzido.
@@ -204,7 +206,9 @@ Detalhes estao em `docs/testing-strategy.md`.
 ### Etapa 3: Conteudo rico
 
 - Melhorar suporte a PDFs com metadados, paginacao e PDFs digitalizados.
-- Adicionar EPUB.
+- Adicionar EPUB sem DRM com extracao de texto e capitulos.
+- Avaliar AZW3 sem DRM por conversao local para EPUB, sem suporte a remocao de DRM.
+- Manter KPF como item experimental ou conversao futura, sem bloquear a evolucao principal do produto.
 - Melhorar leitura traduzida com controle de progresso por lote e reprocessamento por idioma.
 - Adicionar campo `Meditacao` para o resumo pessoal do leitor.
 - Adicionar categorias e subcategorias de estudo para organizar documentos.

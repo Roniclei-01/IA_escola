@@ -53,6 +53,9 @@ Portas e adaptadores:
 - `OllamaModelAdapter`
 - `SQLiteStorage`
 - `TextBookParser`
+- `EpubBookParser`
+- `EbookConversionService`
+- `KpfImportAdapter`
 - `TauriCommandGateway`
 
 Testes:

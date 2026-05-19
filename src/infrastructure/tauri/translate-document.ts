@@ -6,6 +6,7 @@ export interface TranslateDocumentRequest {
   content: string;
   source_language: ImportTextBookResponse["language"];
   target_language: ImportTextBookResponse["language"];
+  persist?: boolean;
 }
 
 export interface TranslateDocumentResponse {

@@ -41,7 +41,7 @@ describe("i18n", () => {
       "Lectura del documento"
     );
     expect(i18n.getResource("pt", "translation", "library.translateDocument")).toBe(
-      "Gerar leitura traduzida"
+      "Traduzir pagina atual"
     );
     expect(i18n.getResource("pt", "translation", "library.nextReaderPage")).toBe(
       "Proxima pagina"

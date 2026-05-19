@@ -4,6 +4,11 @@ import type { ImportTextBookResponse } from "../../infrastructure/tauri/import-t
 const COLLAPSED_PREVIEW_LENGTH = 900;
 const READER_PAGE_LENGTH = 2_200;
 
+export interface ReaderPageTranslationRequest {
+  pageIndex: number;
+  pageContent: string;
+}
+
 interface DocumentSummaryProps {
   document: ImportTextBookResponse;
   chunkCount: number | null;
@@ -37,12 +42,12 @@ interface DocumentSummaryProps {
   };
   originalLanguage: ImportTextBookResponse["language"];
   readerTargetLanguage: ImportTextBookResponse["language"];
-  translatedContent: string | null;
+  translatedPagesByIndex: Record<number, string>;
   isGeneratingCards?: boolean;
   isTranslatingDocument?: boolean;
   onGenerateCards?: () => void;
   onReaderTargetLanguageChange: (language: ImportTextBookResponse["language"]) => void;
-  onTranslateDocument: () => void;
+  onTranslateDocument: (request: ReaderPageTranslationRequest) => void;
   children?: ReactNode;
 }
 
@@ -53,7 +58,7 @@ export function DocumentSummary({
   labels,
   originalLanguage,
   readerTargetLanguage,
-  translatedContent,
+  translatedPagesByIndex,
   isGeneratingCards = false,
   isTranslatingDocument = false,
   onGenerateCards,
@@ -69,20 +74,17 @@ export function DocumentSummary({
       ? `${document.content.slice(0, COLLAPSED_PREVIEW_LENGTH).trimEnd()}...`
       : document.content;
   const isSameLanguage = readerTargetLanguage === originalLanguage;
-  const translatedDisplayContent = isSameLanguage ? document.content : translatedContent;
   const originalPages = useMemo(() => paginateReaderText(document.content), [document.content]);
-  const translatedPages = useMemo(
-    () => paginateReaderText(translatedDisplayContent ?? ""),
-    [translatedDisplayContent]
-  );
   const totalReaderPages = Math.max(originalPages.length, 1);
   const currentReaderPage = Math.min(readerPageIndex, totalReaderPages - 1);
   const currentOriginalPage = originalPages[currentReaderPage] ?? "";
-  const currentTranslatedPage = translatedPages[currentReaderPage] ?? "";
+  const currentTranslatedPage = isSameLanguage
+    ? currentOriginalPage
+    : translatedPagesByIndex[currentReaderPage] ?? "";
 
   useEffect(() => {
     setReaderPageIndex(0);
-  }, [document.document_id, readerTargetLanguage, translatedContent]);
+  }, [document.document_id, readerTargetLanguage]);
 
   function goToPreviousReaderPage() {
     setReaderPageIndex((currentPage) => Math.max(currentPage - 1, 0));
@@ -134,7 +136,12 @@ export function DocumentSummary({
           <button
             type="button"
             disabled={isTranslatingDocument || isSameLanguage}
-            onClick={onTranslateDocument}
+            onClick={() =>
+              onTranslateDocument({
+                pageIndex: currentReaderPage,
+                pageContent: currentOriginalPage
+              })
+            }
           >
             {isTranslatingDocument ? labels.translatingDocument : labels.translateDocument}
           </button>

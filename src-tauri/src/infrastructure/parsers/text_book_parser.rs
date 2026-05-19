@@ -160,27 +160,35 @@ fn extract_pdf_text_with_pdftotext(
     path: &Path,
     options: &TextBookParserOptions,
 ) -> Option<String> {
+    let output_path =
+        std::env::temp_dir().join(format!("estudo-ia-local-pdftotext-{}.txt", uuid::Uuid::new_v4()));
     let mut command = Command::new(&options.pdf_text_extractor_path);
     command
         .arg("-layout")
         .arg(path)
-        .arg("-")
+        .arg(&output_path)
         .stderr(std::process::Stdio::null());
 
-    let output = run_command_output_with_timeout(
+    let status = run_command_status_with_timeout(
         &mut command,
         Duration::from_secs(options.ocr_engine.command_timeout_seconds),
     )
     .ok()?;
 
-    if !output.status.success() {
+    if !status.success() {
+        let _ = fs::remove_file(&output_path);
         return None;
     }
 
-    let text = String::from_utf8_lossy(&output.stdout)
-        .replace('\u{000c}', "\n")
-        .trim()
-        .to_owned();
+    let raw_text = match fs::read_to_string(&output_path) {
+        Ok(text) => text,
+        Err(_) => {
+            let _ = fs::remove_file(&output_path);
+            return None;
+        }
+    };
+    let text = raw_text.replace('\u{000c}', "\n").trim().to_owned();
+    let _ = fs::remove_file(&output_path);
 
     if text.is_empty() {
         return None;
@@ -400,7 +408,7 @@ mod tests {
         write_pdf_file(&path, "Texto parcial via lopdf.");
         write_executable(
             &pdftotext_path,
-            "#!/bin/sh\nprintf 'Texto completo via pdftotext.\\nPagina final.'\n",
+            "#!/bin/sh\nprintf 'Texto completo via pdftotext.\\nPagina final.' > \"$3\"\n",
         );
 
         let document = parse_text_book_with_options(
@@ -419,6 +427,33 @@ mod tests {
             "Texto completo via pdftotext.\nPagina final."
         );
         assert_eq!(document.source_type, DocumentSourceType::Pdf);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn extracts_large_pdf_text_without_stdout_pipe_truncation() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("large-book.pdf");
+        let pdftotext_path = dir.path().join("pdftotext");
+        write_pdf_file(&path, "Texto parcial via fallback.");
+        write_executable(
+            &pdftotext_path,
+            "#!/bin/sh\nfor number in $(seq 1 12000); do printf 'pagina-completa-%s ' \"$number\"; done > \"$3\"\n",
+        );
+
+        let document = parse_text_book_with_options(
+            Uuid::new_v4(),
+            path,
+            Language::Pt,
+            TextBookParserOptions {
+                pdf_text_extractor_path: pdftotext_path,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert!(document.content.contains("pagina-completa-12000"));
+        assert!(!document.content.contains("Texto parcial via fallback."));
     }
 
     #[test]

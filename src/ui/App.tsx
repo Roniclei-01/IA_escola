@@ -97,7 +97,10 @@ import {
   type UiLanguage
 } from "../i18n";
 import { ImportPanel } from "./components/ImportPanel";
-import { DocumentSummary } from "./components/DocumentSummary";
+import {
+  DocumentSummary,
+  type ReaderPageTranslationRequest
+} from "./components/DocumentSummary";
 import { StudyCardViewer, type CardReview } from "./components/StudyCardViewer";
 import { SavedDocumentsList } from "./components/SavedDocumentsList";
 import { OllamaSettingsPanel } from "./components/OllamaSettingsPanel";
@@ -1180,7 +1183,7 @@ export function App({
   const [document, setDocument] = useState<ImportTextBookResponse | null>(null);
   const [readerTargetLanguage, setReaderTargetLanguage] =
     useState<ImportTextBookResponse["language"]>("En");
-  const [translatedDocumentContent, setTranslatedDocumentContent] = useState<string | null>(null);
+  const [translatedDocumentPages, setTranslatedDocumentPages] = useState<Record<number, string>>({});
   const [chunkCount, setChunkCount] = useState<number | null>(null);
   const [documentChunks, setDocumentChunks] = useState<ImportedDocumentChunk[]>([]);
   const [cards, setCards] = useState<StudyCard[]>([]);
@@ -1629,7 +1632,7 @@ export function App({
     const sourceLanguage = inferDocumentLanguage(selectedDocument);
 
     if (targetLanguage === sourceLanguage) {
-      setTranslatedDocumentContent(selectedDocument.content);
+      setTranslatedDocumentPages({});
       return;
     }
 
@@ -1640,7 +1643,9 @@ export function App({
         return;
       }
 
-      setTranslatedDocumentContent(response.translation?.translated_content ?? null);
+      setTranslatedDocumentPages(
+        response.translation ? { 0: response.translation.translated_content } : {}
+      );
     } catch {
       if (isCurrentTranslationLoad(translationLoadToken)) {
         setError(t("library.translationLoadError"));
@@ -1650,14 +1655,17 @@ export function App({
 
   function handleReaderTargetLanguageChange(language: ImportTextBookResponse["language"]) {
     setReaderTargetLanguage(language);
-    setTranslatedDocumentContent(null);
+    setTranslatedDocumentPages({});
 
     if (document) {
       void loadPersistedTranslationForDocument(document, language);
     }
   }
 
-  async function handleTranslateActiveDocument() {
+  async function handleTranslateActiveDocument({
+    pageIndex,
+    pageContent
+  }: ReaderPageTranslationRequest) {
     if (!document) {
       return;
     }
@@ -1667,7 +1675,7 @@ export function App({
     const sourceLanguage = inferDocumentLanguage(document);
 
     if (readerTargetLanguage === sourceLanguage) {
-      setTranslatedDocumentContent(document.content);
+      setTranslatedDocumentPages({});
       return;
     }
 
@@ -1684,15 +1692,19 @@ export function App({
 
       const response = await translateDocument({
         document_id: document.document_id,
-        content: document.content,
+        content: pageContent,
         source_language: sourceLanguage,
-        target_language: readerTargetLanguage
+        target_language: readerTargetLanguage,
+        persist: false
       });
       if (!isCurrentOperation(operationToken)) {
         return;
       }
 
-      setTranslatedDocumentContent(response.translated_content);
+      setTranslatedDocumentPages((currentPages) => ({
+        ...currentPages,
+        [pageIndex]: response.translated_content
+      }));
     } catch (unknownError) {
       if (!isCurrentOperation(operationToken)) {
         return;
@@ -1726,7 +1738,7 @@ export function App({
     setCards([]);
     invalidateTranslationLoad();
     setReaderTargetLanguage("En");
-    setTranslatedDocumentContent(null);
+    setTranslatedDocumentPages({});
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
     setCardReviews({});
@@ -1761,7 +1773,7 @@ export function App({
       setReaderTargetLanguage(
         defaultReaderTargetLanguage(inferDocumentLanguage(currentImportedDocument))
       );
-      setTranslatedDocumentContent(null);
+      setTranslatedDocumentPages({});
       setDocumentChunks(chunkResponse.chunks);
       setSavedDocuments((currentDocuments) => [...currentDocuments, currentImportedDocument]);
       setDocumentReviewCounts((currentCounts) => ({
@@ -1795,7 +1807,7 @@ export function App({
       setCards([]);
       invalidateTranslationLoad();
       setReaderTargetLanguage("En");
-      setTranslatedDocumentContent(null);
+      setTranslatedDocumentPages({});
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
       setCardReviews({});
@@ -1821,7 +1833,7 @@ export function App({
 
     setDocument(selectedDocument);
     setReaderTargetLanguage(targetLanguage);
-    setTranslatedDocumentContent(null);
+    setTranslatedDocumentPages({});
     void loadPersistedTranslationForDocument(selectedDocument, targetLanguage);
     setChunkCount(null);
     setDocumentChunks([]);
@@ -2250,7 +2262,7 @@ export function App({
         setCards([]);
         invalidateTranslationLoad();
         setReaderTargetLanguage("En");
-        setTranslatedDocumentContent(null);
+        setTranslatedDocumentPages({});
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
         setCardReviews({});
@@ -2891,15 +2903,15 @@ export function App({
             }}
             originalLanguage={activeDocumentLanguage ?? document.language}
             readerTargetLanguage={readerTargetLanguage}
-            translatedContent={translatedDocumentContent}
+            translatedPagesByIndex={translatedDocumentPages}
             isGeneratingCards={isCardGenerationBusy}
             isTranslatingDocument={isTranslatingDocument}
             onGenerateCards={() => {
               void handleGenerateCardsForActiveDocument();
             }}
             onReaderTargetLanguageChange={handleReaderTargetLanguageChange}
-            onTranslateDocument={() => {
-              void handleTranslateActiveDocument();
+            onTranslateDocument={(request) => {
+              void handleTranslateActiveDocument(request);
             }}
           >
             <div className="document-actions">

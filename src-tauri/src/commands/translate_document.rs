@@ -15,6 +15,7 @@ pub struct TranslateDocumentRequest {
     pub content: String,
     pub source_language: Language,
     pub target_language: Language,
+    pub persist: Option<bool>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize)]
@@ -56,18 +57,21 @@ pub fn translate_document_with_adapter_and_storage(
     adapter: &dyn crate::app::ModelAdapter,
     storage: &SQLiteStorage,
 ) -> Result<TranslateDocumentResponse, String> {
+    let should_persist = request.persist.unwrap_or(true);
     let response = translate_document_with_adapter(request, adapter)?;
     let document_id = Uuid::parse_str(&response.document_id)
         .map_err(|_| "Documento invalido para traducao.".to_owned())?;
 
-    storage
-        .save_document_translation(
-            document_id,
-            &response.source_language,
-            &response.target_language,
-            &response.translated_content,
-        )
-        .map_err(format_storage_error)?;
+    if should_persist {
+        storage
+            .save_document_translation(
+                document_id,
+                &response.source_language,
+                &response.target_language,
+                &response.translated_content,
+            )
+            .map_err(format_storage_error)?;
+    }
 
     Ok(response)
 }
@@ -151,6 +155,7 @@ mod tests {
             content: "Conteudo para traduzir.".to_owned(),
             source_language: Language::Pt,
             target_language: Language::En,
+            persist: None,
         }
     }
 
@@ -201,5 +206,25 @@ mod tests {
             .unwrap();
 
         assert_eq!(persisted.translated_content, response.translated_content);
+    }
+
+    #[test]
+    fn skips_persistence_when_translation_request_is_page_scoped() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let mut request = request();
+        request.persist = Some(false);
+
+        let response = super::translate_document_with_adapter_and_storage(
+            request,
+            &FakeModelAdapter { fail: false },
+            &storage,
+        )
+        .unwrap();
+
+        let persisted = storage
+            .load_document_translation(response.document_id.parse().unwrap(), &Language::En)
+            .unwrap();
+
+        assert!(persisted.is_none());
     }
 }

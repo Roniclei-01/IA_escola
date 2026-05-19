@@ -1389,14 +1389,15 @@ describe("App", () => {
     expect(screen.getByLabelText("Idioma de leitura")).toHaveValue("En");
     expect(screen.getAllByText("Texto original para leitura.").length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("button", { name: "Gerar leitura traduzida" }));
+    fireEvent.click(screen.getByRole("button", { name: "Traduzir pagina atual" }));
 
     await waitFor(() => {
       expect(translateDocument).toHaveBeenCalledWith({
         document_id: "document-reader",
         content: "Texto original para leitura.",
         source_language: "Pt",
-        target_language: "En"
+        target_language: "En",
+        persist: false
       });
     });
     expect(await screen.findByText("Translated text for reading.")).toBeInTheDocument();
@@ -1481,7 +1482,7 @@ describe("App", () => {
       screen.queryByText("O idioma escolhido e o mesmo do documento original.")
     ).not.toBeInTheDocument();
 
-    const translateButton = screen.getByRole("button", { name: "Gerar leitura traduzida" });
+    const translateButton = screen.getByRole("button", { name: "Traduzir pagina atual" });
     expect(translateButton).toBeEnabled();
     fireEvent.click(translateButton);
 
@@ -1491,7 +1492,8 @@ describe("App", () => {
         content:
           "This book is dedicated to all the people and this content is for study with technical notes.",
         source_language: "En",
-        target_language: "Pt"
+        target_language: "Pt",
+        persist: false
       });
     });
     expect(await screen.findByText("Texto traduzido para leitura.")).toBeInTheDocument();
@@ -1538,9 +1540,15 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Idioma de leitura"), {
       target: { value: "Pt" }
     });
-    fireEvent.click(screen.getByRole("button", { name: "Gerar leitura traduzida" }));
+    fireEvent.click(screen.getByRole("button", { name: "Traduzir pagina atual" }));
 
     expect(await screen.findByText("Traducao parcial retornada pelo modelo.")).toBeInTheDocument();
+    expect(translateDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.not.stringContaining(finalLine),
+        persist: false
+      })
+    );
     expect(screen.getByRole("button", { name: "Proxima pagina" })).toBeEnabled();
 
     for (

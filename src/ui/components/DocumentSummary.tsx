@@ -51,7 +51,9 @@ interface DocumentSummaryProps {
     translatedReaderPages: (pages: string) => string;
     pdfReaderTitle: string;
     previousPdfPage: string;
+    previousPdfPageLabel: string;
     nextPdfPage: string;
+    nextPdfPageLabel: string;
     pdfPageStatus: (currentPage: number, totalPages: number) => string;
     pdfZoomLabel: string;
     pdfPageImageAlt: (page: number) => string;
@@ -181,28 +183,11 @@ export function DocumentSummary({
           <div className="pdf-page-reader-header">
             <h3 id="pdf-page-reader-title">{labels.pdfReaderTitle}</h3>
             <div className="pdf-page-controls">
-              <button
-                type="button"
-                disabled={isRenderingPdfPage || pdfReaderPage <= 1}
-                onClick={() => onPdfReaderPageChange(Math.max(pdfReaderPage - 1, 1))}
-              >
-                {labels.previousPdfPage}
-              </button>
               <span>
                 {renderedPageCount
                   ? labels.pdfPageStatus(pdfReaderPage, renderedPageCount)
                   : labels.pdfPageStatus(pdfReaderPage, pdfReaderPage)}
               </span>
-              <button
-                type="button"
-                disabled={
-                  isRenderingPdfPage ||
-                  (renderedPageCount !== null && pdfReaderPage >= renderedPageCount)
-                }
-                onClick={() => onPdfReaderPageChange(pdfReaderPage + 1)}
-              >
-                {labels.nextPdfPage}
-              </button>
               <label htmlFor="pdf-reader-zoom">
                 {labels.pdfZoomLabel}
                 <select
@@ -232,6 +217,34 @@ export function DocumentSummary({
               />
             </div>
           ) : null}
+          <div className="pdf-page-footer-controls">
+            <button
+              type="button"
+              aria-label={labels.previousPdfPageLabel}
+              title={labels.previousPdfPageLabel}
+              disabled={isRenderingPdfPage || pdfReaderPage <= 1}
+              onClick={() => onPdfReaderPageChange(Math.max(pdfReaderPage - 1, 1))}
+            >
+              {labels.previousPdfPage}
+            </button>
+            <span>
+              {renderedPageCount
+                ? labels.pdfPageStatus(pdfReaderPage, renderedPageCount)
+                : labels.pdfPageStatus(pdfReaderPage, pdfReaderPage)}
+            </span>
+            <button
+              type="button"
+              aria-label={labels.nextPdfPageLabel}
+              title={labels.nextPdfPageLabel}
+              disabled={
+                isRenderingPdfPage ||
+                (renderedPageCount !== null && pdfReaderPage >= renderedPageCount)
+              }
+              onClick={() => onPdfReaderPageChange(pdfReaderPage + 1)}
+            >
+              {labels.nextPdfPage}
+            </button>
+          </div>
         </section>
       ) : null}
       <section className="document-reader" aria-labelledby="document-reader-title">

@@ -1699,12 +1699,15 @@ describe("App", () => {
       "src",
       "data:image/png;base64,UEFHSU5BMQ=="
     );
-    expect(screen.getByText("Pagina PDF 1 de 2")).toBeInTheDocument();
+    expect(screen.getAllByText("Pagina PDF 1 de 2").length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByLabelText("Zoom do PDF"), {
       target: { value: "1.25" }
     });
     expect(screen.getByAltText("Pagina PDF 1")).toHaveStyle({ width: "125%" });
+
+    expect(screen.getByRole("button", { name: "Pagina anterior do PDF" })).toHaveTextContent("<");
+    expect(screen.getByRole("button", { name: "Proxima pagina do PDF" })).toHaveTextContent(">");
 
     fireEvent.click(screen.getByRole("button", { name: "Proxima pagina do PDF" }));
 

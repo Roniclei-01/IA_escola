@@ -3602,7 +3602,9 @@ export function App({
                 t("library.translatedReaderPages", { pages }),
               pdfReaderTitle: t("library.pdfReaderTitle"),
               previousPdfPage: t("library.previousPdfPage"),
+              previousPdfPageLabel: t("library.previousPdfPageLabel"),
               nextPdfPage: t("library.nextPdfPage"),
+              nextPdfPageLabel: t("library.nextPdfPageLabel"),
               pdfPageStatus: (currentPage, totalPages) =>
                 t("library.pdfPageStatus", { currentPage, totalPages }),
               pdfZoomLabel: t("library.pdfZoomLabel"),

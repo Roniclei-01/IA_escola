@@ -870,22 +870,6 @@ h1 {
   gap: 10px;
 }
 
-.pdf-page-controls button {
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid #cfd7d1;
-  border-radius: 6px;
-  color: #23352b;
-  background: #ffffff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.pdf-page-controls button:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-
 .pdf-page-controls span {
   min-width: 130px;
   color: #2d3932;
@@ -930,6 +914,40 @@ h1 {
   height: auto;
   margin: 0 auto;
   background: #ffffff;
+}
+
+.pdf-page-footer-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.pdf-page-footer-controls button {
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid #cfd7d1;
+  border-radius: 6px;
+  color: #23352b;
+  background: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pdf-page-footer-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.pdf-page-footer-controls span {
+  min-width: 130px;
+  color: #2d3932;
+  font-weight: 700;
+  text-align: center;
 }
 
 .document-reader-grid {

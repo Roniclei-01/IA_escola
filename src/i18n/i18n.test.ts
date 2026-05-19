@@ -61,9 +61,11 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.pdfReaderTitle")).toBe(
       "PDF original"
     );
-    expect(i18n.getResource("en", "translation", "library.nextPdfPage")).toBe(
+    expect(i18n.getResource("en", "translation", "library.nextPdfPageLabel")).toBe(
       "Next PDF page"
     );
+    expect(i18n.getResource("pt", "translation", "library.previousPdfPage")).toBe("<");
+    expect(i18n.getResource("pt", "translation", "library.nextPdfPage")).toBe(">");
     expect(
       i18n.getResource("pt", "translation", "library.pdfReaderPreferenceSaveError")
     ).toBe("Nao foi possivel salvar a posicao do leitor PDF.");

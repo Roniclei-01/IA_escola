@@ -1408,6 +1408,7 @@ export function App({
     options: Pick<GenerateStudyCardsOptions, "onChunkCards"> = {}
   ): Promise<StudyCard[]> {
     const chunksForGeneration = chunks.slice(0, INITIAL_CARD_GENERATION_CHUNK_LIMIT);
+    let skippedChunkCount = 0;
     setCardGenerationProgress(null);
 
     if (chunks.length > INITIAL_CARD_GENERATION_CHUNK_LIMIT) {
@@ -1420,15 +1421,30 @@ export function App({
     }
 
     try {
-      return await generateCards(chunksForGeneration, {
+      const generatedCards = await generateCards(chunksForGeneration, {
         onProgress: (progress) => {
           if (isCurrentOperation(operationToken)) {
             setCardGenerationProgress(progress);
           }
         },
         onChunkCards: options.onChunkCards,
+        onChunkError: () => {
+          if (isCurrentOperation(operationToken)) {
+            skippedChunkCount += 1;
+          }
+        },
         signal: operationAbortControllerRef.current?.signal
       });
+
+      if (skippedChunkCount > 0 && isCurrentOperation(operationToken)) {
+        setWarning(
+          t("library.cardGenerationSkippedChunks", {
+            count: skippedChunkCount,
+            total: chunksForGeneration.length
+          })
+        );
+      }
+      return generatedCards;
     } catch (unknownError) {
       if (!enableDevelopmentFallback) {
         throw unknownError;

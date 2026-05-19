@@ -25,6 +25,15 @@ Atualizado em 2026-05-19:
 - O Playwright E2E precisou ser repetido fora do sandbox porque o servidor local do Vite recebeu `EPERM` ao abrir `127.0.0.1:1421` no ambiente sandboxado.
 - `npm run test:e2e` passou fora do sandbox com 2 testes Playwright.
 
+Fechamento tecnico em 2026-05-19:
+
+- `npm run check:mvp` passou fora do sandbox.
+- Vitest passou com 135 testes.
+- Testes Rust passaram com 143 testes.
+- Build web passou.
+- Playwright E2E passou com 2 testes.
+- O teste de extracao de PDF grande foi estabilizado para nao depender do comando externo `seq` durante a suite paralela.
+
 ## 2. App empacotado
 
 Verifique ambiente, dependencias locais e artefatos:
@@ -90,6 +99,15 @@ Atualizado em 2026-05-19:
 - `npm run tauri build` passou fora do sandbox e gerou `.deb`, `.rpm` e AppImage.
 - `npm run check:mvp:appimage` passou em modo sem FUSE com `APPIMAGE_EXTRACT_AND_RUN=1`.
 - Durante o smoke test apareceu a mensagem `GStreamer element appsink not found`; por isso, a secao OCR ainda deve ser confirmada manualmente na interface.
+
+Fechamento tecnico em 2026-05-19:
+
+- `npm run check:mvp:env` passou fora do sandbox.
+- Ollama e modelo `llama3.2:1b` foram encontrados.
+- `pdftoppm`, `tesseract` e `GStreamer appsink` foram encontrados.
+- `npm run tauri build` passou novamente e regenerou `.deb`, `.rpm` e AppImage.
+- `npm run check:mvp:appimage` passou usando fallback sem FUSE.
+- A validacao visual de OCR no aplicativo continua como item manual do aceite.
 
 Para executar o aceite manual no AppImage:
 
@@ -203,5 +221,6 @@ Status:
 Observacoes:
 
 ```text
-
+Fechamento tecnico automatizado em 2026-05-19 concluido com sucesso.
+Pendente confirmacao manual dos fluxos listados acima antes de marcar o MVP como aprovado para uso real.
 ```

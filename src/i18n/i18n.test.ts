@@ -264,6 +264,9 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.mockGenerationFallback")).toBe(
       "Ollama falhou. Cards mockados foram gerados apenas para desenvolvimento."
     );
+    expect(i18n.getResource("pt", "translation", "library.cardGenerationSkippedChunks")).toBe(
+      "Alguns chunks falharam no Ollama. Foram ignorados {{count}} de {{total}} chunks; use Gerar mais cards para tentar novamente."
+    );
     expect(i18n.getResource("en", "translation", "library.mockGenerationFallback")).toBe(
       "Ollama failed. Mock cards were generated for development only."
     );

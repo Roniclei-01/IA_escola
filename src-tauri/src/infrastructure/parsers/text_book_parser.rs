@@ -438,7 +438,7 @@ mod tests {
         write_pdf_file(&path, "Texto parcial via fallback.");
         write_executable(
             &pdftotext_path,
-            "#!/bin/sh\nfor number in $(seq 1 12000); do printf 'pagina-completa-%s ' \"$number\"; done > \"$3\"\n",
+            "#!/bin/sh\ni=1\nwhile [ \"$i\" -le 12000 ]; do printf 'pagina-completa-%s ' \"$i\"; i=$((i + 1)); done > \"$3\"\n",
         );
 
         let document = parse_text_book_with_options(

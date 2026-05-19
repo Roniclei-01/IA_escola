@@ -252,6 +252,70 @@ describe("generateStudyCardsWithOllama", () => {
     );
   });
 
+  it("continues with later chunks when one chunk fails after retry", async () => {
+    const chunks = [
+      {
+        id: "chunk-1",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 1,
+        content: "primeiro conteudo",
+        token_estimate: 1
+      },
+      {
+        id: "chunk-2",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 2,
+        content: "conteudo que falha",
+        token_estimate: 1
+      },
+      {
+        id: "chunk-3",
+        book_id: "book-1",
+        document_id: "document-1",
+        position: 3,
+        content: "terceiro conteudo",
+        token_estimate: 1
+      }
+    ];
+    const chunkError = new Error("Ollama retornou JSON invalido.");
+    const onChunkError = vi.fn();
+    invokeMock
+      .mockResolvedValueOnce({
+        cards: [
+          {
+            id: "card-1",
+            book_id: "book-1",
+            chunk_id: "chunk-1",
+            front: "Pergunta 1",
+            back: "Resposta 1",
+            tags: ["ollama"]
+          }
+        ]
+      })
+      .mockRejectedValueOnce(chunkError)
+      .mockRejectedValueOnce(chunkError)
+      .mockResolvedValueOnce({
+        cards: [
+          {
+            id: "card-3",
+            book_id: "book-1",
+            chunk_id: "chunk-3",
+            front: "Pergunta 3",
+            back: "Resposta 3",
+            tags: ["ollama"]
+          }
+        ]
+      });
+
+    const cards = await generateStudyCardsWithOllama(chunks, { onChunkError });
+
+    expect(invokeMock).toHaveBeenCalledTimes(4);
+    expect(onChunkError).toHaveBeenCalledWith(chunks[1], { current: 2, total: 3 }, chunkError);
+    expect(cards.map((card) => card.chunkId)).toEqual(["chunk-1", "chunk-3"]);
+  });
+
   it("stops before requesting the next chunk when generation is aborted", async () => {
     const abortController = new AbortController();
     const chunks = [

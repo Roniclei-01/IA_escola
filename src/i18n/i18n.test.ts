@@ -52,6 +52,9 @@ describe("i18n", () => {
     expect(i18n.getResource("en", "translation", "library.nextPdfPage")).toBe(
       "Next PDF page"
     );
+    expect(
+      i18n.getResource("pt", "translation", "library.pdfReaderPreferenceSaveError")
+    ).toBe("Nao foi possivel salvar a posicao do leitor PDF.");
     expect(i18n.getResource("pt", "translation", "library.extractedTextTitle")).toBe(
       "Texto extraido"
     );

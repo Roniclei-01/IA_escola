@@ -51,6 +51,11 @@ import {
   type RenderPdfPageResponse
 } from "../infrastructure/tauri/render-pdf-page";
 import {
+  loadPdfReaderPreference as defaultLoadPdfReaderPreference,
+  savePdfReaderPreference as defaultSavePdfReaderPreference,
+  type PdfReaderPreference
+} from "../infrastructure/tauri/pdf-reader-preferences";
+import {
   loadDocumentTranslation as defaultLoadDocumentTranslation,
   type LoadDocumentTranslationResponse
 } from "../infrastructure/tauri/load-document-translation";
@@ -135,6 +140,8 @@ interface AppProps {
   ) => Promise<StudyCard[]>;
   translateDocument?: (request: TranslateDocumentRequest) => Promise<TranslateDocumentResponse>;
   renderPdfPage?: (request: RenderPdfPageRequest) => Promise<RenderPdfPageResponse>;
+  loadPdfReaderPreference?: (documentId: string) => Promise<PdfReaderPreference>;
+  savePdfReaderPreference?: (preference: PdfReaderPreference) => Promise<PdfReaderPreference>;
   loadDocumentTranslation?: (
     documentId: string,
     targetLanguage: ImportTextBookResponse["language"]
@@ -1147,6 +1154,8 @@ export function App({
   generateCards = generateStudyCardsWithOllama,
   translateDocument = defaultTranslateDocument,
   renderPdfPage = defaultRenderPdfPage,
+  loadPdfReaderPreference = defaultLoadPdfReaderPreference,
+  savePdfReaderPreference = defaultSavePdfReaderPreference,
   loadDocumentTranslation = defaultLoadDocumentTranslation,
   saveStudyCards = defaultSaveStudyCards,
   deleteStudyCards = defaultDeleteStudyCards,
@@ -1175,6 +1184,7 @@ export function App({
   const operationTokenRef = useRef(0);
   const operationAbortControllerRef = useRef<AbortController | null>(null);
   const translationLoadTokenRef = useRef(0);
+  const pdfReaderPreferenceTokenRef = useRef(0);
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>(() =>
     normalizeUiLanguage(i18n.language)
   );
@@ -1195,6 +1205,7 @@ export function App({
   const [pdfReaderZoom, setPdfReaderZoom] = useState(1);
   const [renderedPdfPage, setRenderedPdfPage] = useState<RenderPdfPageResponse | null>(null);
   const [isRenderingPdfPage, setIsRenderingPdfPage] = useState(false);
+  const [isPdfReaderPreferenceLoaded, setIsPdfReaderPreferenceLoaded] = useState(false);
   const [chunkCount, setChunkCount] = useState<number | null>(null);
   const [documentChunks, setDocumentChunks] = useState<ImportedDocumentChunk[]>([]);
   const [cards, setCards] = useState<StudyCard[]>([]);
@@ -1629,13 +1640,73 @@ export function App({
   }, [testOcrDependencies, t]);
 
   useEffect(() => {
+    pdfReaderPreferenceTokenRef.current += 1;
+    const preferenceToken = pdfReaderPreferenceTokenRef.current;
+
     setPdfReaderPage(1);
     setPdfReaderZoom(1);
     setRenderedPdfPage(null);
-  }, [document?.document_id]);
+    setIsPdfReaderPreferenceLoaded(false);
+
+    if (!document || document.source_type !== "pdf" || !document.source_path) {
+      setIsPdfReaderPreferenceLoaded(true);
+      return;
+    }
+
+    loadPdfReaderPreference(document.document_id)
+      .then((preference) => {
+        if (pdfReaderPreferenceTokenRef.current !== preferenceToken) {
+          return;
+        }
+
+        setPdfReaderPage(preference.page);
+        setPdfReaderZoom(preference.zoom);
+      })
+      .catch(() => {
+        if (pdfReaderPreferenceTokenRef.current === preferenceToken) {
+          setError(t("library.pdfReaderPreferenceLoadError"));
+        }
+      })
+      .finally(() => {
+        if (pdfReaderPreferenceTokenRef.current === preferenceToken) {
+          setIsPdfReaderPreferenceLoaded(true);
+        }
+      });
+  }, [document, loadPdfReaderPreference, t]);
 
   useEffect(() => {
-    if (!document || document.source_type !== "pdf" || !document.source_path) {
+    if (
+      !document ||
+      document.source_type !== "pdf" ||
+      !document.source_path ||
+      !isPdfReaderPreferenceLoaded
+    ) {
+      return;
+    }
+
+    savePdfReaderPreference({
+      document_id: document.document_id,
+      page: pdfReaderPage,
+      zoom: pdfReaderZoom
+    }).catch(() => {
+      setError(t("library.pdfReaderPreferenceSaveError"));
+    });
+  }, [
+    document,
+    isPdfReaderPreferenceLoaded,
+    pdfReaderPage,
+    pdfReaderZoom,
+    savePdfReaderPreference,
+    t
+  ]);
+
+  useEffect(() => {
+    if (
+      !document ||
+      document.source_type !== "pdf" ||
+      !document.source_path ||
+      !isPdfReaderPreferenceLoaded
+    ) {
       setRenderedPdfPage(null);
       setIsRenderingPdfPage(false);
       return;
@@ -1676,7 +1747,7 @@ export function App({
     return () => {
       isCurrent = false;
     };
-  }, [document, pdfReaderPage, renderPdfPage, t]);
+  }, [document, isPdfReaderPreferenceLoaded, pdfReaderPage, renderPdfPage, t]);
 
   async function handleUiLanguageChange(language: UiLanguage) {
     setUiLanguage(language);

@@ -54,6 +54,12 @@ const renderDefaultPdfPage = vi.fn().mockResolvedValue({
   page_count: 1,
   image_data_url: "data:image/png;base64,UE5H"
 });
+const loadDefaultPdfReaderPreference = vi.fn().mockImplementation(async (documentId: string) => ({
+  document_id: documentId,
+  page: 1,
+  zoom: 1
+}));
+const saveDefaultPdfReaderPreference = vi.fn().mockImplementation(async (preference: unknown) => preference);
 
 function renderApp(props: ComponentProps<typeof App> = {}) {
   return render(
@@ -74,6 +80,8 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       testOcrDependencies={testOcrDependencies}
       loadDocumentTranslation={loadNoDocumentTranslation}
       renderPdfPage={renderDefaultPdfPage}
+      loadPdfReaderPreference={loadDefaultPdfReaderPreference}
+      savePdfReaderPreference={saveDefaultPdfReaderPreference}
       {...props}
     />
   );
@@ -86,6 +94,8 @@ describe("App", () => {
       await i18n.changeLanguage("pt");
     });
     renderDefaultPdfPage.mockClear();
+    loadDefaultPdfReaderPreference.mockClear();
+    saveDefaultPdfReaderPreference.mockClear();
   });
 
   it("renders the product name", async () => {
@@ -1122,6 +1132,7 @@ describe("App", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
+    expect(await screen.findByAltText("Pagina PDF 1")).toBeInTheDocument();
     expect(await screen.findByText("Texto extraido")).toBeInTheDocument();
     expect(screen.getByText(`${longContent.length} caracteres extraidos`)).toBeInTheDocument();
     expect(window.document.querySelector(".document-content-preview")).toBeNull();
@@ -1474,6 +1485,72 @@ describe("App", () => {
       "src",
       "data:image/png;base64,UEFHSU5BMg=="
     );
+  });
+
+  it("restores and saves the PDF reader page and zoom per document", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-pdf-position",
+      book_id: "book-pdf-position",
+      content: "Texto extraido do PDF.",
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/position.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const loadPdfReaderPreference = vi.fn().mockResolvedValue({
+      document_id: "document-pdf-position",
+      page: 2,
+      zoom: 1.25
+    });
+    const savePdfReaderPreference = vi
+      .fn()
+      .mockImplementation(async (preference: unknown) => preference);
+    const renderPdfPage = vi
+      .fn()
+      .mockImplementation(async ({ page }: { page: number }) => ({
+        page,
+        page_count: 3,
+        image_data_url:
+          page === 3
+            ? "data:image/png;base64,UEFHSU5BMw=="
+            : "data:image/png;base64,UEFHSU5BMg=="
+      }));
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      loadPdfReaderPreference,
+      savePdfReaderPreference,
+      renderPdfPage
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/position.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "PDF original" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(loadPdfReaderPreference).toHaveBeenCalledWith("document-pdf-position");
+    });
+    await waitFor(() => {
+      expect(renderPdfPage).toHaveBeenCalledWith({
+        file_path: "/tmp/position.pdf",
+        page: 2,
+        dpi: 144
+      });
+    });
+    expect(await screen.findByAltText("Pagina PDF 2")).toHaveStyle({ width: "125%" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Proxima pagina do PDF" }));
+
+    await waitFor(() => {
+      expect(savePdfReaderPreference).toHaveBeenCalledWith({
+        document_id: "document-pdf-position",
+        page: 3,
+        zoom: 1.25
+      });
+    });
   });
 
   it("paginates the full imported document in the reader", async () => {
@@ -2574,6 +2651,7 @@ describe("App", () => {
     });
 
     fireEvent.click(await screen.findByRole("button", { name: /Algebra linear/ }));
+    expect(await screen.findByAltText("Pagina PDF 1")).toBeInTheDocument();
     expect(await screen.findByText("Sessoes de estudo")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Exportar relatorio" }));

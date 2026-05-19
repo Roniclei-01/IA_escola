@@ -1821,7 +1821,9 @@ describe("App", () => {
       attempts < 8 && readerQueries.queryAllByText(textIncludes(finalLine)).length === 0;
       attempts += 1
     ) {
-      fireEvent.click(screen.getByRole("button", { name: "Proxima pagina" }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Proxima pagina" }));
+      });
     }
 
     expect(readerQueries.getAllByText(textIncludes(finalLine)).length).toBeGreaterThan(0);
@@ -3481,6 +3483,61 @@ describe("App", () => {
     });
   });
 
+  it("exports study cards as an Anki APKG package", async () => {
+    const exportAnkiPackage = vi.fn().mockResolvedValue({
+      file_path: "/tmp/anki-document-anki.apkg",
+      card_count: 2
+    });
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-anki",
+          book_id: "book-anki",
+          content: "Biologia celular.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/biologia.txt"
+        }
+      ]
+    });
+    const cards = [
+      {
+        id: "card-1",
+        bookId: "book-anki",
+        chunkId: "chunk-1",
+        front: "O que e celula?\nExplique.",
+        back: "Unidade basica da vida.",
+        tags: ["biologia", "celula animal"]
+      },
+      {
+        id: "card-2",
+        bookId: "book-anki",
+        chunkId: "chunk-1",
+        front: "Funcao da mitocondria?",
+        back: "Produzir energia.",
+        tags: ["biologia"]
+      }
+    ];
+    const listStudyCards = vi.fn().mockResolvedValue(cards);
+
+    renderApp({
+      exportAnkiPackage,
+      listImportedDocuments,
+      listStudyCards
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Biologia celular/ }));
+    expect(await screen.findByText(/O que e celula/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Exportar Anki .apkg" }));
+
+    expect(exportAnkiPackage).toHaveBeenCalledWith(
+      "anki-document-anki.apkg",
+      "Biologia celular.",
+      cards
+    );
+  });
+
   it("exports study cards as an Anki TSV deck", async () => {
     const downloadTextFile = vi.fn();
     const listImportedDocuments = vi.fn().mockResolvedValue({
@@ -3523,7 +3580,7 @@ describe("App", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Biologia celular/ }));
     expect(await screen.findByText(/O que e celula/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Exportar Anki" }));
+    fireEvent.click(screen.getByRole("button", { name: "Exportar Anki TSV" }));
 
     expect(downloadTextFile).toHaveBeenCalledWith(
       "anki-document-anki.tsv",

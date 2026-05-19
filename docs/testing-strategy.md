@@ -46,6 +46,7 @@ Devem cobrir:
 - tratar falha de IA;
 - exibir progresso de fila por chunk em painel de segundo plano durante geracao de cards com IA;
 - gerar pacote Anki `.apkg` com `collection.anki2`, arquivo `media` e quantidade correta de cards;
+- acionar exportacao Anki `.apkg` e TSV pela interface sem misturar os formatos;
 - tratar arquivo invalido;
 - preservar dados apos migracao simples.
 

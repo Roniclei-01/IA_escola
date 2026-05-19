@@ -168,6 +168,12 @@ describe("i18n", () => {
       "Previa PDF"
     );
     expect(i18n.getResource("pt", "translation", "study.exportAnki")).toBe("Exportar Anki");
+    expect(i18n.getResource("pt", "translation", "study.exportAnkiPackage")).toBe(
+      "Exportar Anki .apkg"
+    );
+    expect(i18n.getResource("pt", "translation", "study.exportAnkiTsv")).toBe(
+      "Exportar Anki TSV"
+    );
     expect(i18n.getResource("pt", "translation", "study.exportFileError")).toBe(
       "Nao foi possivel exportar o arquivo."
     );

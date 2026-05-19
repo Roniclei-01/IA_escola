@@ -105,6 +105,10 @@ import {
   testOcrDependencies as defaultTestOcrDependencies,
   type OcrDependencies
 } from "../infrastructure/tauri/ocr-dependencies";
+import {
+  exportAnkiPackage as defaultExportAnkiPackage,
+  type ExportAnkiPackageResponse
+} from "../infrastructure/tauri/export-anki-package";
 import { exportTextFile as defaultExportTextFile } from "../infrastructure/tauri/export-text-file";
 import {
   SUPPORTED_UI_LANGUAGES,
@@ -184,6 +188,11 @@ interface AppProps {
   loadNotificationSettings?: () => Promise<NotificationSettings>;
   saveNotificationSettings?: (settings: NotificationSettings) => Promise<NotificationSettings>;
   testOcrDependencies?: () => Promise<OcrDependencies>;
+  exportAnkiPackage?: (
+    fileName: string,
+    deckName: string,
+    cards: StudyCard[]
+  ) => Promise<ExportAnkiPackageResponse | null> | ExportAnkiPackageResponse | null;
   downloadTextFile?: (fileName: string, content: string) => Promise<void> | void;
   printStudySessionReport?: (fileName: string, html: string) => void;
   notifyStudyGoalReminder?: (notification: StudyGoalReminderNotification) => Promise<void> | void;
@@ -1193,6 +1202,7 @@ export function App({
   loadNotificationSettings = defaultLoadNotificationSettings,
   saveNotificationSettings = defaultSaveNotificationSettings,
   testOcrDependencies = defaultTestOcrDependencies,
+  exportAnkiPackage = defaultExportAnkiPackage,
   downloadTextFile = defaultDownloadTextFile,
   printStudySessionReport = defaultPrintStudySessionReport,
   notifyStudyGoalReminder = defaultNotifyStudyGoalReminder,
@@ -3025,7 +3035,22 @@ export function App({
     );
   }
 
-  async function handleExportAnkiDeck() {
+  async function handleExportAnkiPackage() {
+    if (!document || cards.length === 0) {
+      return;
+    }
+
+    const fileName = `anki-${sanitizeReportFileName(document.document_id)}.apkg`;
+
+    try {
+      setError(null);
+      await exportAnkiPackage(fileName, getDocumentTitle(document), cards);
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("study.exportFileError")));
+    }
+  }
+
+  async function handleExportAnkiTsvDeck() {
     if (!document || cards.length === 0) {
       return;
     }
@@ -3330,8 +3355,11 @@ export function App({
             }}
           >
             <div className="document-actions">
-              <button type="button" onClick={handleExportAnkiDeck}>
-                {t("study.exportAnki")}
+              <button type="button" onClick={handleExportAnkiPackage}>
+                {t("study.exportAnkiPackage")}
+              </button>
+              <button type="button" onClick={handleExportAnkiTsvDeck}>
+                {t("study.exportAnkiTsv")}
               </button>
               <button
                 className="danger-button"

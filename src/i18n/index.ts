@@ -184,6 +184,8 @@ export const resources = {
         pdfPreviewTitle: "Previa do PDF",
         pdfPreviewFrameTitle: "Previa do relatorio PDF",
         exportAnki: "Exportar Anki",
+        exportAnkiPackage: "Exportar Anki .apkg",
+        exportAnkiTsv: "Exportar Anki TSV",
         exportFileError: "Nao foi possivel exportar o arquivo.",
         deleteCards: "Excluir cards",
         deleteCardsConfirmation:
@@ -451,6 +453,8 @@ export const resources = {
         pdfPreviewTitle: "PDF preview",
         pdfPreviewFrameTitle: "PDF report preview",
         exportAnki: "Export Anki",
+        exportAnkiPackage: "Export Anki .apkg",
+        exportAnkiTsv: "Export Anki TSV",
         exportFileError: "Could not export the file.",
         deleteCards: "Delete cards",
         deleteCardsConfirmation:
@@ -718,6 +722,8 @@ export const resources = {
         pdfPreviewTitle: "Vista previa del PDF",
         pdfPreviewFrameTitle: "Vista previa del informe PDF",
         exportAnki: "Exportar Anki",
+        exportAnkiPackage: "Exportar Anki .apkg",
+        exportAnkiTsv: "Exportar Anki TSV",
         exportFileError: "No fue posible exportar el archivo.",
         deleteCards: "Eliminar cards",
         deleteCardsConfirmation:

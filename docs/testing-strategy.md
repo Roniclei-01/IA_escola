@@ -175,12 +175,14 @@ Execute este roteiro no app desktop com `npm run tauri dev` e registre o resulta
 
 1. Abrir um documento importado.
 2. Confirmar que a tela mostra `Idioma original` e `Idioma escolhido` lado a lado.
-3. Selecionar um idioma diferente do idioma original do documento.
-4. Clicar em `Gerar leitura traduzida`.
-5. Confirmar que a traducao aparece no painel `Idioma escolhido`.
-6. Fechar e abrir o app ou selecionar o documento novamente.
-7. Confirmar que a traducao salva reaparece sem chamar a geracao novamente.
-8. Confirmar que a importacao do documento nao gera traducao automaticamente.
+3. Usar `Proxima pagina` e `Pagina anterior` para confirmar que o arquivo completo fica acessivel no leitor.
+4. Selecionar um idioma diferente do idioma original do documento.
+5. Clicar em `Gerar leitura traduzida`.
+6. Confirmar que a traducao aparece no painel `Idioma escolhido`.
+7. Confirmar que documentos longos sao traduzidos em lotes sem travar a janela.
+8. Fechar e abrir o app ou selecionar o documento novamente.
+9. Confirmar que a traducao salva reaparece sem chamar a geracao novamente.
+10. Confirmar que a importacao do documento nao gera traducao automaticamente.
 
 ### Funcionalidades futuras documentadas
 

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StudyCard } from "../domain/model-adapter";
@@ -544,7 +544,7 @@ describe("App", () => {
     renderApp({ testOcrDependencies });
 
     expect(await screen.findByText("OCR local")).toBeInTheDocument();
-    expect(screen.getByText("OCR indisponivel neste computador.")).toBeInTheDocument();
+    expect(await screen.findByText("OCR indisponivel neste computador.")).toBeInTheDocument();
     expect(screen.getByText("pdftoppm disponivel")).toBeInTheDocument();
     expect(screen.getByText("tesseract ausente")).toBeInTheDocument();
     expect(
@@ -1088,7 +1088,7 @@ describe("App", () => {
     expect(generateButton).toBeDisabled();
   });
 
-  it("collapses long imported document previews until requested", async () => {
+  it("keeps extracted PDF text hidden until requested", async () => {
     const longContent = `${"Conteudo extenso do PDF. ".repeat(
       60
     )}TRECHO FINAL IMPORTANTE DO DOCUMENTO.`;
@@ -1115,23 +1115,49 @@ describe("App", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/Conteudo extenso do PDF/).length).toBeGreaterThan(1);
-    });
-    expect(window.document.querySelector(".document-content-preview")).not.toHaveTextContent(
-      "TRECHO FINAL IMPORTANTE DO DOCUMENTO"
-    );
+    expect(await screen.findByText("Texto extraido")).toBeInTheDocument();
+    expect(screen.getByText(`${longContent.length} caracteres extraidos`)).toBeInTheDocument();
+    expect(window.document.querySelector(".document-content-preview")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Mostrar previa completa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar texto extraido" }));
 
     expect(window.document.querySelector(".document-content-preview")).toHaveTextContent(
       "TRECHO FINAL IMPORTANTE DO DOCUMENTO"
     );
-    fireEvent.click(screen.getByRole("button", { name: "Recolher previa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar texto extraido" }));
 
-    expect(window.document.querySelector(".document-content-preview")).not.toHaveTextContent(
-      "TRECHO FINAL IMPORTANTE DO DOCUMENTO"
-    );
+    expect(window.document.querySelector(".document-content-preview")).toBeNull();
+  });
+
+  it("shows a paginated reader for long imported documents", async () => {
+    const longContent = `${"Conteudo extenso do PDF. ".repeat(
+      60
+    )}TRECHO FINAL IMPORTANTE DO DOCUMENTO.`;
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-long-reader",
+          book_id: "book-long-reader",
+          content: longContent,
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/longo.pdf"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([]);
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listDocumentChunks
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
+
+    expect(await screen.findByText("Leitura do documento")).toBeInTheDocument();
+    expect(screen.getAllByText(/Conteudo extenso do PDF/).length).toBeGreaterThan(0);
   });
 
   it("uses persisted cards when selecting a saved document", async () => {
@@ -1374,6 +1400,50 @@ describe("App", () => {
       });
     });
     expect(await screen.findByText("Translated text for reading.")).toBeInTheDocument();
+  });
+
+  it("paginates the full imported document in the reader", async () => {
+    const finalLine = "Fim integral do livro.";
+    const textIncludes = (text: string) => (_content: string, node: Element | null) =>
+      node?.textContent?.includes(text) ?? false;
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-reader-pages",
+      book_id: "book-reader-pages",
+      content: `Inicio do livro.\n\n${"Conteudo de pagina longa. ".repeat(180)}\n\n${finalLine}`,
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/full-book.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/full-book.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    const readerHeading = await screen.findByRole("heading", { name: "Leitura do documento" });
+    const reader = readerHeading.closest(".document-reader");
+    expect(reader).not.toBeNull();
+    const readerQueries = within(reader as HTMLElement);
+
+    expect(readerQueries.getAllByText(textIncludes("Inicio do livro.")).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Pagina 1 de/)).toBeInTheDocument();
+    expect(readerQueries.queryAllByText(textIncludes(finalLine))).toHaveLength(0);
+
+    for (
+      let attempts = 0;
+      attempts < 8 && readerQueries.queryAllByText(textIncludes(finalLine)).length === 0;
+      attempts += 1
+    ) {
+      fireEvent.click(screen.getByRole("button", { name: "Proxima pagina" }));
+    }
+
+    expect(readerQueries.getAllByText(textIncludes(finalLine)).length).toBeGreaterThan(0);
   });
 
   it("keeps translation available when the imported document language metadata is wrong", async () => {

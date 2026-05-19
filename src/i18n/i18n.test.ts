@@ -43,6 +43,21 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.translateDocument")).toBe(
       "Gerar leitura traduzida"
     );
+    expect(i18n.getResource("pt", "translation", "library.nextReaderPage")).toBe(
+      "Proxima pagina"
+    );
+    expect(i18n.getResource("pt", "translation", "library.extractedTextTitle")).toBe(
+      "Texto extraido"
+    );
+    expect(i18n.getResource("en", "translation", "library.expandPreview")).toBe(
+      "Show extracted text"
+    );
+    expect(i18n.getResource("es", "translation", "library.collapsePreview")).toBe(
+      "Ocultar texto extraido"
+    );
+    expect(i18n.getResource("en", "translation", "library.readerPageStatus")).toBe(
+      "Page {{currentPage}} of {{totalPages}}"
+    );
   });
 
   it("has supported file labels in every supported language", () => {

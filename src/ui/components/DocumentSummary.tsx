@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ImportTextBookResponse } from "../../infrastructure/tauri/import-text-book";
 
 const COLLAPSED_PREVIEW_LENGTH = 900;
+const READER_PAGE_LENGTH = 2_200;
 
 interface DocumentSummaryProps {
   document: ImportTextBookResponse;
@@ -17,6 +18,8 @@ interface DocumentSummaryProps {
     generateCards: string;
     expandPreview: string;
     collapsePreview: string;
+    extractedTextTitle: string;
+    extractedTextMeta: (characterCount: number) => string;
     readerTitle: string;
     readerLanguageLabel: string;
     readerPortuguese: string;
@@ -28,6 +31,9 @@ interface DocumentSummaryProps {
     translationSameLanguage: string;
     translateDocument: string;
     translatingDocument: string;
+    previousReaderPage: string;
+    nextReaderPage: string;
+    readerPageStatus: (currentPage: number, totalPages: number) => string;
   };
   originalLanguage: ImportTextBookResponse["language"];
   readerTargetLanguage: ImportTextBookResponse["language"];
@@ -56,6 +62,7 @@ export function DocumentSummary({
   children
 }: DocumentSummaryProps) {
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const [readerPageIndex, setReaderPageIndex] = useState(0);
   const shouldCollapsePreview = document.content.length > COLLAPSED_PREVIEW_LENGTH;
   const previewContent =
     shouldCollapsePreview && !isPreviewExpanded
@@ -63,6 +70,27 @@ export function DocumentSummary({
       : document.content;
   const isSameLanguage = readerTargetLanguage === originalLanguage;
   const translatedDisplayContent = isSameLanguage ? document.content : translatedContent;
+  const originalPages = useMemo(() => paginateReaderText(document.content), [document.content]);
+  const translatedPages = useMemo(
+    () => paginateReaderText(translatedDisplayContent ?? ""),
+    [translatedDisplayContent]
+  );
+  const totalReaderPages = Math.max(originalPages.length, translatedPages.length, 1);
+  const currentReaderPage = Math.min(readerPageIndex, totalReaderPages - 1);
+  const currentOriginalPage = originalPages[currentReaderPage] ?? "";
+  const currentTranslatedPage = translatedPages[currentReaderPage] ?? "";
+
+  useEffect(() => {
+    setReaderPageIndex(0);
+  }, [document.document_id, readerTargetLanguage, translatedContent]);
+
+  function goToPreviousReaderPage() {
+    setReaderPageIndex((currentPage) => Math.max(currentPage - 1, 0));
+  }
+
+  function goToNextReaderPage() {
+    setReaderPageIndex((currentPage) => Math.min(currentPage + 1, totalReaderPages - 1));
+  }
 
   return (
     <section className="document-preview" aria-labelledby="document-title">
@@ -111,16 +139,38 @@ export function DocumentSummary({
             {isTranslatingDocument ? labels.translatingDocument : labels.translateDocument}
           </button>
         </div>
+        {totalReaderPages > 1 ? (
+          <div
+            className="reader-pagination"
+            aria-label={labels.readerPageStatus(currentReaderPage + 1, totalReaderPages)}
+          >
+            <button
+              type="button"
+              disabled={currentReaderPage === 0}
+              onClick={goToPreviousReaderPage}
+            >
+              {labels.previousReaderPage}
+            </button>
+            <span>{labels.readerPageStatus(currentReaderPage + 1, totalReaderPages)}</span>
+            <button
+              type="button"
+              disabled={currentReaderPage >= totalReaderPages - 1}
+              onClick={goToNextReaderPage}
+            >
+              {labels.nextReaderPage}
+            </button>
+          </div>
+        ) : null}
         {isSameLanguage ? <p className="reader-note">{labels.translationSameLanguage}</p> : null}
         <div className="document-reader-grid">
           <article className="reader-pane">
             <h4>{labels.originalPaneTitle}</h4>
-            <p>{document.content}</p>
+            <p>{currentOriginalPage}</p>
           </article>
           <article className="reader-pane">
             <h4>{labels.translatedPaneTitle}</h4>
-            {translatedDisplayContent ? (
-              <p>{translatedDisplayContent}</p>
+            {currentTranslatedPage ? (
+              <p>{currentTranslatedPage}</p>
             ) : (
               <p className="reader-placeholder">{labels.translationPlaceholder}</p>
             )}
@@ -128,8 +178,11 @@ export function DocumentSummary({
         </div>
       </section>
       {cardCount > 0 ? children : null}
-      <p className="document-content-preview">{previewContent}</p>
-      {shouldCollapsePreview ? (
+      <section className="document-extracted-text" aria-labelledby="document-extracted-text-title">
+        <div>
+          <h3 id="document-extracted-text-title">{labels.extractedTextTitle}</h3>
+          <span>{labels.extractedTextMeta(document.content.length)}</span>
+        </div>
         <button
           className="document-preview-toggle"
           type="button"
@@ -137,7 +190,69 @@ export function DocumentSummary({
         >
           {isPreviewExpanded ? labels.collapsePreview : labels.expandPreview}
         </button>
-      ) : null}
+        {isPreviewExpanded ? (
+          <pre className="document-content-preview">{previewContent}</pre>
+        ) : null}
+      </section>
     </section>
   );
+}
+
+function paginateReaderText(content: string): string[] {
+  const trimmedContent = content.trim();
+
+  if (!trimmedContent) {
+    return [];
+  }
+
+  const pages: string[] = [];
+  let currentPage = "";
+
+  for (const block of trimmedContent.split(/(\n\s*\n)/)) {
+    if (!block) {
+      continue;
+    }
+
+    if (block.length > READER_PAGE_LENGTH) {
+      if (currentPage.trim()) {
+        pages.push(currentPage.trim());
+        currentPage = "";
+      }
+      pages.push(...splitLongReaderBlock(block));
+      continue;
+    }
+
+    if (currentPage && currentPage.length + block.length > READER_PAGE_LENGTH) {
+      pages.push(currentPage.trim());
+      currentPage = "";
+    }
+
+    currentPage += block;
+  }
+
+  if (currentPage.trim()) {
+    pages.push(currentPage.trim());
+  }
+
+  return pages;
+}
+
+function splitLongReaderBlock(block: string): string[] {
+  const pages: string[] = [];
+  let currentPage = "";
+
+  for (const word of block.split(/\s+/).filter(Boolean)) {
+    if (currentPage && currentPage.length + word.length + 1 > READER_PAGE_LENGTH) {
+      pages.push(currentPage.trim());
+      currentPage = "";
+    }
+
+    currentPage = currentPage ? `${currentPage} ${word}` : word;
+  }
+
+  if (currentPage.trim()) {
+    pages.push(currentPage.trim());
+  }
+
+  return pages;
 }

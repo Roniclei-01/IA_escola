@@ -149,7 +149,7 @@ Tabelas ja iniciadas:
 - `app_settings`.
 
 `documents` guarda tambem `source_type`, `source_path` e `archived_at`, permitindo diferenciar TXT/PDF, mostrar origem na UI, retirar documentos da biblioteca ativa sem apagar dados imediatamente, restaurar itens arquivados e excluir definitivamente documentos arquivados com limpeza dos dados de estudo relacionados.
-`document_translations` guarda a leitura traduzida por documento e idioma de destino, permitindo reutilizacao offline sem chamar o Ollama novamente ao reabrir o material.
+`document_translations` guarda a leitura traduzida por documento e idioma de destino, permitindo reutilizacao offline sem chamar o Ollama novamente ao reabrir o material. A traducao de documentos longos deve ser feita em lotes menores para respeitar limite de contexto do modelo local e evitar bloqueios perceptiveis da janela.
 `study_reviews` guarda `rating`, `priority`, `next_review_at` e `session_id`, formando a base para revisao espacada, filas de estudo por prioridade, metricas de retencao, cards mais dificeis, filtros de periodo, tendencia por sessao, evolucao semanal de dificuldade e agrupamento de rodadas.
 `study_sessions` registra o documento estudado e o inicio da rodada.
 `app_settings` guarda configuracoes locais e metas de revisao por documento, incluindo recorrencia geral, diaria ou semanal.
@@ -205,7 +205,7 @@ Detalhes estao em `docs/testing-strategy.md`.
 
 - Melhorar suporte a PDFs com metadados, paginacao e PDFs digitalizados.
 - Adicionar EPUB.
-- Melhorar leitura traduzida com paginacao, controle de progresso e reprocessamento por idioma.
+- Melhorar leitura traduzida com controle de progresso por lote e reprocessamento por idioma.
 - Adicionar campo `Meditacao` para o resumo pessoal do leitor.
 - Adicionar categorias e subcategorias de estudo para organizar documentos.
 - Criar resumos e exercicios.

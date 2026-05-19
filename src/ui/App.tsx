@@ -2868,6 +2868,9 @@ export function App({
               chunkCount: chunkCount !== null ? t("library.chunkCount", { count: chunkCount }) : null,
               cardCount: t("library.cardCount", { count: cards.length }),
               generateCards: t("library.generateCards"),
+              extractedTextTitle: t("library.extractedTextTitle"),
+              extractedTextMeta: (characterCount) =>
+                t("library.extractedTextMeta", { characterCount }),
               readerTitle: t("library.readerTitle"),
               readerLanguageLabel: t("library.readerLanguageLabel"),
               readerPortuguese: t("library.readerPortuguese"),
@@ -2879,6 +2882,10 @@ export function App({
               translationSameLanguage: t("library.translationSameLanguage"),
               translateDocument: t("library.translateDocument"),
               translatingDocument: t("library.translatingDocumentAction"),
+              previousReaderPage: t("library.previousReaderPage"),
+              nextReaderPage: t("library.nextReaderPage"),
+              readerPageStatus: (currentPage, totalPages) =>
+                t("library.readerPageStatus", { currentPage, totalPages }),
               expandPreview: t("library.expandPreview"),
               collapsePreview: t("library.collapsePreview")
             }}

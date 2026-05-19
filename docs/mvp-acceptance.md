@@ -154,9 +154,11 @@ Arquivos gerados:
 
 - [ ] Abrir um documento importado.
 - [ ] Confirmar que `Idioma original` e `Idioma escolhido` aparecem lado a lado.
+- [ ] Usar `Proxima pagina` e `Pagina anterior` para confirmar acesso ao arquivo completo.
 - [ ] Selecionar um idioma diferente do original.
 - [ ] Clicar em `Gerar leitura traduzida`.
 - [ ] Confirmar que a traducao aparece no painel `Idioma escolhido`.
+- [ ] Confirmar que documentos longos sao traduzidos em lotes sem travar a janela.
 - [ ] Fechar e abrir o app ou selecionar o documento novamente.
 - [ ] Confirmar que a traducao salva reaparece sem precisar gerar novamente.
 - [ ] Confirmar que a importacao nao gera traducao automaticamente.

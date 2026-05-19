@@ -724,6 +724,26 @@ h1 {
   font-weight: 700;
 }
 
+.reader-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.reader-pagination span {
+  min-width: 110px;
+  color: #2d3932;
+  font-weight: 700;
+  text-align: center;
+}
+
+.reader-pagination button {
+  color: #23352b;
+  background: #ffffff;
+  border: 1px solid #cfd7d1;
+}
+
 .document-reader-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -731,9 +751,7 @@ h1 {
 }
 
 .reader-pane {
-  min-height: 220px;
-  max-height: 420px;
-  overflow: auto;
+  min-height: 560px;
   padding: 14px;
   border: 1px solid #dde4dd;
   border-radius: 8px;
@@ -792,10 +810,6 @@ h1 {
   line-height: 1.6;
 }
 
-.document-content-preview {
-  max-width: 76ch;
-}
-
 .document-preview-toggle {
   width: fit-content;
   min-height: 34px;
@@ -807,6 +821,55 @@ h1 {
   background: #ffffff;
   font-weight: 700;
   cursor: pointer;
+}
+
+.document-extracted-text {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #d8ddd4;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.document-extracted-text > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.document-extracted-text h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.document-extracted-text span {
+  color: #526256;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.document-extracted-text .document-preview-toggle {
+  margin-top: 0;
+}
+
+.document-content-preview {
+  max-height: 300px;
+  max-width: none;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid #dde4dd;
+  border-radius: 6px;
+  color: #2d3932;
+  background: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
 }
 
 .card-preview {

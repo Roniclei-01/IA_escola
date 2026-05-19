@@ -112,7 +112,9 @@ import {
 import { exportTextFile as defaultExportTextFile } from "../infrastructure/tauri/export-text-file";
 import {
   addMeditationNote as defaultAddMeditationNote,
+  deleteMeditationNote as defaultDeleteMeditationNote,
   loadMeditationNotes as defaultLoadMeditationNotes,
+  updateMeditationNote as defaultUpdateMeditationNote,
   type MeditationNote,
   type MeditationNotesResponse
 } from "../infrastructure/tauri/meditation-notes";
@@ -201,6 +203,15 @@ interface AppProps {
   ) => Promise<ExportAnkiPackageResponse | null> | ExportAnkiPackageResponse | null;
   loadMeditationNotes?: (documentId: string) => Promise<MeditationNotesResponse>;
   addMeditationNote?: (documentId: string, content: string) => Promise<MeditationNotesResponse>;
+  updateMeditationNote?: (
+    documentId: string,
+    noteId: string,
+    content: string
+  ) => Promise<MeditationNotesResponse>;
+  deleteMeditationNote?: (
+    documentId: string,
+    noteId: string
+  ) => Promise<MeditationNotesResponse>;
   downloadTextFile?: (fileName: string, content: string) => Promise<void> | void;
   printStudySessionReport?: (fileName: string, html: string) => void;
   notifyStudyGoalReminder?: (notification: StudyGoalReminderNotification) => Promise<void> | void;
@@ -1213,6 +1224,8 @@ export function App({
   exportAnkiPackage = defaultExportAnkiPackage,
   loadMeditationNotes = defaultLoadMeditationNotes,
   addMeditationNote = defaultAddMeditationNote,
+  updateMeditationNote = defaultUpdateMeditationNote,
+  deleteMeditationNote = defaultDeleteMeditationNote,
   downloadTextFile = defaultDownloadTextFile,
   printStudySessionReport = defaultPrintStudySessionReport,
   notifyStudyGoalReminder = defaultNotifyStudyGoalReminder,
@@ -1294,9 +1307,12 @@ export function App({
   >({});
   const [meditationNotes, setMeditationNotes] = useState<MeditationNote[]>([]);
   const [meditationDraft, setMeditationDraft] = useState("");
+  const [editingMeditationNoteId, setEditingMeditationNoteId] = useState<string | null>(null);
+  const [isMeditationPanelOpen, setIsMeditationPanelOpen] = useState(false);
   const [isMeditationEditorOpen, setIsMeditationEditorOpen] = useState(false);
   const [isLoadingMeditationNote, setIsLoadingMeditationNote] = useState(false);
   const [isSavingMeditationNote, setIsSavingMeditationNote] = useState(false);
+  const [deletingMeditationNoteId, setDeletingMeditationNoteId] = useState<string | null>(null);
   const [meditationStatus, setMeditationStatus] = useState<string | null>(null);
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://127.0.0.1:11434");
   const [ollamaModel, setOllamaModel] = useState("llama3.2:1b");
@@ -1679,7 +1695,10 @@ export function App({
     meditationLoadTokenRef.current = loadToken;
     setMeditationNotes([]);
     setMeditationDraft("");
+    setEditingMeditationNoteId(null);
+    setIsMeditationPanelOpen(false);
     setIsMeditationEditorOpen(false);
+    setDeletingMeditationNoteId(null);
     setMeditationStatus(null);
 
     if (!document) {
@@ -3132,12 +3151,17 @@ export function App({
       setError(null);
       setMeditationStatus(null);
       setIsSavingMeditationNote(true);
-      const response = await addMeditationNote(document.document_id, meditationDraft);
+      const response = editingMeditationNoteId
+        ? await updateMeditationNote(document.document_id, editingMeditationNoteId, meditationDraft)
+        : await addMeditationNote(document.document_id, meditationDraft);
 
       setMeditationNotes(response.notes);
       setMeditationDraft("");
+      setEditingMeditationNoteId(null);
       setIsMeditationEditorOpen(false);
-      setMeditationStatus(t("study.meditationAdded"));
+      setMeditationStatus(
+        editingMeditationNoteId ? t("study.meditationUpdated") : t("study.meditationAdded")
+      );
     } catch (unknownError) {
       setError(getErrorMessage(unknownError, t("study.meditationSaveError")));
     } finally {
@@ -3145,68 +3169,155 @@ export function App({
     }
   }
 
-  const meditationActionLabel = isMeditationEditorOpen
-    ? t("study.closeMeditation")
-    : t("study.addMeditation");
+  async function handleDeleteMeditationNote(noteId: string) {
+    if (!document || !confirmDelete(t("study.confirmDeleteMeditation"))) {
+      return;
+    }
+
+    try {
+      setError(null);
+      setMeditationStatus(null);
+      setDeletingMeditationNoteId(noteId);
+      const response = await deleteMeditationNote(document.document_id, noteId);
+
+      setMeditationNotes(response.notes);
+      if (editingMeditationNoteId === noteId) {
+        setEditingMeditationNoteId(null);
+        setMeditationDraft("");
+        setIsMeditationEditorOpen(false);
+      }
+      setMeditationStatus(t("study.meditationDeleted"));
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("study.meditationSaveError")));
+    } finally {
+      setDeletingMeditationNoteId(null);
+    }
+  }
+
+  const activeMeditationNote = editingMeditationNoteId
+    ? meditationNotes.find((note) => note.id === editingMeditationNoteId)
+    : null;
+  const isMeditationSaveDisabled =
+    isLoadingMeditationNote ||
+    isSavingMeditationNote ||
+    meditationDraft.trim().length === 0 ||
+    (activeMeditationNote ? meditationDraft.trim() === activeMeditationNote.content : false);
   const meditationSlot = document ? (
     <section className="meditation-note meditation-note-reader" aria-labelledby="meditation-note-title">
-      <div className="meditation-note-summary">
-        <div>
-          <h4 id="meditation-note-title">{t("study.meditationTitle")}</h4>
+      <button
+        type="button"
+        className="meditation-note-toggle"
+        aria-expanded={isMeditationPanelOpen}
+        aria-controls="meditation-note-panel"
+        disabled={isLoadingMeditationNote}
+        onClick={() => {
+          setIsMeditationPanelOpen((currentValue) => {
+            const nextValue = !currentValue;
+            if (!nextValue) {
+              setMeditationDraft("");
+              setEditingMeditationNoteId(null);
+              setIsMeditationEditorOpen(false);
+            }
+
+            return nextValue;
+          });
+        }}
+      >
+        <span id="meditation-note-title">{t("study.meditationTitle")}</span>
+        <span>{t("study.meditationListSummary", { count: meditationNotes.length })}</span>
+      </button>
+      {isMeditationPanelOpen ? (
+        <div id="meditation-note-panel" className="meditation-note-panel">
           {meditationNotes.length > 0 ? (
             <ol className="meditation-note-list">
               {meditationNotes.map((note, index) => (
                 <li key={note.id}>
-                  <strong>{t("study.meditationEntryLabel", { number: index + 1 })}</strong>
-                  <p>{note.content}</p>
+                  <div>
+                    <strong>{t("study.meditationEntryLabel", { number: index + 1 })}</strong>
+                    <p>{note.content}</p>
+                  </div>
+                  <div className="meditation-note-item-actions">
+                    <button
+                      type="button"
+                      disabled={isSavingMeditationNote || deletingMeditationNoteId !== null}
+                      onClick={() => {
+                        setMeditationDraft(note.content);
+                        setEditingMeditationNoteId(note.id);
+                        setMeditationStatus(null);
+                        setIsMeditationEditorOpen(true);
+                      }}
+                    >
+                      {t("study.editMeditation")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSavingMeditationNote || deletingMeditationNoteId !== null}
+                      onClick={() => {
+                        void handleDeleteMeditationNote(note.id);
+                      }}
+                    >
+                      {deletingMeditationNoteId === note.id
+                        ? t("study.deletingMeditation")
+                        : t("study.deleteMeditation")}
+                    </button>
+                  </div>
                 </li>
               ))}
             </ol>
           ) : (
             <p className="reader-placeholder">{t("study.meditationEmpty")}</p>
           )}
-        </div>
-        <button
-          type="button"
-          disabled={isLoadingMeditationNote}
-          onClick={() => {
-            setMeditationDraft("");
-            setMeditationStatus(null);
-            setIsMeditationEditorOpen((currentValue) => !currentValue);
-          }}
-        >
-          {meditationActionLabel}
-        </button>
-      </div>
-      {isMeditationEditorOpen ? (
-        <>
-          <label htmlFor="meditation-note-content">{t("study.meditationLabel")}</label>
-          <textarea
-            id="meditation-note-content"
-            value={meditationDraft}
-            disabled={isLoadingMeditationNote}
-            placeholder={t("study.meditationPlaceholder")}
-            onChange={(event) => {
-              setMeditationDraft(event.target.value);
+          <button
+            type="button"
+            className="meditation-note-add"
+            disabled={isLoadingMeditationNote || isSavingMeditationNote}
+            onClick={() => {
+              setMeditationDraft("");
+              setEditingMeditationNoteId(null);
               setMeditationStatus(null);
+              setIsMeditationEditorOpen(true);
             }}
-          />
-          <div className="meditation-note-actions">
-            <button
-              type="button"
-              disabled={
-                isLoadingMeditationNote ||
-                isSavingMeditationNote ||
-                meditationDraft.trim().length === 0
-              }
-              onClick={() => {
-                void handleSaveMeditationNote();
-              }}
-            >
-              {isSavingMeditationNote ? t("study.savingMeditation") : t("study.saveMeditation")}
-            </button>
-          </div>
-        </>
+          >
+            {t("study.addMeditation")}
+          </button>
+          {isMeditationEditorOpen ? (
+            <>
+              <label htmlFor="meditation-note-content">{t("study.meditationLabel")}</label>
+              <textarea
+                id="meditation-note-content"
+                value={meditationDraft}
+                disabled={isLoadingMeditationNote}
+                placeholder={t("study.meditationPlaceholder")}
+                onChange={(event) => {
+                  setMeditationDraft(event.target.value);
+                  setMeditationStatus(null);
+                }}
+              />
+              <div className="meditation-note-actions">
+                <button
+                  type="button"
+                  disabled={isMeditationSaveDisabled}
+                  onClick={() => {
+                    void handleSaveMeditationNote();
+                  }}
+                >
+                  {isSavingMeditationNote ? t("study.savingMeditation") : t("study.saveMeditation")}
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingMeditationNote}
+                  onClick={() => {
+                    setMeditationDraft("");
+                    setEditingMeditationNoteId(null);
+                    setIsMeditationEditorOpen(false);
+                  }}
+                >
+                  {t("study.cancelMeditationEdit")}
+                </button>
+              </div>
+            </>
+          ) : null}
+        </div>
       ) : null}
       {isLoadingMeditationNote ? (
         <span role="status">{t("study.loadingMeditation")}</span>

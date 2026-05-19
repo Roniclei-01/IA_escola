@@ -28,3 +28,29 @@ export async function addMeditationNote(
     }
   });
 }
+
+export async function updateMeditationNote(
+  documentId: string,
+  noteId: string,
+  content: string
+): Promise<MeditationNotesResponse> {
+  return invoke<MeditationNotesResponse>("update_meditation_note", {
+    request: {
+      document_id: documentId,
+      note_id: noteId,
+      content
+    }
+  });
+}
+
+export async function deleteMeditationNote(
+  documentId: string,
+  noteId: string
+): Promise<MeditationNotesResponse> {
+  return invoke<MeditationNotesResponse>("delete_meditation_note", {
+    request: {
+      document_id: documentId,
+      note_id: noteId
+    }
+  });
+}

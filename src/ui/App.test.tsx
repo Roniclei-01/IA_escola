@@ -64,6 +64,22 @@ const addMeditationNote = vi.fn().mockImplementation(async (documentId: string, 
     }
   ]
 }));
+const updateMeditationNote = vi
+  .fn()
+  .mockImplementation(async (documentId: string, noteId: string, content: string) => ({
+    document_id: documentId,
+    notes: [
+      {
+        id: noteId,
+        content,
+        created_at: "2026-05-19T14:00:00Z"
+      }
+    ]
+  }));
+const deleteMeditationNote = vi.fn().mockImplementation(async (documentId: string) => ({
+  document_id: documentId,
+  notes: []
+}));
 const renderDefaultPdfPage = vi.fn().mockResolvedValue({
   page: 1,
   page_count: 1,
@@ -97,6 +113,8 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       listDocumentPageTranslations={listNoDocumentPageTranslations}
       loadMeditationNotes={loadNoMeditationNotes}
       addMeditationNote={addMeditationNote}
+      updateMeditationNote={updateMeditationNote}
+      deleteMeditationNote={deleteMeditationNote}
       renderPdfPage={renderDefaultPdfPage}
       loadPdfReaderPreference={loadDefaultPdfReaderPreference}
       savePdfReaderPreference={saveDefaultPdfReaderPreference}
@@ -117,6 +135,8 @@ describe("App", () => {
     listNoDocumentPageTranslations.mockClear();
     loadNoMeditationNotes.mockClear();
     addMeditationNote.mockClear();
+    updateMeditationNote.mockClear();
+    deleteMeditationNote.mockClear();
   });
 
   it("renders the product name", async () => {
@@ -3614,7 +3634,7 @@ describe("App", () => {
     );
   });
 
-  it("loads and adds meditation notes for the active document", async () => {
+  it("keeps meditation notes collapsed and supports add, edit and delete actions", async () => {
     const loadMeditationNotes = vi.fn().mockResolvedValue({
       document_id: "document-meditation",
       notes: [
@@ -3640,6 +3660,32 @@ describe("App", () => {
         }
       ]
     });
+    const updateMeditationNote = vi.fn().mockResolvedValue({
+      document_id: "document-meditation",
+      notes: [
+        {
+          id: "note-1",
+          content: "Resumo inicial revisado.",
+          created_at: "2026-05-19T14:00:00Z"
+        },
+        {
+          id: "note-2",
+          content: "Agora entendi os conceitos principais.",
+          created_at: "2026-05-19T14:20:00Z"
+        }
+      ]
+    });
+    const deleteMeditationNote = vi.fn().mockResolvedValue({
+      document_id: "document-meditation",
+      notes: [
+        {
+          id: "note-1",
+          content: "Resumo inicial revisado.",
+          created_at: "2026-05-19T14:00:00Z"
+        }
+      ]
+    });
+    const confirmDelete = vi.fn().mockReturnValue(true);
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [
         {
@@ -3656,7 +3702,10 @@ describe("App", () => {
     renderApp({
       listImportedDocuments,
       loadMeditationNotes,
-      addMeditationNote
+      addMeditationNote,
+      updateMeditationNote,
+      deleteMeditationNote,
+      confirmDelete
     });
 
     fireEvent.click(await screen.findByRole("button", { name: /Conteudo sobre redes/ }));
@@ -3665,7 +3714,13 @@ describe("App", () => {
     expect(reader).not.toBeNull();
     const readerQueries = within(reader as HTMLElement);
 
-    expect(readerQueries.getByText("Meditacao")).toBeInTheDocument();
+    const meditationToggle = readerQueries.getByRole("button", { name: /Meditacao/ });
+    expect(meditationToggle).toHaveAttribute("aria-expanded", "false");
+    expect(readerQueries.queryByText("Meditacao 1")).not.toBeInTheDocument();
+    expect(readerQueries.queryByText("Resumo inicial do leitor.")).not.toBeInTheDocument();
+
+    fireEvent.click(meditationToggle);
+    expect(meditationToggle).toHaveAttribute("aria-expanded", "true");
     expect(readerQueries.getByText("Meditacao 1")).toBeInTheDocument();
     expect(readerQueries.getByText("Resumo inicial do leitor.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Meditacao do documento")).not.toBeInTheDocument();
@@ -3688,6 +3743,39 @@ describe("App", () => {
     expect(screen.queryByLabelText("Meditacao do documento")).not.toBeInTheDocument();
     expect(readerQueries.getByText("Meditacao 2")).toBeInTheDocument();
     expect(readerQueries.getByText("Agora entendi os conceitos principais.")).toBeInTheDocument();
+
+    const firstMeditation = readerQueries.getByText("Resumo inicial do leitor.").closest("li");
+    expect(firstMeditation).not.toBeNull();
+    fireEvent.click(within(firstMeditation as HTMLElement).getByRole("button", { name: "Editar meditacao" }));
+    expect(screen.getByLabelText("Meditacao do documento")).toHaveValue("Resumo inicial do leitor.");
+
+    fireEvent.change(screen.getByLabelText("Meditacao do documento"), {
+      target: { value: "Resumo inicial revisado." }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar meditacao" }));
+
+    await waitFor(() => {
+      expect(updateMeditationNote).toHaveBeenCalledWith(
+        "document-meditation",
+        "note-1",
+        "Resumo inicial revisado."
+      );
+    });
+    expect(await screen.findByText("Meditacao atualizada.")).toBeInTheDocument();
+    expect(readerQueries.getByText("Resumo inicial revisado.")).toBeInTheDocument();
+
+    const secondMeditation = readerQueries
+      .getByText("Agora entendi os conceitos principais.")
+      .closest("li");
+    expect(secondMeditation).not.toBeNull();
+    fireEvent.click(within(secondMeditation as HTMLElement).getByRole("button", { name: "Excluir meditacao" }));
+
+    expect(confirmDelete).toHaveBeenCalledWith("Excluir esta meditacao?");
+    await waitFor(() => {
+      expect(deleteMeditationNote).toHaveBeenCalledWith("document-meditation", "note-2");
+    });
+    expect(await screen.findByText("Meditacao excluida.")).toBeInTheDocument();
+    expect(readerQueries.queryByText("Agora entendi os conceitos principais.")).not.toBeInTheDocument();
   });
 
   it("deletes generated cards from the active document after confirmation", async () => {

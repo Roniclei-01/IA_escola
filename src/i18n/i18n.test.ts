@@ -184,8 +184,23 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.meditationEntryLabel")).toBe(
       "Meditacao {{number}}"
     );
+    expect(i18n.getResource("pt", "translation", "study.meditationListSummary")).toBe(
+      "{{count}} registro(s)"
+    );
+    expect(i18n.getResource("pt", "translation", "study.editMeditation")).toBe(
+      "Editar meditacao"
+    );
+    expect(i18n.getResource("pt", "translation", "study.deleteMeditation")).toBe(
+      "Excluir meditacao"
+    );
     expect(i18n.getResource("pt", "translation", "study.meditationAdded")).toBe(
       "Meditacao adicionada."
+    );
+    expect(i18n.getResource("pt", "translation", "study.meditationUpdated")).toBe(
+      "Meditacao atualizada."
+    );
+    expect(i18n.getResource("pt", "translation", "study.meditationDeleted")).toBe(
+      "Meditacao excluida."
     );
     expect(i18n.getResource("en", "translation", "study.meditationTitle")).toBe("Meditation");
     expect(i18n.getResource("es", "translation", "study.meditationTitle")).toBe("Meditacion");

@@ -1,6 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { addMeditationNote, loadMeditationNotes } from "./meditation-notes";
+import {
+  addMeditationNote,
+  deleteMeditationNote,
+  loadMeditationNotes,
+  updateMeditationNote
+} from "./meditation-notes";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn()
@@ -67,5 +72,46 @@ describe("meditation notes bridge", () => {
     });
     expect(result.notes).toHaveLength(1);
     expect(result.notes[0].content).toBe("O leitor entendeu os conceitos principais.");
+  });
+
+  it("updates a meditation note for a document", async () => {
+    invokeMock.mockResolvedValue({
+      document_id: "document-1",
+      notes: [
+        {
+          id: "note-1",
+          content: "Resumo revisado.",
+          created_at: "2026-05-19T14:10:00Z"
+        }
+      ]
+    });
+
+    const result = await updateMeditationNote("document-1", "note-1", "Resumo revisado.");
+
+    expect(invokeMock).toHaveBeenCalledWith("update_meditation_note", {
+      request: {
+        document_id: "document-1",
+        note_id: "note-1",
+        content: "Resumo revisado."
+      }
+    });
+    expect(result.notes[0].content).toBe("Resumo revisado.");
+  });
+
+  it("deletes a meditation note for a document", async () => {
+    invokeMock.mockResolvedValue({
+      document_id: "document-1",
+      notes: []
+    });
+
+    const result = await deleteMeditationNote("document-1", "note-1");
+
+    expect(invokeMock).toHaveBeenCalledWith("delete_meditation_note", {
+      request: {
+        document_id: "document-1",
+        note_id: "note-1"
+      }
+    });
+    expect(result.notes).toEqual([]);
   });
 });

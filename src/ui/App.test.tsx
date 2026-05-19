@@ -1474,11 +1474,22 @@ describe("App", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
-    expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Idioma original" })).toBeInTheDocument();
+    const readerHeading = await screen.findByRole("heading", { name: "Leitura do documento" });
+    const reader = readerHeading.closest(".document-reader");
+    expect(reader).not.toBeNull();
+    const readerQueries = within(reader as HTMLElement);
+
+    expect(readerQueries.queryByRole("heading", { name: "Idioma original" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Idioma escolhido" })).toBeInTheDocument();
     expect(screen.getByLabelText("Idioma de leitura")).toHaveValue("En");
-    expect(screen.getAllByText("Texto original para leitura.").length).toBeGreaterThan(0);
+    const originalPaneToggle = readerQueries.getByRole("button", { name: "Mostrar idioma original" });
+    expect(originalPaneToggle).toHaveAttribute("aria-expanded", "false");
+    expect(readerQueries.queryByText("Texto original para leitura.")).not.toBeInTheDocument();
+
+    fireEvent.click(originalPaneToggle);
+    expect(originalPaneToggle).toHaveAttribute("aria-expanded", "true");
+    expect(readerQueries.getByRole("heading", { name: "Idioma original" })).toBeInTheDocument();
+    expect(readerQueries.getAllByText("Texto original para leitura.").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Traduzir pagina atual" }));
 
@@ -1850,6 +1861,7 @@ describe("App", () => {
     expect(reader).not.toBeNull();
     const readerQueries = within(reader as HTMLElement);
 
+    fireEvent.click(readerQueries.getByRole("button", { name: "Mostrar idioma original" }));
     expect(readerQueries.getAllByText(textIncludes("Inicio do livro.")).length).toBeGreaterThan(0);
     expect(screen.getByText(/Pagina 1 de/)).toBeInTheDocument();
     expect(readerQueries.queryAllByText(textIncludes(finalLine))).toHaveLength(0);
@@ -1971,6 +1983,7 @@ describe("App", () => {
     );
     expect(screen.getByRole("button", { name: "Proxima pagina" })).toBeEnabled();
 
+    fireEvent.click(readerQueries.getByRole("button", { name: "Mostrar idioma original" }));
     for (
       let attempts = 0;
       attempts < 8 && readerQueries.queryAllByText(textIncludes(finalLine)).length === 0;
@@ -3714,24 +3727,25 @@ describe("App", () => {
     expect(reader).not.toBeNull();
     const readerQueries = within(reader as HTMLElement);
 
-    const meditationToggle = readerQueries.getByRole("button", { name: /Meditacao/ });
-    expect(meditationToggle).toHaveAttribute("aria-expanded", "false");
-    expect(readerQueries.queryByText("Meditacao 1")).not.toBeInTheDocument();
+    const meditationToggle = readerQueries.getByRole("button", { name: "Abrir anotacao" });
+    expect(screen.queryByRole("dialog", { name: "Anotacao" })).not.toBeInTheDocument();
+    expect(readerQueries.queryByText("Anotacao 1")).not.toBeInTheDocument();
     expect(readerQueries.queryByText("Resumo inicial do leitor.")).not.toBeInTheDocument();
 
     fireEvent.click(meditationToggle);
-    expect(meditationToggle).toHaveAttribute("aria-expanded", "true");
-    expect(readerQueries.getByText("Meditacao 1")).toBeInTheDocument();
-    expect(readerQueries.getByText("Resumo inicial do leitor.")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Meditacao do documento")).not.toBeInTheDocument();
+    const meditationDialog = await screen.findByRole("dialog", { name: "Anotacao" });
+    const meditationQueries = within(meditationDialog);
+    expect(meditationQueries.getByText("Anotacao 1")).toBeInTheDocument();
+    expect(meditationQueries.getByText("Resumo inicial do leitor.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Anotacao do documento")).not.toBeInTheDocument();
 
-    fireEvent.click(readerQueries.getByRole("button", { name: "Adicionar meditacao" }));
-    expect(screen.getByLabelText("Meditacao do documento")).toHaveValue("");
+    fireEvent.click(meditationQueries.getByRole("button", { name: "Adicionar anotacao" }));
+    expect(screen.getByLabelText("Anotacao do documento")).toHaveValue("");
 
-    fireEvent.change(screen.getByLabelText("Meditacao do documento"), {
+    fireEvent.change(screen.getByLabelText("Anotacao do documento"), {
       target: { value: "Agora entendi os conceitos principais." }
     });
-    fireEvent.click(screen.getByRole("button", { name: "Salvar meditacao" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar anotacao" }));
 
     await waitFor(() => {
       expect(addMeditationNote).toHaveBeenCalledWith(
@@ -3739,20 +3753,20 @@ describe("App", () => {
         "Agora entendi os conceitos principais."
       );
     });
-    expect(await screen.findByText("Meditacao adicionada.")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Meditacao do documento")).not.toBeInTheDocument();
-    expect(readerQueries.getByText("Meditacao 2")).toBeInTheDocument();
-    expect(readerQueries.getByText("Agora entendi os conceitos principais.")).toBeInTheDocument();
+    expect(await screen.findByText("Anotacao adicionada.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Anotacao do documento")).not.toBeInTheDocument();
+    expect(meditationQueries.getByText("Anotacao 2")).toBeInTheDocument();
+    expect(meditationQueries.getByText("Agora entendi os conceitos principais.")).toBeInTheDocument();
 
-    const firstMeditation = readerQueries.getByText("Resumo inicial do leitor.").closest("li");
+    const firstMeditation = meditationQueries.getByText("Resumo inicial do leitor.").closest("li");
     expect(firstMeditation).not.toBeNull();
-    fireEvent.click(within(firstMeditation as HTMLElement).getByRole("button", { name: "Editar meditacao" }));
-    expect(screen.getByLabelText("Meditacao do documento")).toHaveValue("Resumo inicial do leitor.");
+    fireEvent.click(within(firstMeditation as HTMLElement).getByRole("button", { name: "Editar anotacao" }));
+    expect(screen.getByLabelText("Anotacao do documento")).toHaveValue("Resumo inicial do leitor.");
 
-    fireEvent.change(screen.getByLabelText("Meditacao do documento"), {
+    fireEvent.change(screen.getByLabelText("Anotacao do documento"), {
       target: { value: "Resumo inicial revisado." }
     });
-    fireEvent.click(screen.getByRole("button", { name: "Salvar meditacao" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar anotacao" }));
 
     await waitFor(() => {
       expect(updateMeditationNote).toHaveBeenCalledWith(
@@ -3761,21 +3775,21 @@ describe("App", () => {
         "Resumo inicial revisado."
       );
     });
-    expect(await screen.findByText("Meditacao atualizada.")).toBeInTheDocument();
-    expect(readerQueries.getByText("Resumo inicial revisado.")).toBeInTheDocument();
+    expect(await screen.findByText("Anotacao atualizada.")).toBeInTheDocument();
+    expect(meditationQueries.getByText("Resumo inicial revisado.")).toBeInTheDocument();
 
-    const secondMeditation = readerQueries
+    const secondMeditation = meditationQueries
       .getByText("Agora entendi os conceitos principais.")
       .closest("li");
     expect(secondMeditation).not.toBeNull();
-    fireEvent.click(within(secondMeditation as HTMLElement).getByRole("button", { name: "Excluir meditacao" }));
+    fireEvent.click(within(secondMeditation as HTMLElement).getByRole("button", { name: "Excluir anotacao" }));
 
-    expect(confirmDelete).toHaveBeenCalledWith("Excluir esta meditacao?");
+    expect(confirmDelete).toHaveBeenCalledWith("Excluir esta anotacao?");
     await waitFor(() => {
       expect(deleteMeditationNote).toHaveBeenCalledWith("document-meditation", "note-2");
     });
-    expect(await screen.findByText("Meditacao excluida.")).toBeInTheDocument();
-    expect(readerQueries.queryByText("Agora entendi os conceitos principais.")).not.toBeInTheDocument();
+    expect(await screen.findByText("Anotacao excluida.")).toBeInTheDocument();
+    expect(meditationQueries.queryByText("Agora entendi os conceitos principais.")).not.toBeInTheDocument();
   });
 
   it("deletes generated cards from the active document after confirmation", async () => {

@@ -50,7 +50,7 @@ package "Dominio" {
     +description: String
   }
 
-  class MeditationNote {
+  class AnnotationNote {
     +id: UUID
     +documentId: UUID
     +summary: String
@@ -109,8 +109,8 @@ package "Aplicacao" {
     +execute(documentId: UUID, targetLanguage: Language): DocumentTranslation
   }
 
-  class SaveMeditationNote {
-    +execute(documentId: UUID, summary: String): MeditationNote
+  class SaveAnnotationNote {
+    +execute(documentId: UUID, summary: String): AnnotationNote
   }
 
   class AssignStudyCategory {
@@ -234,7 +234,7 @@ DocumentChunk --> Document
 DocumentTranslation --> Document
 DocumentStudyMetadata --> Document
 DocumentStudyMetadata --> Category
-MeditationNote --> Document
+AnnotationNote --> Document
 StudyCard --> DocumentChunk
 StudyCard --> Book
 StudySession --> Book
@@ -247,7 +247,7 @@ GenerateFlashcards --> ModelAdapter
 GenerateFlashcards --> StorageRepository
 TranslateDocument --> TranslationAdapter
 TranslateDocument --> StorageRepository
-SaveMeditationNote --> StorageRepository
+SaveAnnotationNote --> StorageRepository
 AssignStudyCategory --> StorageRepository
 StartStudySession --> StorageRepository
 UpdateUserSettings --> StorageRepository

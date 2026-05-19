@@ -35,6 +35,8 @@ interface DocumentSummaryProps {
     readerEnglish: string;
     readerSpanish: string;
     originalPaneTitle: string;
+    showOriginalPane: string;
+    hideOriginalPane: string;
     translatedPaneTitle: string;
     translationPlaceholder: string;
     translationSameLanguage: string;
@@ -102,6 +104,7 @@ export function DocumentSummary({
   children
 }: DocumentSummaryProps) {
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const [isOriginalPaneOpen, setIsOriginalPaneOpen] = useState(false);
   const [readerPageIndex, setReaderPageIndex] = useState(0);
   const shouldCollapsePreview = document.content.length > COLLAPSED_PREVIEW_LENGTH;
   const previewContent =
@@ -129,6 +132,7 @@ export function DocumentSummary({
 
   useEffect(() => {
     setReaderPageIndex(0);
+    setIsOriginalPaneOpen(false);
   }, [document.document_id, readerTargetLanguage]);
 
   function goToPreviousReaderPage() {
@@ -302,12 +306,32 @@ export function DocumentSummary({
           </p>
         ) : null}
         <div className="document-reader-grid">
-          <article className="reader-pane">
-            <h4>{labels.originalPaneTitle}</h4>
-            <p>{currentOriginalPage}</p>
+          <article
+            className={`reader-pane reader-pane-original ${
+              isOriginalPaneOpen ? "" : "reader-pane-collapsed"
+            }`}
+          >
+            <button
+              type="button"
+              className="reader-pane-toggle"
+              aria-expanded={isOriginalPaneOpen}
+              aria-label={isOriginalPaneOpen ? labels.hideOriginalPane : labels.showOriginalPane}
+              onClick={() => setIsOriginalPaneOpen((currentValue) => !currentValue)}
+            >
+              <span className="reader-pane-toggle-arrow" aria-hidden="true" />
+            </button>
+            {isOriginalPaneOpen ? (
+              <>
+                <h4>{labels.originalPaneTitle}</h4>
+                <p>{currentOriginalPage}</p>
+              </>
+            ) : null}
           </article>
-          <article className="reader-pane">
-            <h4>{labels.translatedPaneTitle}</h4>
+          <article className="reader-pane reader-pane-translated">
+            <div className="reader-pane-heading">
+              <h4>{labels.translatedPaneTitle}</h4>
+              {meditationSlot ? <div className="reader-pane-tools">{meditationSlot}</div> : null}
+            </div>
             {currentTranslatedPage ? (
               <p>{currentTranslatedPage}</p>
             ) : (
@@ -315,7 +339,6 @@ export function DocumentSummary({
             )}
           </article>
         </div>
-        {meditationSlot}
       </section>
       {cardCount > 0 ? children : null}
       <section className="document-extracted-text" aria-labelledby="document-extracted-text-title">

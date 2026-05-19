@@ -938,12 +938,68 @@ h1 {
   gap: 12px;
 }
 
+.document-reader-grid:has(.reader-pane-original.reader-pane-collapsed) {
+  grid-template-columns: 44px minmax(0, 1fr);
+}
+
 .reader-pane {
   min-height: 560px;
   padding: 14px;
   border: 1px solid #dde4dd;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.reader-pane-collapsed {
+  min-height: auto;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+.reader-pane-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.reader-pane-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.reader-pane-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  color: #ffffff;
+  background: #315b7c;
+}
+
+.reader-pane-original:not(.reader-pane-collapsed) .reader-pane-toggle {
+  float: right;
+  margin-left: 10px;
+  color: #23352b;
+  background: #ffffff;
+  border: 1px solid #cfd7d1;
+}
+
+.reader-pane-toggle-arrow {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid currentColor;
+  transition: transform 160ms ease;
+}
+
+.reader-pane-toggle[aria-expanded="true"] .reader-pane-toggle-arrow {
+  transform: rotate(90deg);
 }
 
 .reader-pane p {
@@ -1316,35 +1372,75 @@ h1 {
 }
 
 .meditation-note-reader {
-  margin-top: 14px;
+  position: relative;
 }
 
-.meditation-note-toggle {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  width: 100%;
-  min-height: 42px;
-  padding: 0 12px;
-  border: 1px solid #c9d6cd;
+.document-reader .meditation-note-open {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 0;
   border-radius: 6px;
-  color: #13231a;
-  background: #f8fbf8;
-  font: inherit;
+  color: #ffffff;
+  background: #315b7c;
+  font-size: 1.25rem;
   font-weight: 800;
-  text-align: left;
-  cursor: pointer;
+  line-height: 1;
+  text-align: center;
 }
 
-.meditation-note-toggle span:last-child {
-  color: #526256;
-  font-size: 0.82rem;
+.meditation-note-open span {
+  display: block;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.meditation-note-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 24, 22, 0.55);
 }
 
 .meditation-note-panel {
   display: grid;
   gap: 10px;
+  width: min(720px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid #d8e1da;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(14, 22, 18, 0.26);
+}
+
+.meditation-note-panel-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.meditation-note-panel-header h4 {
+  margin: 0;
+  color: #13231a;
+  font-size: 1.1rem;
+}
+
+.meditation-note-panel-header span {
+  display: block;
+  margin-top: 4px;
+  color: #526256;
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
 .meditation-note-summary {
@@ -1411,6 +1507,7 @@ h1 {
 
 .meditation-note-actions button,
 .meditation-note-add,
+.meditation-note-close,
 .meditation-note-item-actions button,
 .meditation-note-summary button {
   min-height: 36px;
@@ -1425,8 +1522,9 @@ h1 {
 
 .meditation-note-actions button:disabled,
 .meditation-note-add:disabled,
+.meditation-note-close:disabled,
 .meditation-note-item-actions button:disabled,
-.meditation-note-toggle:disabled,
+.meditation-note-open:disabled,
 .meditation-note-summary button:disabled {
   cursor: not-allowed;
   opacity: 0.58;

@@ -29,7 +29,7 @@ Entidades de dominio:
 - `StudyCard`
 - `Category`
 - `DocumentStudyMetadata`
-- `MeditationNote`
+- `AnnotationNote`
 - `ModelProfile`
 - `UserSettings`
 - `StudySession`
@@ -40,7 +40,7 @@ Casos de uso:
 - `ChunkDocument`
 - `GenerateFlashcards`
 - `TranslateDocument`
-- `SaveMeditationNote`
+- `SaveAnnotationNote`
 - `AssignStudyCategory`
 - `StartStudySession`
 - `UpdateUserSettings`

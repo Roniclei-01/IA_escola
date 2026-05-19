@@ -47,7 +47,8 @@ Devem cobrir:
 - exibir progresso de fila por chunk em painel de segundo plano durante geracao de cards com IA;
 - gerar pacote Anki `.apkg` com `collection.anki2`, arquivo `media` e quantidade correta de cards;
 - acionar exportacao Anki `.apkg` e TSV pela interface sem misturar os formatos;
-- adicionar, editar, excluir, carregar e exibir multiplas entradas de `Meditacao` por documento em painel recolhido;
+- adicionar, editar, excluir, carregar e exibir multiplas entradas de `Anotacao` por documento em modal acionado por `+`;
+- recolher e expandir a caixa de idioma original por seta no leitor;
 - tratar arquivo invalido;
 - preservar dados apos migracao simples.
 

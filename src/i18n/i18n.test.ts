@@ -52,6 +52,12 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.nextReaderPage")).toBe(
       "Proxima pagina"
     );
+    expect(i18n.getResource("pt", "translation", "library.showOriginalPane")).toBe(
+      "Mostrar idioma original"
+    );
+    expect(i18n.getResource("pt", "translation", "library.hideOriginalPane")).toBe(
+      "Ocultar idioma original"
+    );
     expect(i18n.getResource("pt", "translation", "library.pdfReaderTitle")).toBe(
       "PDF original"
     );
@@ -177,33 +183,36 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.exportFileError")).toBe(
       "Nao foi possivel exportar o arquivo."
     );
-    expect(i18n.getResource("pt", "translation", "study.meditationTitle")).toBe("Meditacao");
+    expect(i18n.getResource("pt", "translation", "study.meditationTitle")).toBe("Anotacao");
     expect(i18n.getResource("pt", "translation", "study.addMeditation")).toBe(
-      "Adicionar meditacao"
+      "Adicionar anotacao"
     );
     expect(i18n.getResource("pt", "translation", "study.meditationEntryLabel")).toBe(
-      "Meditacao {{number}}"
+      "Anotacao {{number}}"
     );
     expect(i18n.getResource("pt", "translation", "study.meditationListSummary")).toBe(
       "{{count}} registro(s)"
     );
+    expect(i18n.getResource("pt", "translation", "study.openMeditationPanel")).toBe(
+      "Abrir anotacao"
+    );
     expect(i18n.getResource("pt", "translation", "study.editMeditation")).toBe(
-      "Editar meditacao"
+      "Editar anotacao"
     );
     expect(i18n.getResource("pt", "translation", "study.deleteMeditation")).toBe(
-      "Excluir meditacao"
+      "Excluir anotacao"
     );
     expect(i18n.getResource("pt", "translation", "study.meditationAdded")).toBe(
-      "Meditacao adicionada."
+      "Anotacao adicionada."
     );
     expect(i18n.getResource("pt", "translation", "study.meditationUpdated")).toBe(
-      "Meditacao atualizada."
+      "Anotacao atualizada."
     );
     expect(i18n.getResource("pt", "translation", "study.meditationDeleted")).toBe(
-      "Meditacao excluida."
+      "Anotacao excluida."
     );
-    expect(i18n.getResource("en", "translation", "study.meditationTitle")).toBe("Meditation");
-    expect(i18n.getResource("es", "translation", "study.meditationTitle")).toBe("Meditacion");
+    expect(i18n.getResource("en", "translation", "study.meditationTitle")).toBe("Note");
+    expect(i18n.getResource("es", "translation", "study.meditationTitle")).toBe("Anotacion");
     expect(i18n.getResource("pt", "translation", "study.deleteCards")).toBe("Excluir cards");
     expect(i18n.getResource("pt", "translation", "progress.title")).toBe(
       "Progresso por documento"

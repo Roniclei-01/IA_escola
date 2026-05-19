@@ -206,7 +206,8 @@ Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 
 Esses itens estao documentados para as proximas fatias e nao bloqueiam o aceite do MVP 0.1:
 
-- [x] Campo `Meditacao` recolhido, com multiplas entradas, edicao e exclusao.
+- [x] Campo `Anotacao` em modal acionado por `+`, com multiplas entradas, edicao e exclusao.
+- [x] Caixa de idioma original recolhivel por seta no leitor.
 - [ ] Categorias e subcategorias de estudo por documento, com descricao da classificacao.
 - [x] Exportacao Anki em `.apkg`.
 - [ ] Importacao EPUB sem DRM em versao futura.

@@ -48,6 +48,7 @@ const testOcrDependencies = vi.fn().mockResolvedValue({
   pdftoppm_available: true,
   tesseract_available: true
 });
+const loadNoDocumentTranslation = vi.fn().mockResolvedValue({ translation: null });
 
 function renderApp(props: ComponentProps<typeof App> = {}) {
   return render(
@@ -66,6 +67,7 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       loadNotificationSettings={loadDefaultNotificationSettings}
       saveNotificationSettings={saveNotificationSettings}
       testOcrDependencies={testOcrDependencies}
+      loadDocumentTranslation={loadNoDocumentTranslation}
       {...props}
     />
   );
@@ -1116,14 +1118,20 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getAllByText(/Conteudo extenso do PDF/).length).toBeGreaterThan(1);
     });
-    expect(screen.queryByText(/TRECHO FINAL IMPORTANTE DO DOCUMENTO/)).not.toBeInTheDocument();
+    expect(window.document.querySelector(".document-content-preview")).not.toHaveTextContent(
+      "TRECHO FINAL IMPORTANTE DO DOCUMENTO"
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Mostrar previa completa" }));
 
-    expect(screen.getByText(/TRECHO FINAL IMPORTANTE DO DOCUMENTO/)).toBeInTheDocument();
+    expect(window.document.querySelector(".document-content-preview")).toHaveTextContent(
+      "TRECHO FINAL IMPORTANTE DO DOCUMENTO"
+    );
     fireEvent.click(screen.getByRole("button", { name: "Recolher previa" }));
 
-    expect(screen.queryByText(/TRECHO FINAL IMPORTANTE DO DOCUMENTO/)).not.toBeInTheDocument();
+    expect(window.document.querySelector(".document-content-preview")).not.toHaveTextContent(
+      "TRECHO FINAL IMPORTANTE DO DOCUMENTO"
+    );
   });
 
   it("uses persisted cards when selecting a saved document", async () => {
@@ -1319,6 +1327,95 @@ describe("App", () => {
     expect(generateCards).not.toHaveBeenCalled();
     expect(screen.queryByText("Pergunta 1 sobre o trecho 0")).not.toBeInTheDocument();
     expect(screen.getAllByText("Conteudo importado para estudo.").length).toBeGreaterThan(0);
+  });
+
+  it("shows the document reader side by side and translates on demand", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-reader",
+      book_id: "book-reader",
+      content: "Texto original para leitura.",
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/book.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const translateDocument = vi.fn().mockResolvedValue({
+      document_id: "document-reader",
+      source_language: "Pt",
+      target_language: "En",
+      translated_content: "Translated text for reading."
+    });
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      translateDocument
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/book.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Idioma original" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Idioma escolhido" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Idioma de leitura")).toHaveValue("En");
+    expect(screen.getAllByText("Texto original para leitura.").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerar leitura traduzida" }));
+
+    await waitFor(() => {
+      expect(translateDocument).toHaveBeenCalledWith({
+        document_id: "document-reader",
+        content: "Texto original para leitura.",
+        source_language: "Pt",
+        target_language: "En"
+      });
+    });
+    expect(await screen.findByText("Translated text for reading.")).toBeInTheDocument();
+  });
+
+  it("loads a persisted translation when selecting a saved document", async () => {
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-translated",
+          book_id: "book-translated",
+          content: "Texto original salvo.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/salvo.pdf"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([]);
+    const listDocumentChunks = vi.fn().mockResolvedValue({ chunks: [] });
+    const loadDocumentTranslation = vi.fn().mockResolvedValue({
+      translation: {
+        document_id: "document-translated",
+        source_language: "Pt",
+        target_language: "En",
+        translated_content: "Previously saved translation."
+      }
+    });
+    const translateDocument = vi.fn();
+
+    renderApp({
+      listImportedDocuments,
+      listStudyCards,
+      listDocumentChunks,
+      loadDocumentTranslation,
+      translateDocument
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
+
+    await waitFor(() => {
+      expect(loadDocumentTranslation).toHaveBeenCalledWith("document-translated", "En");
+    });
+    expect(await screen.findByText("Previously saved translation.")).toBeInTheDocument();
+    expect(translateDocument).not.toHaveBeenCalled();
   });
 
   it("imports with selected OCR language when OCR is enabled", async () => {

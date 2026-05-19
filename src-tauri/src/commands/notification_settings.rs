@@ -59,7 +59,10 @@ pub fn save_notification_settings_with_storage(
         )
         .map_err(format_save_error)?;
     storage
-        .save_setting(STUDY_GOAL_REMINDER_TIME_KEY, &settings.study_goal_reminder_time)
+        .save_setting(
+            STUDY_GOAL_REMINDER_TIME_KEY,
+            &settings.study_goal_reminder_time,
+        )
         .map_err(format_save_error)?;
 
     Ok(settings)

@@ -1,6 +1,7 @@
 use std::{collections::HashSet, path::Path};
 
 use rusqlite::{params, Connection};
+use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -31,6 +32,10 @@ pub enum StorageError {
     SaveChunksFailed(#[source] rusqlite::Error),
     #[error("failed to list document chunks")]
     ListChunksFailed(#[source] rusqlite::Error),
+    #[error("failed to save document translation")]
+    SaveDocumentTranslationFailed(#[source] rusqlite::Error),
+    #[error("failed to load document translation")]
+    LoadDocumentTranslationFailed(#[source] rusqlite::Error),
     #[error("failed to save study cards")]
     SaveStudyCardsFailed(#[source] rusqlite::Error),
     #[error("failed to list study cards")]
@@ -59,6 +64,8 @@ pub enum StorageError {
     InvalidChunkId(#[source] uuid::Error),
     #[error("stored chunk has invalid document id")]
     InvalidChunkDocumentId(#[source] uuid::Error),
+    #[error("stored translation has invalid document id")]
+    InvalidTranslationDocumentId(#[source] uuid::Error),
     #[error("stored chunk position is invalid")]
     InvalidChunkPosition(i64),
     #[error("stored chunk token estimate is invalid")]
@@ -97,6 +104,14 @@ pub enum StorageError {
 
 pub struct SQLiteStorage {
     connection: Connection,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct DocumentTranslationRecord {
+    pub document_id: Uuid,
+    pub source_language: Language,
+    pub target_language: Language,
+    pub translated_content: String,
 }
 
 impl SQLiteStorage {
@@ -264,6 +279,12 @@ impl SQLiteStorage {
             .map_err(StorageError::DeleteDocumentFailed)?;
         transaction
             .execute(
+                "DELETE FROM document_translations WHERE document_id = ?1",
+                [&document_id],
+            )
+            .map_err(StorageError::DeleteDocumentFailed)?;
+        transaction
+            .execute(
                 "DELETE FROM study_sessions WHERE document_id = ?1",
                 [&document_id],
             )
@@ -363,6 +384,75 @@ impl SQLiteStorage {
         }
 
         Ok(chunks)
+    }
+
+    pub fn save_document_translation(
+        &self,
+        document_id: Uuid,
+        source_language: &Language,
+        target_language: &Language,
+        translated_content: &str,
+    ) -> Result<(), StorageError> {
+        self.connection
+            .execute(
+                "INSERT OR REPLACE INTO document_translations
+                    (document_id, source_language, target_language, translated_content, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP)",
+                params![
+                    document_id.to_string(),
+                    language_to_code(source_language),
+                    language_to_code(target_language),
+                    translated_content,
+                ],
+            )
+            .map_err(StorageError::SaveDocumentTranslationFailed)?;
+
+        Ok(())
+    }
+
+    pub fn load_document_translation(
+        &self,
+        document_id: Uuid,
+        target_language: &Language,
+    ) -> Result<Option<DocumentTranslationRecord>, StorageError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT document_id, source_language, target_language, translated_content
+                 FROM document_translations
+                 WHERE document_id = ?1 AND target_language = ?2",
+            )
+            .map_err(StorageError::LoadDocumentTranslationFailed)?;
+        let mut rows = statement
+            .query(params![
+                document_id.to_string(),
+                language_to_code(target_language)
+            ])
+            .map_err(StorageError::LoadDocumentTranslationFailed)?;
+
+        let Some(row) = rows
+            .next()
+            .map_err(StorageError::LoadDocumentTranslationFailed)?
+        else {
+            return Ok(None);
+        };
+
+        let raw_translation = RawDocumentTranslation {
+            document_id: row
+                .get(0)
+                .map_err(StorageError::LoadDocumentTranslationFailed)?,
+            source_language: row
+                .get(1)
+                .map_err(StorageError::LoadDocumentTranslationFailed)?,
+            target_language: row
+                .get(2)
+                .map_err(StorageError::LoadDocumentTranslationFailed)?,
+            translated_content: row
+                .get(3)
+                .map_err(StorageError::LoadDocumentTranslationFailed)?,
+        };
+
+        raw_translation.try_into().map(Some)
     }
 
     pub fn save_study_cards(&mut self, cards: &[StudyCard]) -> Result<(), StorageError> {
@@ -704,7 +794,10 @@ impl SQLiteStorage {
         self.save_setting(&study_goal_recurrence_setting_key(document_id), recurrence)
     }
 
-    pub fn load_study_goal(&self, document_id: Uuid) -> Result<Option<(u32, String)>, StorageError> {
+    pub fn load_study_goal(
+        &self,
+        document_id: Uuid,
+    ) -> Result<Option<(u32, String)>, StorageError> {
         let Some(value) = self.load_setting(&study_goal_setting_key(document_id))? else {
             return Ok(None);
         };
@@ -745,6 +838,15 @@ impl SQLiteStorage {
                     content TEXT NOT NULL,
                     token_estimate INTEGER NOT NULL,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS document_translations (
+                    document_id TEXT NOT NULL,
+                    source_language TEXT NOT NULL,
+                    target_language TEXT NOT NULL,
+                    translated_content TEXT NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (document_id, target_language)
                 );
 
                 CREATE TABLE IF NOT EXISTS study_cards (
@@ -879,6 +981,13 @@ struct RawDocumentChunk {
     token_estimate: i64,
 }
 
+struct RawDocumentTranslation {
+    document_id: String,
+    source_language: String,
+    target_language: String,
+    translated_content: String,
+}
+
 struct RawStudyCard {
     id: String,
     book_id: String,
@@ -944,6 +1053,20 @@ impl TryFrom<RawDocumentChunk> for DocumentChunk {
             position,
             content: raw.content,
             token_estimate,
+        })
+    }
+}
+
+impl TryFrom<RawDocumentTranslation> for DocumentTranslationRecord {
+    type Error = StorageError;
+
+    fn try_from(raw: RawDocumentTranslation) -> Result<Self, Self::Error> {
+        Ok(Self {
+            document_id: Uuid::parse_str(&raw.document_id)
+                .map_err(StorageError::InvalidTranslationDocumentId)?,
+            source_language: language_from_code(&raw.source_language)?,
+            target_language: language_from_code(&raw.target_language)?,
+            translated_content: raw.translated_content,
         })
     }
 }
@@ -1147,6 +1270,18 @@ mod tests {
     }
 
     #[test]
+    fn creates_document_translations_table_on_open() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+
+        assert_eq!(
+            storage
+                .load_document_translation(Uuid::new_v4(), &Language::En)
+                .unwrap(),
+            None
+        );
+    }
+
+    #[test]
     fn creates_study_cards_table_on_open() {
         let storage = SQLiteStorage::open_in_memory().unwrap();
 
@@ -1282,6 +1417,14 @@ mod tests {
         storage.save_study_cards(&[card]).unwrap();
         storage.save_study_session(&session).unwrap();
         storage.save_study_review(&review).unwrap();
+        storage
+            .save_document_translation(
+                document.id,
+                &Language::Pt,
+                &Language::En,
+                "Translated archived content.",
+            )
+            .unwrap();
         storage.archive_document(document.id).unwrap();
 
         storage.delete_archived_document(document.id).unwrap();
@@ -1308,6 +1451,12 @@ mod tests {
                 .unwrap(),
             Vec::<StudySession>::new()
         );
+        assert_eq!(
+            storage
+                .load_document_translation(document.id, &Language::En)
+                .unwrap(),
+            None
+        );
     }
 
     #[test]
@@ -1331,6 +1480,56 @@ mod tests {
 
         assert_eq!(documents.len(), 1);
         assert_eq!(documents[0].content, "Versao atualizada");
+    }
+
+    #[test]
+    fn saves_and_loads_document_translation() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let document_id = Uuid::new_v4();
+
+        storage
+            .save_document_translation(
+                document_id,
+                &Language::Pt,
+                &Language::En,
+                "Translated content.",
+            )
+            .unwrap();
+
+        let translation = storage
+            .load_document_translation(document_id, &Language::En)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(translation.document_id, document_id);
+        assert_eq!(translation.source_language, Language::Pt);
+        assert_eq!(translation.target_language, Language::En);
+        assert_eq!(translation.translated_content, "Translated content.");
+    }
+
+    #[test]
+    fn replaces_existing_document_translation_for_target_language() {
+        let storage = SQLiteStorage::open_in_memory().unwrap();
+        let document_id = Uuid::new_v4();
+
+        storage
+            .save_document_translation(document_id, &Language::Pt, &Language::En, "First version.")
+            .unwrap();
+        storage
+            .save_document_translation(
+                document_id,
+                &Language::Pt,
+                &Language::En,
+                "Updated version.",
+            )
+            .unwrap();
+
+        let translation = storage
+            .load_document_translation(document_id, &Language::En)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(translation.translated_content, "Updated version.");
     }
 
     #[test]

@@ -170,7 +170,11 @@ fn extract_pdf_text_with_ocr(
         .arg(engine.resolution_dpi.to_string());
 
     if let Some(max_pages) = engine.max_pages {
-        raster_command.arg("-f").arg("1").arg("-l").arg(max_pages.to_string());
+        raster_command
+            .arg("-f")
+            .arg("1")
+            .arg("-l")
+            .arg(max_pages.to_string());
     }
 
     raster_command.arg(path).arg(&output_prefix);
@@ -544,10 +548,7 @@ mod tests {
             &pdftoppm_path,
             "#!/bin/sh\n[ \"$3\" = \"150\" ] || exit 1\n[ \"$5\" = \"1\" ] || exit 1\n[ \"$7\" = \"2\" ] || exit 1\nprefix=\"$9\"\ntouch \"${prefix}-1.png\"\ntouch \"${prefix}-2.png\"\n",
         );
-        write_executable(
-            &tesseract_path,
-            "#!/bin/sh\nprintf 'Pagina OCR\\n'\n",
-        );
+        write_executable(&tesseract_path, "#!/bin/sh\nprintf 'Pagina OCR\\n'\n");
 
         let document = parse_text_book_with_options(
             Uuid::new_v4(),

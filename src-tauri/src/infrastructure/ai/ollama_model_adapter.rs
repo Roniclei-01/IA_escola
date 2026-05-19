@@ -220,7 +220,10 @@ fn decode_chunked_body(body: &str) -> Result<String, OllamaClientError> {
         let (size_line, rest) = remaining
             .split_once("\r\n")
             .ok_or(OllamaClientError::InvalidResponse)?;
-        let size_hex = size_line.split_once(';').map(|(size, _)| size).unwrap_or(size_line);
+        let size_hex = size_line
+            .split_once(';')
+            .map(|(size, _)| size)
+            .unwrap_or(size_line);
         let size = usize::from_str_radix(size_hex.trim(), 16)
             .map_err(|_| OllamaClientError::InvalidResponse)?;
 
@@ -427,9 +430,8 @@ fn raw_flashcards_from_value(value: &Value) -> Result<Vec<ParsedFlashcard>, Mode
 }
 
 fn parsed_flashcard_from_value(value: &Value) -> Result<ParsedFlashcard, ModelAdapterError> {
-    let raw_card: RawFlashcard =
-        serde_json::from_value(value.clone())
-            .map_err(|error| invalid_flashcards_reason(&format!("card invalido: {error}")))?;
+    let raw_card: RawFlashcard = serde_json::from_value(value.clone())
+        .map_err(|error| invalid_flashcards_reason(&format!("card invalido: {error}")))?;
     let front = raw_card
         .front
         .ok_or_else(|| invalid_flashcards_reason("campo front/question/pergunta ausente"))?;

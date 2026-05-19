@@ -185,9 +185,13 @@ mod tests {
         let path = write_temp_file(&dir, "book.txt", "Conteudo persistido no SQLite.");
         let storage = SQLiteStorage::open_in_memory().unwrap();
 
-        let response =
-            import_text_book_with_storage(path.to_string_lossy().to_string(), false, None, &storage)
-                .unwrap();
+        let response = import_text_book_with_storage(
+            path.to_string_lossy().to_string(),
+            false,
+            None,
+            &storage,
+        )
+        .unwrap();
         let documents = storage.list_documents().unwrap();
 
         assert_eq!(documents.len(), 1);

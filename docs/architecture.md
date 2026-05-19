@@ -142,12 +142,14 @@ Tabelas ja iniciadas:
 
 - `documents`.
 - `document_chunks`.
+- `document_translations`.
 - `study_cards`.
 - `study_reviews`.
 - `study_sessions`.
 - `app_settings`.
 
 `documents` guarda tambem `source_type`, `source_path` e `archived_at`, permitindo diferenciar TXT/PDF, mostrar origem na UI, retirar documentos da biblioteca ativa sem apagar dados imediatamente, restaurar itens arquivados e excluir definitivamente documentos arquivados com limpeza dos dados de estudo relacionados.
+`document_translations` guarda a leitura traduzida por documento e idioma de destino, permitindo reutilizacao offline sem chamar o Ollama novamente ao reabrir o material.
 `study_reviews` guarda `rating`, `priority`, `next_review_at` e `session_id`, formando a base para revisao espacada, filas de estudo por prioridade, metricas de retencao, cards mais dificeis, filtros de periodo, tendencia por sessao, evolucao semanal de dificuldade e agrupamento de rodadas.
 `study_sessions` registra o documento estudado e o inicio da rodada.
 `app_settings` guarda configuracoes locais e metas de revisao por documento, incluindo recorrencia geral, diaria ou semanal.
@@ -159,7 +161,6 @@ Tabelas futuras:
 - `model_profiles`.
 - `study_categories`.
 - `document_study_metadata`.
-- `document_translations`.
 - `meditation_notes`.
 - `exercises`.
 - `review_events`.
@@ -204,7 +205,7 @@ Detalhes estao em `docs/testing-strategy.md`.
 
 - Melhorar suporte a PDFs com metadados, paginacao e PDFs digitalizados.
 - Adicionar EPUB.
-- Adicionar leitura lado a lado do PDF original e da traducao no idioma escolhido.
+- Melhorar leitura traduzida com paginacao, controle de progresso e reprocessamento por idioma.
 - Adicionar campo `Meditacao` para o resumo pessoal do leitor.
 - Adicionar categorias e subcategorias de estudo para organizar documentos.
 - Criar resumos e exercicios.

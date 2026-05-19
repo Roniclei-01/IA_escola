@@ -171,14 +171,24 @@ Execute este roteiro no app desktop com `npm run tauri dev` e registre o resulta
 3. Clicar no botao `Pesquisar` e confirmar o mesmo comportamento.
 4. Confirmar que a busca considera conteudo e caminho de origem.
 
+### Leitura traduzida
+
+1. Abrir um documento importado.
+2. Confirmar que a tela mostra `Idioma original` e `Idioma escolhido` lado a lado.
+3. Selecionar um idioma diferente do idioma original do documento.
+4. Clicar em `Gerar leitura traduzida`.
+5. Confirmar que a traducao aparece no painel `Idioma escolhido`.
+6. Fechar e abrir o app ou selecionar o documento novamente.
+7. Confirmar que a traducao salva reaparece sem chamar a geracao novamente.
+8. Confirmar que a importacao do documento nao gera traducao automaticamente.
+
 ### Funcionalidades futuras documentadas
 
 Esses itens nao bloqueiam o MVP 0.1, mas devem seguir a regra test-first quando forem implementados:
 
-1. Leitura de PDF no idioma original e em idioma escolhido pelo usuario, com visualizacao lado a lado.
-2. Campo `Meditacao` para registrar o resumo pessoal do leitor sobre o documento.
-3. Categorias e subcategorias de estudo com descricao do documento dentro da classificacao.
-4. Busca semantica futura sem substituir a busca textual atual.
+1. Campo `Meditacao` para registrar o resumo pessoal do leitor sobre o documento.
+2. Categorias e subcategorias de estudo com descricao do documento dentro da classificacao.
+3. Busca semantica futura sem substituir a busca textual atual.
 
 ### Criterio de aprovacao manual
 

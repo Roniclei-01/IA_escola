@@ -30,6 +30,21 @@ describe("i18n", () => {
     expect(i18n.getResource("es", "translation", "library.import")).toBe("Importar");
   });
 
+  it("has document reader labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "library.readerTitle")).toBe(
+      "Leitura do documento"
+    );
+    expect(i18n.getResource("en", "translation", "library.readerTitle")).toBe(
+      "Document reader"
+    );
+    expect(i18n.getResource("es", "translation", "library.readerTitle")).toBe(
+      "Lectura del documento"
+    );
+    expect(i18n.getResource("pt", "translation", "library.translateDocument")).toBe(
+      "Gerar leitura traduzida"
+    );
+  });
+
   it("has supported file labels in every supported language", () => {
     expect(i18n.getResource("pt", "translation", "library.filePathLabel")).toBe(
       "Caminho do arquivo .txt ou .pdf"

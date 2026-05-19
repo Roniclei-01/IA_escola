@@ -20,6 +20,7 @@ pub fn run() {
             commands::delete_imported_document::delete_imported_document,
             commands::import_text_book::import_text_book,
             commands::list_archived_documents::list_archived_documents,
+            commands::load_document_translation::load_document_translation,
             commands::chunk_text_document::chunk_text_document,
             commands::list_imported_documents::list_imported_documents,
             commands::list_document_chunks::list_document_chunks,
@@ -40,6 +41,7 @@ pub fn run() {
             commands::study_goals::save_study_goal,
             commands::restore_imported_document::restore_imported_document,
             commands::generate_study_cards::generate_study_cards,
+            commands::translate_document::translate_document,
             commands::export_text_file::export_text_file
         ])
         .run(tauri::generate_context!())

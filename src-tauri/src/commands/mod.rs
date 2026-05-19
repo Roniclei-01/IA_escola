@@ -13,6 +13,7 @@ pub mod list_imported_documents;
 pub mod list_study_cards;
 pub mod list_study_reviews;
 pub mod list_study_session_summaries;
+pub mod load_document_translation;
 pub mod notification_settings;
 pub mod ollama_settings;
 pub mod restore_imported_document;
@@ -22,6 +23,7 @@ pub mod start_study_session;
 pub mod study_goals;
 pub mod test_ocr_dependencies;
 pub mod test_ollama_connection;
+pub mod translate_document;
 
 #[cfg(feature = "tauri-app")]
 pub use archive_imported_document::archive_imported_document;
@@ -50,6 +52,8 @@ pub use list_study_reviews::list_study_reviews;
 #[cfg(feature = "tauri-app")]
 pub use list_study_session_summaries::list_study_session_summaries;
 #[cfg(feature = "tauri-app")]
+pub use load_document_translation::load_document_translation;
+#[cfg(feature = "tauri-app")]
 pub use notification_settings::{load_notification_settings, save_notification_settings};
 #[cfg(feature = "tauri-app")]
 pub use ollama_settings::{load_ollama_settings, save_ollama_settings};
@@ -67,6 +71,8 @@ pub use study_goals::{load_study_goal, save_study_goal};
 pub use test_ocr_dependencies::test_ocr_dependencies;
 #[cfg(feature = "tauri-app")]
 pub use test_ollama_connection::test_ollama_connection;
+#[cfg(feature = "tauri-app")]
+pub use translate_document::translate_document;
 
 pub use archive_imported_document::{
     archive_imported_document_with_storage, ArchiveImportedDocumentRequest,
@@ -99,6 +105,10 @@ pub use list_study_reviews::{list_study_reviews_from_storage, ListStudyReviewsRe
 pub use list_study_session_summaries::{
     list_study_session_summaries_from_storage, ListStudySessionSummariesResponse,
 };
+pub use load_document_translation::{
+    load_document_translation_from_storage, LoadDocumentTranslationRequest,
+    LoadDocumentTranslationResponse,
+};
 pub use notification_settings::{
     default_notification_settings, load_notification_settings_from_storage,
     save_notification_settings_with_storage, NotificationSettings,
@@ -125,4 +135,7 @@ pub use study_goals::{
 pub use test_ocr_dependencies::{test_ocr_dependencies_with_checker, TestOcrDependenciesResponse};
 pub use test_ollama_connection::{
     test_ollama_connection_with_adapter, TestOllamaConnectionRequest, TestOllamaConnectionResponse,
+};
+pub use translate_document::{
+    translate_document_with_adapter, TranslateDocumentRequest, TranslateDocumentResponse,
 };

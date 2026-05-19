@@ -42,7 +42,7 @@ O primeiro MVP deve validar o fluxo mais importante do produto:
 6. estudar cards em uma tela simples;
 7. trocar idioma da interface entre Portugues, Ingles e Espanhol.
 
-PDF, EPUB, tutor, traducao completa, exportacao e calendario entram depois que esse fluxo estiver estavel.
+EPUB, tutor, traducao completa persistida, exportacao avancada e calendario entram depois que esse fluxo estiver estavel.
 
 ## Estado atual da implementacao
 
@@ -129,6 +129,9 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - busca na biblioteca com filtro instantaneo, tecla Enter e botao `Pesquisar` como gatilhos explicitos;
 - exibicao do tipo e caminho de origem na biblioteca e na previa do documento;
 - seletor de idioma da interface entre Portugues, Ingles e Espanhol, com persistencia local;
+- leitura lado a lado do documento original e da versao em idioma escolhido;
+- traducao sob demanda do conteudo ativo via Ollama, sem gerar automaticamente durante a importacao;
+- persistencia das traducoes geradas por documento para reutilizacao offline ao reabrir o material;
 - tela principal organizada em areas de `Importacao e IA`, `Biblioteca` e `Estudo ativo`;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
@@ -154,15 +157,14 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 6. Clique em `Gerar cards` quando quiser iniciar a IA.
 7. Se o documento tiver muitos chunks, a acao de geracao processa apenas o lote inicial para evitar travamentos.
 8. Use `Gerar mais cards` para processar os proximos chunks sob demanda.
-9. Revise os cards gerados e acompanhe historico, fila de revisao e metas.
+9. No painel `Leitura do documento`, escolha o idioma de leitura e clique em `Gerar leitura traduzida` quando desejar traduzir. Ao reabrir o documento, a traducao salva e reaproveitada.
+10. Revise os cards gerados e acompanhe historico, fila de revisao e metas.
 
 Durante operacoes longas, botoes de geracao e acoes da biblioteca ficam bloqueados para evitar cliques duplicados ou troca de documento no meio do processamento.
 
 ### Fase de expansao
 
 - Importacao de EPUB e melhorias para PDFs digitalizados.
-- Leitura de PDF em duas janelas/painéis: uma com o idioma original e outra com o idioma escolhido pelo usuario.
-- Traducao local ou opt-in do conteudo do PDF para o idioma escolhido, preservando a referencia ao texto original.
 - Campo `Meditacao` por documento, onde o leitor registra um breve resumo pessoal sobre o que entendeu.
 - Cadastro de categorias de estudo e subcategorias, com descricao do documento dentro dessa classificacao.
 - Exercicios de multipla escolha e perguntas abertas.
@@ -227,9 +229,8 @@ docs/
 3. Testar o app empacotado fora de `tauri dev`.
 4. Evoluir a geracao de cards para fila em background com progresso por chunk.
 5. Evoluir exportacao Anki para pacote `.apkg`.
-6. Implementar leitura traduzida de PDFs com visualizacao lado a lado.
-7. Implementar `Meditacao` do leitor por documento.
-8. Implementar categorias e subcategorias de estudo por documento.
+6. Implementar `Meditacao` do leitor por documento.
+7. Implementar categorias e subcategorias de estudo por documento.
 
 ## Comandos de desenvolvimento
 

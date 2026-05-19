@@ -150,11 +150,21 @@ Arquivos gerados:
 - [ ] Confirmar que o idioma escolhido continua aplicado.
 - [ ] Trocar o idioma da interface de volta para `Portugues`.
 
-## 10. Funcionalidades futuras registradas
+## 10. Leitura traduzida
+
+- [ ] Abrir um documento importado.
+- [ ] Confirmar que `Idioma original` e `Idioma escolhido` aparecem lado a lado.
+- [ ] Selecionar um idioma diferente do original.
+- [ ] Clicar em `Gerar leitura traduzida`.
+- [ ] Confirmar que a traducao aparece no painel `Idioma escolhido`.
+- [ ] Fechar e abrir o app ou selecionar o documento novamente.
+- [ ] Confirmar que a traducao salva reaparece sem precisar gerar novamente.
+- [ ] Confirmar que a importacao nao gera traducao automaticamente.
+
+## 11. Funcionalidades futuras registradas
 
 Esses itens estao documentados para as proximas fatias e nao bloqueiam o aceite do MVP 0.1:
 
-- [ ] Leitura de PDF em idioma original e idioma escolhido, em janelas ou paineis paralelos.
 - [ ] Campo `Meditacao` para resumo pessoal do leitor.
 - [ ] Categorias e subcategorias de estudo por documento, com descricao da classificacao.
 - [ ] Exportacao Anki em `.apkg`.

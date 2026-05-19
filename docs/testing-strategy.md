@@ -45,6 +45,7 @@ Devem cobrir:
 - executar `GenerateFlashcards` com `MockModelAdapter`;
 - tratar falha de IA;
 - exibir progresso de fila por chunk em painel de segundo plano durante geracao de cards com IA;
+- gerar pacote Anki `.apkg` com `collection.anki2`, arquivo `media` e quantidade correta de cards;
 - tratar arquivo invalido;
 - preservar dados apos migracao simples.
 

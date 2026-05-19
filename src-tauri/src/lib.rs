@@ -46,6 +46,7 @@ pub fn run() {
             commands::restore_imported_document::restore_imported_document,
             commands::generate_study_cards::generate_study_cards,
             commands::translate_document::translate_document,
+            commands::export_anki_package::export_anki_package,
             commands::export_text_file::export_text_file
         ])
         .run(tauri::generate_context!())

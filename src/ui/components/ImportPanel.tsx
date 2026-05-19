@@ -1,4 +1,4 @@
-import { FormEvent } from "react";
+import { FormEvent, type ReactNode } from "react";
 
 interface ImportPanelProps {
   filePath: string;
@@ -22,6 +22,7 @@ interface ImportPanelProps {
   onOcrLanguageChange: (language: "por" | "eng" | "spa") => void;
   onChooseFile: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  children?: ReactNode;
 }
 
 export function ImportPanel({
@@ -34,10 +35,12 @@ export function ImportPanel({
   onOcrEnabledChange,
   onOcrLanguageChange,
   onChooseFile,
-  onSubmit
+  onSubmit,
+  children
 }: ImportPanelProps) {
   return (
     <form className="import-panel" onSubmit={onSubmit}>
+      {children}
       <label htmlFor="file-path">{labels.filePathLabel}</label>
       <div className="import-row">
         <input

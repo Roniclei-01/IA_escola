@@ -20,7 +20,7 @@ Essa stack foi escolhida por favorecer manutencao, seguranca, instaladores menor
 
 ## Visao do produto
 
-O usuario deve conseguir estudar a partir de livros e materiais proprios, mantendo controle local sobre seus arquivos e dados. A aplicacao deve extrair texto, segmentar conteudo, gerar flashcards e exercicios, permitir revisao e, em fases posteriores, oferecer leitura traduzida em paralelo ao texto original, meditacoes do leitor, categorizacao do material, traducao, tutor conversacional e exportacoes.
+O usuario deve conseguir estudar a partir de livros e materiais proprios, mantendo controle local sobre seus arquivos e dados. A aplicacao deve organizar a biblioteca por categorias academicas, extrair texto, segmentar conteudo, gerar flashcards e exercicios, permitir revisao e, em fases posteriores, oferecer tutor conversacional, sincronizacao opcional e novos formatos de leitura.
 
 ## Principios de arquitetura
 
@@ -40,7 +40,8 @@ O primeiro MVP deve validar o fluxo mais importante do produto:
 4. gerar flashcards usando um adaptador de IA;
 5. salvar livro, chunks e cards em SQLite;
 6. estudar cards em uma tela simples;
-7. trocar idioma da interface entre Portugues, Ingles e Espanhol.
+7. trocar idioma da interface entre Portugues, Ingles e Espanhol;
+8. navegar pela biblioteca por categoria e subcategoria.
 
 EPUB, tutor, traducao completa persistida, exportacao avancada e calendario entram depois que esse fluxo estiver estavel.
 
@@ -69,7 +70,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - migracao SQLite para armazenar metadados de origem em documentos existentes;
 - comando `import_text_book` persistindo documentos no SQLite;
 - comando `list_imported_documents` para recuperar documentos salvos;
-- UI carregando documentos salvos ao iniciar e exibindo lista de biblioteca;
+- UI carregando documentos salvos ao iniciar e exibindo navegacao por categorias academicas antes da lista de livros;
 - persistencia SQLite de `document_chunks`;
 - comando `chunk_text_document` persistindo chunks gerados no SQLite;
 - comando `list_document_chunks` para recuperar chunks salvos por documento;
@@ -112,8 +113,9 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - agendamento nativo de lembretes diarios ou semanais com horario configuravel;
 - cancelamento explicito do lembrete agendado ao desativar notificacoes de meta;
 - filtros da biblioteca por tipo de arquivo e status de revisao;
-- filtro global da biblioteca por categoria e subcategoria, reaproveitado para classificar novos livros antes da importacao;
-- lista `Meus Livros` em modal, respeitando os filtros ativos e abrindo o documento selecionado;
+- filtro global da biblioteca por categoria e subcategoria, com caminho curto da area atual;
+- janela de importacao que exige categoria e subcategoria antes de subir o livro;
+- lista `Meus Livros` em modal, respeitando categoria/subcategoria e filtros ativos, abrindo o documento selecionado;
 - busca textual na biblioteca por conteudo e caminho de origem;
 - ordenacao da biblioteca por data, tipo e status;
 - sessoes de estudo vinculando novas revisoes a uma rodada ativa;
@@ -157,8 +159,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 
 1. Instale um modelo leve no Ollama, como `llama3.2:1b`.
 2. Abra o app desktop e clique em `Testar` na secao Ollama.
-3. Escolha uma categoria e subcategoria no topo da tela, se quiser classificar o novo livro.
-4. Importe um arquivo `.txt` ou `.pdf`.
+3. Navegue pela biblioteca escolhendo uma categoria academica e, se necessario, uma subcategoria.
+4. Clique em `Importar livro`, escolha categoria/subcategoria e importe um arquivo `.txt` ou `.pdf`.
 5. Aguarde a importacao e a divisao em chunks.
 6. Revise a previa do conteudo importado.
 7. Clique em `Gerar cards` quando quiser iniciar a IA.
@@ -235,9 +237,9 @@ docs/
 
 ## Proximos passos
 
-1. Validar manualmente filtro por categoria/subcategoria e modal `Meus Livros`.
-2. Rodar aceite final do MVP apos os ajustes de biblioteca.
-3. Planejar importacao EPUB sem DRM para a versao futura, mantendo AZW3/KPF como conversao ou suporte experimental posterior.
+1. Validar manualmente a importacao com escolha de categoria/subcategoria.
+2. Validar manualmente a navegacao por categorias, subcategorias, caminho curto e modal `Meus Livros`.
+3. Rodar aceite final do MVP apos os ajustes de biblioteca.
 
 ## Comandos de desenvolvimento
 

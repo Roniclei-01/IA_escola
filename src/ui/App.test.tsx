@@ -134,6 +134,23 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
   );
 }
 
+function openImportDialog() {
+  fireEvent.click(screen.getAllByRole("button", { name: "Importar livro" })[0]);
+}
+
+function fillImportFilePath(filePath: string) {
+  openImportDialog();
+  fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+    target: { value: filePath }
+  });
+}
+
+function selectLibraryCategory(category = "Geral") {
+  fireEvent.change(screen.getByLabelText("Categoria da biblioteca"), {
+    target: { value: category }
+  });
+}
+
 describe("App", () => {
   afterEach(async () => {
     window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
@@ -159,7 +176,8 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Importacao e IA" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Biblioteca" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Estudo ativo" })).toBeInTheDocument();
-    expect(await screen.findByText("Nenhum documento salvo ainda.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Categorias academicas" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Geral/ })).toBeInTheDocument();
   });
 
   it("changes the interface language and persists the selected option", async () => {
@@ -196,6 +214,7 @@ describe("App", () => {
     renderApp({ listImportedDocuments });
 
     expect(listImportedDocuments).toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: /Geral/ }));
     expect(await screen.findByText("Documentos salvos")).toBeInTheDocument();
     expect(await screen.findByText("Documento salvo anteriormente.")).toBeInTheDocument();
   });
@@ -234,9 +253,7 @@ describe("App", () => {
       saveDocumentStudyMetadata
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/python.txt" }
-    });
+    fillImportFilePath("/tmp/python.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("heading", { name: "Classificacao de estudo" })).toBeInTheDocument();
@@ -300,11 +317,12 @@ describe("App", () => {
       saveDocumentStudyMetadata
     });
 
-    fireEvent.change(screen.getByLabelText("Categoria da biblioteca"), {
-      target: { value: "Programacao" }
+    openImportDialog();
+    fireEvent.change(screen.getByLabelText("Categoria"), {
+      target: { value: "Tecnologia e Computacao" }
     });
-    fireEvent.change(screen.getByLabelText("Subcategoria da biblioteca"), {
-      target: { value: "Python" }
+    fireEvent.change(screen.getByLabelText("Subcategoria"), {
+      target: { value: "Redes de computadores" }
     });
     fireEvent.change(screen.getByLabelText("Descricao para novos livros"), {
       target: { value: "Trilha inicial de Python." }
@@ -317,8 +335,8 @@ describe("App", () => {
     await waitFor(() => {
       expect(saveDocumentStudyMetadata).toHaveBeenCalledWith(
         "document-import-category",
-        "Programacao",
-        "Python",
+        "Tecnologia e Computacao",
+        "Redes de computadores",
         "Trilha inicial de Python."
       );
     });
@@ -371,15 +389,14 @@ describe("App", () => {
       listDocumentChunks
     });
 
-    expect(await screen.findByText("Python Crash Course")).toBeInTheDocument();
-    expect(await screen.findByText("Computer Networking")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Categorias academicas" })).toBeInTheDocument();
+    expect(screen.queryByText("Python Crash Course")).not.toBeInTheDocument();
+    expect(screen.queryByText("Computer Networking")).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Categoria da biblioteca"), {
-      target: { value: "Redes" }
-    });
+    fireEvent.click(await screen.findByRole("button", { name: /Redes/ }));
 
     expect(screen.queryByText("Python Crash Course")).not.toBeInTheDocument();
-    expect(screen.getByText("Computer Networking")).toBeInTheDocument();
+    expect(await screen.findByText("Computer Networking")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Meus Livros" }));
     const booksDialog = await screen.findByRole("dialog", { name: "Meus Livros" });
@@ -450,6 +467,7 @@ describe("App", () => {
     });
 
     renderApp({ listImportedDocuments, listStudySessionSummaries });
+    selectLibraryCategory();
 
     expect(await screen.findByText("Progresso por documento")).toBeInTheDocument();
     expect(screen.getAllByText("Biologia celular.")).toHaveLength(2);
@@ -500,6 +518,7 @@ describe("App", () => {
     });
 
     renderApp({ listImportedDocuments, listStudyReviews });
+    selectLibraryCategory();
 
     expect(await screen.findByText("Documento PDF revisado.")).toBeInTheDocument();
     expect(screen.getByText("Documento TXT pendente.")).toBeInTheDocument();
@@ -548,6 +567,7 @@ describe("App", () => {
     });
 
     renderApp({ listImportedDocuments });
+    selectLibraryCategory();
 
     expect(await screen.findByText("Apostila de algebra linear.")).toBeInTheDocument();
     expect(screen.getByText("Resumo de historia do Brasil.")).toBeInTheDocument();
@@ -610,6 +630,7 @@ describe("App", () => {
     });
 
     renderApp({ listImportedDocuments, listStudyReviews });
+    selectLibraryCategory();
 
     expect(await screen.findByText("Documento antigo revisado.")).toBeInTheDocument();
 
@@ -657,6 +678,7 @@ describe("App", () => {
 
     renderApp({ archiveImportedDocument, listImportedDocuments });
 
+    fireEvent.click(await screen.findByRole("button", { name: /Geral/ }));
     expect(await screen.findByText("Documento que sera arquivado.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Arquivar" }));
@@ -664,7 +686,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(archiveImportedDocument).toHaveBeenCalledWith("document-archived");
     });
-    expect(screen.getByText("Nenhum documento salvo ainda.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum documento corresponde aos filtros.")).toBeInTheDocument();
     expect(screen.getByText("Documento que sera arquivado.")).toBeInTheDocument();
   });
 
@@ -698,6 +720,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.queryByText("Nenhum documento salvo ainda.")).not.toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole("button", { name: /Geral/ }));
     expect(screen.getByText("Documento arquivado para restaurar.")).toBeInTheDocument();
     expect(screen.getByText("Nenhum documento arquivado.")).toBeInTheDocument();
   });
@@ -834,6 +857,7 @@ describe("App", () => {
 
     renderApp({ selectStudyFile });
 
+    openImportDialog();
     fireEvent.click(screen.getByRole("button", { name: "Selecionar" }));
 
     expect(await screen.findByDisplayValue("/tmp/book.pdf")).toBeInTheDocument();
@@ -866,11 +890,10 @@ describe("App", () => {
       importTextBook,
       listDocumentChunks
     });
+    selectLibraryCategory();
 
     await screen.findByRole("button", { name: /Documento 1/ });
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/novo.txt" }
-    });
+    fillImportFilePath("/tmp/novo.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     const savedDocumentButton = await screen.findByRole("button", { name: /Documento 1/ });
@@ -918,9 +941,7 @@ describe("App", () => {
       chunkTextDocument
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/cancelado.txt" }
-    });
+    fillImportFilePath("/tmp/cancelado.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent("Importando documento.");
@@ -999,9 +1020,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/progresso.txt" }
-    });
+    fillImportFilePath("/tmp/progresso.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -1074,9 +1093,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/abortar.txt" }
-    });
+    fillImportFilePath("/tmp/abortar.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -1097,6 +1114,7 @@ describe("App", () => {
 
     renderApp({ selectStudyFile });
 
+    openImportDialog();
     fireEvent.click(screen.getByRole("button", { name: "Selecionar" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -1159,6 +1177,7 @@ describe("App", () => {
       listStudyCards,
       generateCards
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -1218,6 +1237,7 @@ describe("App", () => {
       generateCards,
       saveStudyCards: saveCards
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -1333,6 +1353,7 @@ describe("App", () => {
       saveStudyCards,
       enableDevelopmentFallback: false
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -1375,6 +1396,7 @@ describe("App", () => {
       listDocumentChunks,
       chunkTextDocument
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -1409,6 +1431,7 @@ describe("App", () => {
       listStudyCards,
       listDocumentChunks
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -1451,6 +1474,7 @@ describe("App", () => {
       listStudyCards,
       listDocumentChunks
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -1550,6 +1574,7 @@ describe("App", () => {
       generateCards,
       listStudyReviews
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -1623,9 +1648,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/book.txt" }
-    });
+    fillImportFilePath("/tmp/book.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     await waitFor(() => {
@@ -1676,9 +1699,7 @@ describe("App", () => {
       translateDocument
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/book.pdf" }
-    });
+    fillImportFilePath("/tmp/book.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     const readerHeading = await screen.findByRole("heading", { name: "Leitura do documento" });
@@ -1746,9 +1767,7 @@ describe("App", () => {
       translateDocument
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/cached.pdf" }
-    });
+    fillImportFilePath("/tmp/cached.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
@@ -1808,9 +1827,7 @@ describe("App", () => {
       translateDocument
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/navigation-cache.pdf" }
-    });
+    fillImportFilePath("/tmp/navigation-cache.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
@@ -1853,6 +1870,7 @@ describe("App", () => {
       listDocumentChunks,
       listDocumentPageTranslations
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -1889,9 +1907,7 @@ describe("App", () => {
       renderPdfPage
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/visual.pdf" }
-    });
+    fillImportFilePath("/tmp/visual.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("heading", { name: "PDF original" })).toBeInTheDocument();
@@ -1968,9 +1984,7 @@ describe("App", () => {
       renderPdfPage
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/position.pdf" }
-    });
+    fillImportFilePath("/tmp/position.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("heading", { name: "PDF original" })).toBeInTheDocument();
@@ -2021,9 +2035,7 @@ describe("App", () => {
       renderPdfPage
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/ocr-fallback.pdf" }
-    });
+    fillImportFilePath("/tmp/ocr-fallback.pdf");
     fireEvent.click(screen.getByLabelText("Ativar OCR para PDF digitalizado"));
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
@@ -2061,9 +2073,7 @@ describe("App", () => {
       chunkTextDocument
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/full-book.pdf" }
-    });
+    fillImportFilePath("/tmp/full-book.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     const readerHeading = await screen.findByRole("heading", { name: "Leitura do documento" });
@@ -2113,9 +2123,7 @@ describe("App", () => {
       translateDocument
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/english-book.pdf" }
-    });
+    fillImportFilePath("/tmp/english-book.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
@@ -2169,9 +2177,7 @@ describe("App", () => {
       translateDocument
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/partial-translation.pdf" }
-    });
+    fillImportFilePath("/tmp/partial-translation.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     const readerHeading = await screen.findByRole("heading", { name: "Leitura do documento" });
@@ -2237,6 +2243,7 @@ describe("App", () => {
       loadDocumentTranslation,
       translateDocument
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento 1/ }));
 
@@ -2264,9 +2271,7 @@ describe("App", () => {
       saveStudyCards: saveCards
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/scanned.pdf" }
-    });
+    fillImportFilePath("/tmp/scanned.pdf");
     fireEvent.click(screen.getByLabelText("Ativar OCR para PDF digitalizado"));
     fireEvent.change(screen.getByLabelText("Idioma OCR"), {
       target: { value: "eng" }
@@ -2323,9 +2328,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/book.txt" }
-    });
+    fillImportFilePath("/tmp/book.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -2401,9 +2404,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/import-incremental.txt" }
-    });
+    fillImportFilePath("/tmp/import-incremental.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -2464,9 +2465,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/large.pdf" }
-    });
+    fillImportFilePath("/tmp/large.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -2557,9 +2556,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/more.pdf" }
-    });
+    fillImportFilePath("/tmp/more.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -2653,9 +2650,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/incremental.pdf" }
-    });
+    fillImportFilePath("/tmp/incremental.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -2744,9 +2739,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/more-partial.pdf" }
-    });
+    fillImportFilePath("/tmp/more-partial.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -2827,9 +2820,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/more-cancel.pdf" }
-    });
+    fillImportFilePath("/tmp/more-cancel.pdf");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -2890,9 +2881,7 @@ describe("App", () => {
       enableDevelopmentFallback: true
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/book.txt" }
-    });
+    fillImportFilePath("/tmp/book.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -2967,9 +2956,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/book.txt" }
-    });
+    fillImportFilePath("/tmp/book.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -3058,9 +3045,7 @@ describe("App", () => {
       saveStudyReview
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/book.txt" }
-    });
+    fillImportFilePath("/tmp/book.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -3142,6 +3127,7 @@ describe("App", () => {
       listStudySessionSummaries,
       downloadTextFile
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Algebra linear/ }));
     expect(await screen.findByAltText("Pagina PDF 1")).toBeInTheDocument();
@@ -3209,6 +3195,7 @@ describe("App", () => {
       listStudySessionSummaries,
       printStudySessionReport
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Historia geral/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Previa PDF" }));
@@ -3301,6 +3288,7 @@ describe("App", () => {
       listStudyReviews,
       listStudySessionSummaries
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Quimica organica/ }));
 
@@ -3356,6 +3344,7 @@ describe("App", () => {
       listStudyCards,
       listStudySessionSummaries
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Fisica mecanica/ }));
 
@@ -3414,6 +3403,7 @@ describe("App", () => {
       listStudyCards,
       listStudySessionSummaries
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Geografia fisica/ }));
 
@@ -3469,6 +3459,7 @@ describe("App", () => {
       listStudyCards,
       listStudySessionSummaries
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Literatura brasileira/ }));
     fireEvent.change(await screen.findByLabelText("Meta de revisoes"), {
@@ -3532,6 +3523,7 @@ describe("App", () => {
       loadStudyGoal,
       saveStudyGoal
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Arte moderna/ }));
 
@@ -3605,6 +3597,7 @@ describe("App", () => {
       saveStudyGoal,
       notifyStudyGoalReminder
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Matematica aplicada/ }));
     fireEvent.change(await screen.findByLabelText("Meta de revisoes"), {
@@ -3674,6 +3667,7 @@ describe("App", () => {
       notifyStudyGoalReminder,
       cancelStudyGoalReminder
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Fisica basica/ }));
     fireEvent.click(await screen.findByLabelText("Ativar lembretes de meta"));
@@ -3730,6 +3724,7 @@ describe("App", () => {
       listStudyCards,
       saveNotificationSettings
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Quimica organica/ }));
     fireEvent.change(await screen.findByLabelText("Horario do lembrete"), {
@@ -3786,6 +3781,7 @@ describe("App", () => {
       listImportedDocuments,
       listStudyCards
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Biologia celular/ }));
     expect(await screen.findByText(/O que e celula/)).toBeInTheDocument();
@@ -3837,6 +3833,7 @@ describe("App", () => {
       listImportedDocuments,
       listStudyCards
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Biologia celular/ }));
     expect(await screen.findByText(/O que e celula/)).toBeInTheDocument();
@@ -3930,6 +3927,7 @@ describe("App", () => {
       deleteMeditationNote,
       confirmDelete
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Conteudo sobre redes/ }));
     const readerHeading = await screen.findByRole("heading", { name: "Leitura do documento" });
@@ -4072,6 +4070,7 @@ describe("App", () => {
       listStudyReviews,
       listStudySessionSummaries
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento com cards/ }));
     expect((await screen.findAllByText("Pergunta para excluir")).length).toBeGreaterThan(0);
@@ -4135,6 +4134,7 @@ describe("App", () => {
       listDocumentChunks,
       listStudyCards
     });
+    selectLibraryCategory();
 
     fireEvent.click(await screen.findByRole("button", { name: /Documento com cards/ }));
     expect(await screen.findByText("Pergunta preservada")).toBeInTheDocument();
@@ -4153,9 +4153,7 @@ describe("App", () => {
       listStudyCards: listNoStudyCards
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/missing.txt" }
-    });
+    fillImportFilePath("/tmp/missing.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Arquivo de estudo nao encontrado.");
@@ -4176,9 +4174,7 @@ describe("App", () => {
       saveStudyCards: saveCards
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/book.txt" }
-    });
+    fillImportFilePath("/tmp/book.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Falha ao gerar chunks.");
@@ -4212,9 +4208,7 @@ describe("App", () => {
       saveStudyCards: saveCards
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/book.txt" }
-    });
+    fillImportFilePath("/tmp/book.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
@@ -4278,9 +4272,7 @@ describe("App", () => {
       enableDevelopmentFallback: false
     });
 
-    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
-      target: { value: "/tmp/partial.txt" }
-    });
+    fillImportFilePath("/tmp/partial.txt");
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
     expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));

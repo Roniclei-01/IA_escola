@@ -173,18 +173,21 @@ Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 - [x] Exportar deck Anki TSV.
 - [x] Confirmar que os arquivos exportados pertencem ao documento ativo.
 
-## 8. Biblioteca
+## 8. Biblioteca e categorias
 
+- [ ] Confirmar que a tela inicial da biblioteca mostra primeiro as categorias academicas.
+- [ ] Confirmar que os livros nao aparecem todos juntos antes da escolha de categoria.
+- [ ] Selecionar uma categoria e confirmar que aparecem apenas livros dessa categoria.
+- [ ] Selecionar uma subcategoria e confirmar que aparecem apenas livros dessa subcategoria.
+- [ ] Confirmar o caminho curto da biblioteca com categoria, subcategoria e documento ativo.
+- [ ] Abrir `Importar livro` e confirmar que categoria/subcategoria sao escolhidas antes da importacao.
+- [ ] Confirmar que o livro importado entra automaticamente na categoria/subcategoria escolhida.
+- [ ] Abrir `Meus Livros` e confirmar que a lista sobreposta respeita a categoria/subcategoria ativa.
 - [x] Digitar no campo `Buscar na biblioteca`.
 - [x] Pressionar Enter e confirmar filtragem.
 - [x] Clicar em `Pesquisar` e confirmar filtragem.
 - [x] Confirmar busca por conteudo.
 - [x] Confirmar busca por caminho de origem.
-- [x] Escolher categoria no topo e confirmar que a biblioteca mostra apenas livros dessa categoria.
-- [x] Escolher subcategoria no topo e confirmar que a biblioteca mostra apenas livros dessa subcategoria.
-- [x] Importar documento com categoria/subcategoria selecionada e confirmar classificacao salva.
-- [x] Abrir `Meus Livros` e confirmar lista em modal respeitando os filtros ativos.
-- [x] Clicar em um item de `Meus Livros` e confirmar abertura do documento selecionado.
 
 ## 9. Idioma da interface
 
@@ -213,8 +216,8 @@ Esses itens estao documentados para as proximas fatias e nao bloqueiam o aceite 
 
 - [x] Campo `Anotacao` em modal acionado por `+`, com multiplas entradas, edicao e exclusao.
 - [x] Caixa de idioma original recolhivel por seta no leitor.
-- [x] Categorias e subcategorias de estudo por documento, com descricao da classificacao, filtro global e lista `Meus Livros`.
 - [x] Exportacao Anki em `.apkg`.
+- [ ] Manutencao dedicada de categorias e subcategorias em tela propria.
 - [ ] Importacao EPUB sem DRM em versao futura.
 - [ ] Avaliacao de AZW3 sem DRM por conversao local para EPUB.
 - [ ] KPF como suporte experimental futuro ou conversao para formato aberto.

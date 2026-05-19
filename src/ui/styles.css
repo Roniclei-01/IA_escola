@@ -132,7 +132,8 @@ h1 {
   font-weight: 700;
 }
 
-.library-category-control input {
+.library-category-control input,
+.library-category-control select {
   width: 220px;
   min-height: 36px;
   padding: 0 10px;
@@ -142,6 +143,7 @@ h1 {
   background: #fbfcfa;
 }
 
+.primary-header-button,
 .my-books-button {
   min-height: 36px;
   padding: 0 12px;
@@ -151,6 +153,50 @@ h1 {
   background: #eef6f0;
   font-weight: 800;
   cursor: pointer;
+}
+
+.primary-header-button {
+  color: #ffffff;
+  border-color: #1f6d4a;
+  background: #24764f;
+}
+
+.primary-header-button:disabled,
+.my-books-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.library-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+  color: #526256;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.library-breadcrumb span {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.import-book-button {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #1f6d4a;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #24764f;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.import-book-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .import-panel {
@@ -446,6 +492,159 @@ h1 {
   color: #526256;
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+.import-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(24 32 28 / 0.42);
+}
+
+.import-dialog-panel {
+  display: grid;
+  gap: 16px;
+  width: min(720px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  padding: 22px;
+  overflow: auto;
+  border: 1px solid #bed0c3;
+  border-radius: 8px;
+  color: #18201c;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgb(24 32 28 / 0.22);
+}
+
+.import-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.import-dialog-header h2,
+.import-dialog-header p {
+  margin: 0;
+}
+
+.import-dialog-header p {
+  margin-top: 6px;
+  color: #526256;
+  font-weight: 700;
+}
+
+.import-dialog-header button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #cfd7d1;
+  border-radius: 6px;
+  color: #23352b;
+  background: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.import-classification-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.import-classification-fields label {
+  display: grid;
+  gap: 6px;
+}
+
+.import-classification-fields label:last-child {
+  grid-column: 1 / -1;
+}
+
+.import-classification-fields select,
+.import-classification-fields input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #cfd7d1;
+  border-radius: 6px;
+  color: #18201c;
+  background: #fbfcfa;
+}
+
+.library-navigation {
+  display: grid;
+  gap: 16px;
+  margin-top: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e1e5df;
+}
+
+.library-navigation-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.library-navigation h2,
+.library-navigation h3,
+.library-navigation p {
+  margin: 0;
+}
+
+.library-navigation p {
+  margin-top: 4px;
+  color: #526256;
+  font-weight: 700;
+}
+
+.category-grid,
+.subcategory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category-grid button,
+.subcategory-grid button {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  min-height: 82px;
+  padding: 12px;
+  border: 1px solid #d8ddd4;
+  border-radius: 6px;
+  color: #18201c;
+  background: #fbfcfa;
+  text-align: left;
+  cursor: pointer;
+}
+
+.subcategory-grid button.is-active {
+  border-color: #2f7d56;
+  background: #e7f3eb;
+}
+
+.category-grid strong,
+.subcategory-grid strong {
+  font-size: 0.98rem;
+}
+
+.category-grid span,
+.subcategory-grid span {
+  color: #526256;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.subcategory-navigation {
+  display: grid;
+  gap: 12px;
 }
 
 .processing-panel p,
@@ -2066,8 +2265,18 @@ h1 {
   }
 
   .library-category-control input,
+  .library-category-control select,
   .language-selector select {
     width: 100%;
     min-width: 0;
+  }
+
+  .import-classification-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .library-navigation-header,
+  .import-dialog-header {
+    display: grid;
   }
 }

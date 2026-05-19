@@ -248,6 +248,149 @@ type StudyGoalRecurrence = StudyGoal["recurrence"];
 type DocumentLanguage = ImportTextBookResponse["language"];
 const INITIAL_CARD_GENERATION_CHUNK_LIMIT = 3;
 const STUDY_GOAL_REMINDER_NOTIFICATION_ID = 1001;
+const DEFAULT_STUDY_CATEGORY = "Geral";
+const DEFAULT_STUDY_SUBCATEGORY = "Sem subcategoria";
+const ACADEMIC_CATEGORIES = [
+  {
+    category: DEFAULT_STUDY_CATEGORY,
+    subcategories: [DEFAULT_STUDY_SUBCATEGORY]
+  },
+  {
+    category: "Linguagens e Comunicacao",
+    subcategories: [
+      "Portugues",
+      "Redacao",
+      "Literatura",
+      "Ingles",
+      "Espanhol",
+      "Comunicacao cientifica"
+    ]
+  },
+  {
+    category: "Matematica e Estatistica",
+    subcategories: [
+      "Matematica basica",
+      "Algebra",
+      "Geometria",
+      "Calculo",
+      "Estatistica",
+      "Probabilidade",
+      "Matematica financeira"
+    ]
+  },
+  {
+    category: "Ciencias da Natureza",
+    subcategories: [
+      "Fisica",
+      "Quimica",
+      "Biologia",
+      "Astronomia",
+      "Geologia",
+      "Ciencias ambientais"
+    ]
+  },
+  {
+    category: "Ciencias Humanas",
+    subcategories: [
+      "Historia",
+      "Geografia",
+      "Filosofia",
+      "Sociologia",
+      "Antropologia",
+      "Psicologia"
+    ]
+  },
+  {
+    category: "Tecnologia e Computacao",
+    subcategories: [
+      "Programacao",
+      "Redes de computadores",
+      "Banco de dados",
+      "Seguranca da informacao",
+      "Inteligencia artificial",
+      "Engenharia de software",
+      "Sistemas operacionais"
+    ]
+  },
+  {
+    category: "Engenharia e Arquitetura",
+    subcategories: [
+      "Engenharia civil",
+      "Engenharia eletrica",
+      "Engenharia mecanica",
+      "Engenharia de producao",
+      "Arquitetura",
+      "Desenho tecnico"
+    ]
+  },
+  {
+    category: "Saude",
+    subcategories: [
+      "Anatomia",
+      "Fisiologia",
+      "Farmacologia",
+      "Enfermagem",
+      "Medicina",
+      "Nutricao",
+      "Saude publica"
+    ]
+  },
+  {
+    category: "Negocios e Gestao",
+    subcategories: [
+      "Administracao",
+      "Economia",
+      "Contabilidade",
+      "Marketing",
+      "Financas",
+      "Empreendedorismo"
+    ]
+  },
+  {
+    category: "Direito e Politicas Publicas",
+    subcategories: [
+      "Direito constitucional",
+      "Direito civil",
+      "Direito penal",
+      "Direito trabalhista",
+      "Direito administrativo",
+      "Politicas publicas"
+    ]
+  },
+  {
+    category: "Educacao e Pedagogia",
+    subcategories: [
+      "Didatica",
+      "Curriculo",
+      "Avaliacao educacional",
+      "Psicopedagogia",
+      "Educacao inclusiva",
+      "Tecnologias educacionais"
+    ]
+  },
+  {
+    category: "Artes e Cultura",
+    subcategories: [
+      "Historia da arte",
+      "Musica",
+      "Design",
+      "Cinema",
+      "Teatro",
+      "Fotografia"
+    ]
+  },
+  {
+    category: "Pesquisa e Metodologia",
+    subcategories: [
+      "Metodologia cientifica",
+      "Projeto de pesquisa",
+      "Revisao bibliografica",
+      "Normas ABNT/APA",
+      "Analise de dados",
+      "Escrita academica"
+    ]
+  }
+] as const;
 const LANGUAGE_MARKERS: Record<DocumentLanguage, string[]> = {
   Pt: [
     "que",
@@ -1139,7 +1282,7 @@ function filterSavedDocuments(
     .filter(({ savedDocument }) => {
       const sourceType = savedDocument.source_type ?? "txt";
       const reviewCount = reviewCounts[savedDocument.document_id] ?? 0;
-      const metadata = metadataByDocumentId[savedDocument.document_id] ?? null;
+      const metadata = getDocumentStudyClassification(savedDocument, metadataByDocumentId);
       const searchableText =
         `${savedDocument.content} ${savedDocument.source_path ?? ""}`.toLowerCase();
 
@@ -1203,9 +1346,25 @@ function uniqueSortedValues(values: string[]): string[] {
   ).sort((firstValue, secondValue) => firstValue.localeCompare(secondValue));
 }
 
+function getAcademicSubcategories(category: string): string[] {
+  const normalizedCategory = category.trim().toLowerCase();
+  const academicCategory = ACADEMIC_CATEGORIES.find(
+    (item) => item.category.toLowerCase() === normalizedCategory
+  );
+
+  return academicCategory ? [...academicCategory.subcategories] : [];
+}
+
+function getDefaultSubcategoryForCategory(category: string): string {
+  return getAcademicSubcategories(category)[0] ?? DEFAULT_STUDY_SUBCATEGORY;
+}
+
 function categoryOptionsFromMetadata(metadataByDocumentId: Record<string, DocumentStudyMetadata>) {
   return uniqueSortedValues(
-    Object.values(metadataByDocumentId).map((metadata) => metadata.category)
+    [
+      ...ACADEMIC_CATEGORIES.map((item) => item.category),
+      ...Object.values(metadataByDocumentId).map((metadata) => metadata.category)
+    ]
   );
 }
 
@@ -1216,14 +1375,49 @@ function subcategoryOptionsFromMetadata(
   const normalizedCategoryFilter = categoryFilter.trim().toLowerCase();
 
   return uniqueSortedValues(
-    Object.values(metadataByDocumentId)
-      .filter(
-        (metadata) =>
-          !normalizedCategoryFilter ||
-          metadata.category.trim().toLowerCase() === normalizedCategoryFilter
-      )
-      .map((metadata) => metadata.subcategory)
+    [
+      ...getAcademicSubcategories(categoryFilter),
+      ...Object.values(metadataByDocumentId)
+        .filter(
+          (metadata) =>
+            !normalizedCategoryFilter ||
+            metadata.category.trim().toLowerCase() === normalizedCategoryFilter
+        )
+        .map((metadata) => metadata.subcategory)
+    ]
   );
+}
+
+function getDocumentStudyClassification(
+  document: ImportTextBookResponse,
+  metadataByDocumentId: Record<string, DocumentStudyMetadata>
+): Pick<DocumentStudyMetadata, "category" | "subcategory"> {
+  return (
+    metadataByDocumentId[document.document_id] ?? {
+      category: DEFAULT_STUDY_CATEGORY,
+      subcategory: DEFAULT_STUDY_SUBCATEGORY
+    }
+  );
+}
+
+function countDocumentsByCategory(
+  documents: ImportTextBookResponse[],
+  metadataByDocumentId: Record<string, DocumentStudyMetadata>,
+  category: string,
+  subcategory?: string
+): number {
+  const normalizedCategory = category.trim().toLowerCase();
+  const normalizedSubcategory = subcategory?.trim().toLowerCase() ?? "";
+
+  return documents.filter((document) => {
+    const metadata = getDocumentStudyClassification(document, metadataByDocumentId);
+    const matchesCategory = metadata.category.trim().toLowerCase() === normalizedCategory;
+    const matchesSubcategory =
+      !normalizedSubcategory ||
+      metadata.subcategory.trim().toLowerCase() === normalizedSubcategory;
+
+    return matchesCategory && matchesSubcategory;
+  }).length;
 }
 
 function shouldEnableMockAiFallback() {
@@ -1349,7 +1543,10 @@ export function App({
   >({});
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("");
   const [selectedSubcategoryFilter, setSelectedSubcategoryFilter] = useState("");
+  const [importCategory, setImportCategory] = useState(DEFAULT_STUDY_CATEGORY);
+  const [importSubcategory, setImportSubcategory] = useState(DEFAULT_STUDY_SUBCATEGORY);
   const [importCategoryDescriptionDraft, setImportCategoryDescriptionDraft] = useState("");
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isBooksPanelOpen, setIsBooksPanelOpen] = useState(false);
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
   const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatusFilter>("all");
@@ -1478,7 +1675,11 @@ export function App({
     selectedCategoryFilter,
     selectedSubcategoryFilter
   );
-  const visibleDocumentIds = new Set(filteredSavedDocuments.map((savedDocument) => savedDocument.document_id));
+  const hasSelectedLibraryCategory = selectedCategoryFilter.trim().length > 0;
+  const navigatedSavedDocuments = hasSelectedLibraryCategory ? filteredSavedDocuments : [];
+  const visibleDocumentIds = new Set(
+    navigatedSavedDocuments.map((savedDocument) => savedDocument.document_id)
+  );
   const visibleDocumentProgressSummaries = documentProgressSummaries.filter((summary) =>
     visibleDocumentIds.has(summary.documentId)
   );
@@ -1487,6 +1688,18 @@ export function App({
     documentStudyMetadataById,
     selectedCategoryFilter
   );
+  const importSubcategoryOptions = uniqueSortedValues(
+    [
+      ...subcategoryOptionsFromMetadata(documentStudyMetadataById, importCategory),
+      importSubcategory
+    ]
+  );
+  const breadcrumbItems = [
+    t("layout.library"),
+    selectedCategoryFilter.trim(),
+    selectedSubcategoryFilter.trim(),
+    document ? getDocumentTitle(document) : ""
+  ].filter((item) => item.length > 0);
   const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
   const isWorkspaceBusy = isImporting || operationStatus !== null;
   const isTranslatingDocument = operationStatus === "translatingDocument";
@@ -2401,21 +2614,19 @@ export function App({
       if (!isCurrentOperation(operationToken)) {
         return;
       }
-      const importCategory = selectedCategoryFilter.trim();
-      const importSubcategory = selectedSubcategoryFilter.trim() || t("library.defaultSubcategory");
-      const importedMetadata =
-        importCategory.length > 0
-          ? await saveDocumentStudyMetadata(
-              currentImportedDocument.document_id,
-              importCategory,
-              importSubcategory,
-              importCategoryDescriptionDraft.trim() ||
-                t("library.importedCategoryDescription", {
-                  category: importCategory,
-                  subcategory: importSubcategory
-                })
-            )
-          : null;
+      const currentImportCategory = importCategory.trim() || DEFAULT_STUDY_CATEGORY;
+      const currentImportSubcategory =
+        importSubcategory.trim() || getDefaultSubcategoryForCategory(currentImportCategory);
+      const importedMetadata = await saveDocumentStudyMetadata(
+        currentImportedDocument.document_id,
+        currentImportCategory,
+        currentImportSubcategory,
+        importCategoryDescriptionDraft.trim() ||
+          t("library.importedCategoryDescription", {
+            category: currentImportCategory,
+            subcategory: currentImportSubcategory
+          })
+      );
       if (!isCurrentOperation(operationToken)) {
         return;
       }
@@ -2433,12 +2644,13 @@ export function App({
       setTranslatedReaderPageIndexes([]);
       setDocumentChunks(chunkResponse.chunks);
       setSavedDocuments((currentDocuments) => [...currentDocuments, currentImportedDocument]);
-      if (importedMetadata) {
-        setDocumentStudyMetadataById((currentMetadataById) => ({
-          ...currentMetadataById,
-          [currentImportedDocument.document_id]: importedMetadata
-        }));
-      }
+      setDocumentStudyMetadataById((currentMetadataById) => ({
+        ...currentMetadataById,
+        [currentImportedDocument.document_id]: importedMetadata
+      }));
+      setSelectedCategoryFilter(currentImportCategory);
+      setSelectedSubcategoryFilter(currentImportSubcategory);
+      setIsImportDialogOpen(false);
       setDocumentReviewCounts((currentCounts) => ({
         ...currentCounts,
         [currentImportedDocument.document_id]: 0
@@ -2639,6 +2851,28 @@ export function App({
         activeStudyPanelRef.current.scrollIntoView({ block: "start" });
       }
     }, 0);
+  }
+
+  function openImportDialog() {
+    const category = selectedCategoryFilter.trim() || DEFAULT_STUDY_CATEGORY;
+    const subcategory =
+      selectedSubcategoryFilter.trim() || getDefaultSubcategoryForCategory(category);
+
+    setImportCategory(category);
+    setImportSubcategory(subcategory);
+    setIsImportDialogOpen(true);
+  }
+
+  function handleLibraryCategoryChange(category: string) {
+    setSelectedCategoryFilter(category);
+    setSelectedSubcategoryFilter("");
+  }
+
+  function handleImportCategoryChange(category: string) {
+    const nextCategory = category || DEFAULT_STUDY_CATEGORY;
+
+    setImportCategory(nextCategory);
+    setImportSubcategory(getDefaultSubcategoryForCategory(nextCategory));
   }
 
   async function handleTestOllama(event: FormEvent<HTMLFormElement>) {
@@ -3690,46 +3924,45 @@ export function App({
             </label>
             <label className="library-category-control" htmlFor="library-category-filter">
               <span>{t("library.categoryFilterLabel")}</span>
-              <input
+              <select
                 id="library-category-filter"
-                list="library-category-options"
                 value={selectedCategoryFilter}
-                placeholder={t("library.categoryFilterPlaceholder")}
                 onChange={(event) => {
-                  setSelectedCategoryFilter(event.target.value);
-                  setSelectedSubcategoryFilter("");
+                  handleLibraryCategoryChange(event.target.value);
                 }}
-              />
-              <datalist id="library-category-options">
+              >
+                <option value="">{t("library.allCategories")}</option>
                 {categoryOptions.map((category) => (
-                  <option key={category} value={category} />
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
                 ))}
-              </datalist>
+              </select>
             </label>
             <label className="library-category-control" htmlFor="library-subcategory-filter">
               <span>{t("library.subcategoryFilterLabel")}</span>
-              <input
+              <select
                 id="library-subcategory-filter"
-                list="library-subcategory-options"
                 value={selectedSubcategoryFilter}
-                placeholder={t("library.subcategoryFilterPlaceholder")}
+                disabled={!selectedCategoryFilter}
                 onChange={(event) => setSelectedSubcategoryFilter(event.target.value)}
-              />
-              <datalist id="library-subcategory-options">
+              >
+                <option value="">{t("library.allSubcategories")}</option>
                 {subcategoryOptions.map((subcategory) => (
-                  <option key={subcategory} value={subcategory} />
+                  <option key={subcategory} value={subcategory}>
+                    {subcategory}
+                  </option>
                 ))}
-              </datalist>
+              </select>
             </label>
-            <label className="library-category-control" htmlFor="library-import-description">
-              <span>{t("library.categoryImportDescriptionLabel")}</span>
-              <input
-                id="library-import-description"
-                value={importCategoryDescriptionDraft}
-                placeholder={t("library.categoryImportDescriptionPlaceholder")}
-                onChange={(event) => setImportCategoryDescriptionDraft(event.target.value)}
-              />
-            </label>
+            <button
+              type="button"
+              className="primary-header-button"
+              disabled={isWorkspaceBusy}
+              onClick={openImportDialog}
+            >
+              {t("library.openImportDialog")}
+            </button>
             <button
               type="button"
               className="my-books-button"
@@ -3739,6 +3972,109 @@ export function App({
             </button>
           </div>
         </header>
+
+        <nav className="library-breadcrumb" aria-label={t("library.breadcrumbLabel")}>
+          {breadcrumbItems.map((item, index) => (
+            <span key={`${item}-${index}`}>
+              {index > 0 ? <span aria-hidden="true">/</span> : null}
+              {item}
+            </span>
+          ))}
+        </nav>
+
+        {isImportDialogOpen ? (
+          <div className="import-dialog-overlay" role="presentation">
+            <section
+              className="import-dialog-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="import-dialog-title"
+            >
+              <div className="import-dialog-header">
+                <div>
+                  <h2 id="import-dialog-title">{t("library.importDialogTitle")}</h2>
+                  <p>{t("library.importDialogDescription")}</p>
+                </div>
+                <button
+                  type="button"
+                  aria-label={t("library.closeImportDialog")}
+                  disabled={isImporting}
+                  onClick={() => setIsImportDialogOpen(false)}
+                >
+                  x
+                </button>
+              </div>
+              <ImportPanel
+                filePath={filePath}
+                isOcrEnabled={isOcrEnabled}
+                ocrLanguage={ocrLanguage}
+                isImporting={isImporting}
+                labels={{
+                  filePathLabel: t("library.filePathLabel"),
+                  filePathPlaceholder: t("library.filePathPlaceholder"),
+                  ocrLabel: t("library.ocrLabel"),
+                  ocrLanguageLabel: t("library.ocrLanguageLabel"),
+                  ocrPortuguese: t("library.ocrPortuguese"),
+                  ocrEnglish: t("library.ocrEnglish"),
+                  ocrSpanish: t("library.ocrSpanish"),
+                  chooseFile: t("library.chooseFile"),
+                  import: t("library.import"),
+                  importing: t("library.importing")
+                }}
+                onFilePathChange={setFilePath}
+                onOcrEnabledChange={setIsOcrEnabled}
+                onOcrLanguageChange={setOcrLanguage}
+                onChooseFile={() => {
+                  void handleChooseFile();
+                }}
+                onSubmit={handleSubmit}
+              >
+                <div className="import-classification-fields">
+                  <label htmlFor="import-category">
+                    {t("library.importCategoryLabel")}
+                    <select
+                      id="import-category"
+                      value={importCategory}
+                      disabled={isImporting}
+                      onChange={(event) => handleImportCategoryChange(event.target.value)}
+                    >
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label htmlFor="import-subcategory">
+                    {t("library.importSubcategoryLabel")}
+                    <select
+                      id="import-subcategory"
+                      value={importSubcategory}
+                      disabled={isImporting}
+                      onChange={(event) => setImportSubcategory(event.target.value)}
+                    >
+                      {importSubcategoryOptions.map((subcategory) => (
+                        <option key={subcategory} value={subcategory}>
+                          {subcategory}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label htmlFor="library-import-description">
+                    {t("library.categoryImportDescriptionLabel")}
+                    <input
+                      id="library-import-description"
+                      value={importCategoryDescriptionDraft}
+                      disabled={isImporting}
+                      placeholder={t("library.categoryImportDescriptionPlaceholder")}
+                      onChange={(event) => setImportCategoryDescriptionDraft(event.target.value)}
+                    />
+                  </label>
+                </div>
+              </ImportPanel>
+            </section>
+          </div>
+        ) : null}
 
         {isBooksPanelOpen ? (
           <div className="my-books-overlay" role="presentation">
@@ -3794,31 +4130,14 @@ export function App({
         <div className="workspace-grid">
           <section className="workspace-panel import-settings-panel" aria-labelledby="import-settings-title">
             <h2 id="import-settings-title">{t("layout.importAndAi")}</h2>
-            <ImportPanel
-              filePath={filePath}
-              isOcrEnabled={isOcrEnabled}
-              ocrLanguage={ocrLanguage}
-              isImporting={isImporting}
-              labels={{
-                filePathLabel: t("library.filePathLabel"),
-                filePathPlaceholder: t("library.filePathPlaceholder"),
-                ocrLabel: t("library.ocrLabel"),
-                ocrLanguageLabel: t("library.ocrLanguageLabel"),
-                ocrPortuguese: t("library.ocrPortuguese"),
-                ocrEnglish: t("library.ocrEnglish"),
-                ocrSpanish: t("library.ocrSpanish"),
-                chooseFile: t("library.chooseFile"),
-                import: t("library.import"),
-                importing: t("library.importing")
-              }}
-              onFilePathChange={setFilePath}
-              onOcrEnabledChange={setIsOcrEnabled}
-              onOcrLanguageChange={setOcrLanguage}
-              onChooseFile={() => {
-                void handleChooseFile();
-              }}
-              onSubmit={handleSubmit}
-            />
+            <button
+              type="button"
+              className="import-book-button"
+              disabled={isWorkspaceBusy}
+              onClick={openImportDialog}
+            >
+              {t("library.openImportDialog")}
+            </button>
 
             {error ? (
               <p className="message error" role="alert">
@@ -3879,6 +4198,95 @@ export function App({
 
           <section className="workspace-panel library-panel" aria-labelledby="library-panel-title">
             <h2 id="library-panel-title">{t("layout.library")}</h2>
+            <section className="library-navigation" aria-labelledby="library-navigation-title">
+              <div className="library-navigation-header">
+                <div>
+                  <h2 id="library-navigation-title">{t("library.categoriesTitle")}</h2>
+                  <p>{t("library.categoriesDescription")}</p>
+                </div>
+                {hasSelectedLibraryCategory ? (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      setSelectedCategoryFilter("");
+                      setSelectedSubcategoryFilter("");
+                    }}
+                  >
+                    {t("library.backToCategories")}
+                  </button>
+                ) : null}
+              </div>
+
+              {!hasSelectedLibraryCategory ? (
+                <ul className="category-grid">
+                  {categoryOptions.map((category) => (
+                    <li key={category}>
+                      <button type="button" onClick={() => handleLibraryCategoryChange(category)}>
+                        <strong>{category}</strong>
+                        <span>
+                          {t("library.categoryBookCount", {
+                            count: countDocumentsByCategory(
+                              savedDocuments,
+                              documentStudyMetadataById,
+                              category
+                            )
+                          })}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="subcategory-navigation">
+                  <h3>{selectedCategoryFilter}</h3>
+                  <ul className="subcategory-grid">
+                    <li>
+                      <button
+                        type="button"
+                        className={!selectedSubcategoryFilter ? "is-active" : undefined}
+                        onClick={() => setSelectedSubcategoryFilter("")}
+                      >
+                        <strong>{t("library.allSubcategories")}</strong>
+                        <span>
+                          {t("library.categoryBookCount", {
+                            count: countDocumentsByCategory(
+                              savedDocuments,
+                              documentStudyMetadataById,
+                              selectedCategoryFilter
+                            )
+                          })}
+                        </span>
+                      </button>
+                    </li>
+                    {subcategoryOptions.map((subcategory) => (
+                      <li key={subcategory}>
+                        <button
+                          type="button"
+                          className={
+                            selectedSubcategoryFilter === subcategory ? "is-active" : undefined
+                          }
+                          onClick={() => setSelectedSubcategoryFilter(subcategory)}
+                        >
+                          <strong>{subcategory}</strong>
+                          <span>
+                            {t("library.categoryBookCount", {
+                              count: countDocumentsByCategory(
+                                savedDocuments,
+                                documentStudyMetadataById,
+                                selectedCategoryFilter,
+                                subcategory
+                              )
+                            })}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
+
             {visibleDocumentProgressSummaries.length > 0 ? (
               <section className="progress-comparison" aria-labelledby="progress-comparison-title">
                 <h2 id="progress-comparison-title">{t("progress.title")}</h2>
@@ -3909,53 +4317,55 @@ export function App({
               </section>
             ) : null}
 
-            <SavedDocumentsList
-              documents={filteredSavedDocuments}
-              isLoading={isLoadingSavedDocuments}
-              isInteractionDisabled={isWorkspaceBusy}
-              filters={{
-                sourceType: sourceTypeFilter,
-                reviewStatus: reviewStatusFilter,
-                searchQuery: librarySearchQuery,
-                sortMode: librarySortMode,
-                hasExternalFilter:
-                  selectedCategoryFilter.trim().length > 0 ||
-                  selectedSubcategoryFilter.trim().length > 0
-              }}
-              labels={{
-                title: t("library.savedDocuments"),
-                loading: t("library.loadingSavedDocuments"),
-                empty: t("library.noSavedDocuments"),
-                noFilterResults: t("library.noFilteredDocuments"),
-                searchLabel: t("library.searchLabel"),
-                searchPlaceholder: t("library.searchPlaceholder"),
-                searchAction: t("library.searchAction"),
-                sourceFilterLabel: t("library.sourceFilterLabel"),
-                allSourceTypes: t("library.allSourceTypes"),
-                reviewStatusFilterLabel: t("library.reviewStatusFilterLabel"),
-                allReviewStatuses: t("library.allReviewStatuses"),
-                reviewed: t("library.reviewed"),
-                pendingReview: t("library.pendingReview"),
-                sortLabel: t("library.sortLabel"),
-                oldestFirst: t("library.oldestFirst"),
-                newestFirst: t("library.newestFirst"),
-                sortByType: t("library.sortByType"),
-                sortByStatus: t("library.sortByStatus"),
-                archive: t("library.archiveDocument"),
-                itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 }),
-                sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
-              }}
-              onSearchQueryChange={setLibrarySearchQuery}
-              onSourceTypeFilterChange={setSourceTypeFilter}
-              onReviewStatusFilterChange={setReviewStatusFilter}
-              onSortModeChange={setLibrarySortMode}
-              onSelectDocument={(selectedDocument) => {
-                void handleSelectSavedDocument(selectedDocument);
-              }}
-              onArchiveDocument={(selectedDocument) => {
-                void handleArchiveDocument(selectedDocument);
-              }}
-            />
+            {hasSelectedLibraryCategory ? (
+              <SavedDocumentsList
+                documents={navigatedSavedDocuments}
+                isLoading={isLoadingSavedDocuments}
+                isInteractionDisabled={isWorkspaceBusy}
+                filters={{
+                  sourceType: sourceTypeFilter,
+                  reviewStatus: reviewStatusFilter,
+                  searchQuery: librarySearchQuery,
+                  sortMode: librarySortMode,
+                  hasExternalFilter:
+                    selectedCategoryFilter.trim().length > 0 ||
+                    selectedSubcategoryFilter.trim().length > 0
+                }}
+                labels={{
+                  title: t("library.savedDocuments"),
+                  loading: t("library.loadingSavedDocuments"),
+                  empty: t("library.noSavedDocuments"),
+                  noFilterResults: t("library.noFilteredDocuments"),
+                  searchLabel: t("library.searchLabel"),
+                  searchPlaceholder: t("library.searchPlaceholder"),
+                  searchAction: t("library.searchAction"),
+                  sourceFilterLabel: t("library.sourceFilterLabel"),
+                  allSourceTypes: t("library.allSourceTypes"),
+                  reviewStatusFilterLabel: t("library.reviewStatusFilterLabel"),
+                  allReviewStatuses: t("library.allReviewStatuses"),
+                  reviewed: t("library.reviewed"),
+                  pendingReview: t("library.pendingReview"),
+                  sortLabel: t("library.sortLabel"),
+                  oldestFirst: t("library.oldestFirst"),
+                  newestFirst: t("library.newestFirst"),
+                  sortByType: t("library.sortByType"),
+                  sortByStatus: t("library.sortByStatus"),
+                  archive: t("library.archiveDocument"),
+                  itemLabel: (index) => t("library.savedDocumentItem", { number: index + 1 }),
+                  sourceType: (sourceType) => getSourceTypeLabel(sourceType, t)
+                }}
+                onSearchQueryChange={setLibrarySearchQuery}
+                onSourceTypeFilterChange={setSourceTypeFilter}
+                onReviewStatusFilterChange={setReviewStatusFilter}
+                onSortModeChange={setLibrarySortMode}
+                onSelectDocument={(selectedDocument) => {
+                  void handleSelectSavedDocument(selectedDocument);
+                }}
+                onArchiveDocument={(selectedDocument) => {
+                  void handleArchiveDocument(selectedDocument);
+                }}
+              />
+            ) : null}
 
             <ArchivedDocumentsList
               documents={archivedDocuments}

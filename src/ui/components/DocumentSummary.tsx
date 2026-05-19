@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ImportTextBookResponse } from "../../infrastructure/tauri/import-text-book";
+import type { RenderPdfPageResponse } from "../../infrastructure/tauri/render-pdf-page";
 
 const COLLAPSED_PREVIEW_LENGTH = 900;
 const READER_PAGE_LENGTH = 2_200;
@@ -39,12 +40,25 @@ interface DocumentSummaryProps {
     previousReaderPage: string;
     nextReaderPage: string;
     readerPageStatus: (currentPage: number, totalPages: number) => string;
+    pdfReaderTitle: string;
+    previousPdfPage: string;
+    nextPdfPage: string;
+    pdfPageStatus: (currentPage: number, totalPages: number) => string;
+    pdfZoomLabel: string;
+    pdfPageImageAlt: (page: number) => string;
+    renderingPdfPage: string;
   };
   originalLanguage: ImportTextBookResponse["language"];
   readerTargetLanguage: ImportTextBookResponse["language"];
   translatedPagesByIndex: Record<number, string>;
+  renderedPdfPage: RenderPdfPageResponse | null;
+  isRenderingPdfPage?: boolean;
+  pdfReaderPage: number;
+  pdfReaderZoom: number;
   isGeneratingCards?: boolean;
   isTranslatingDocument?: boolean;
+  onPdfReaderPageChange: (page: number) => void;
+  onPdfReaderZoomChange: (zoom: number) => void;
   onGenerateCards?: () => void;
   onReaderTargetLanguageChange: (language: ImportTextBookResponse["language"]) => void;
   onTranslateDocument: (request: ReaderPageTranslationRequest) => void;
@@ -59,8 +73,14 @@ export function DocumentSummary({
   originalLanguage,
   readerTargetLanguage,
   translatedPagesByIndex,
+  renderedPdfPage,
+  isRenderingPdfPage = false,
+  pdfReaderPage,
+  pdfReaderZoom,
   isGeneratingCards = false,
   isTranslatingDocument = false,
+  onPdfReaderPageChange,
+  onPdfReaderZoomChange,
   onGenerateCards,
   onReaderTargetLanguageChange,
   onTranslateDocument,
@@ -81,6 +101,8 @@ export function DocumentSummary({
   const currentTranslatedPage = isSameLanguage
     ? currentOriginalPage
     : translatedPagesByIndex[currentReaderPage] ?? "";
+  const isPdfDocument = document.source_type === "pdf" && Boolean(document.source_path);
+  const renderedPageCount = renderedPdfPage?.page_count ?? null;
 
   useEffect(() => {
     setReaderPageIndex(0);
@@ -114,6 +136,64 @@ export function DocumentSummary({
             {labels.generateCards}
           </button>
         </div>
+      ) : null}
+      {isPdfDocument ? (
+        <section className="pdf-page-reader" aria-labelledby="pdf-page-reader-title">
+          <div className="pdf-page-reader-header">
+            <h3 id="pdf-page-reader-title">{labels.pdfReaderTitle}</h3>
+            <div className="pdf-page-controls">
+              <button
+                type="button"
+                disabled={isRenderingPdfPage || pdfReaderPage <= 1}
+                onClick={() => onPdfReaderPageChange(Math.max(pdfReaderPage - 1, 1))}
+              >
+                {labels.previousPdfPage}
+              </button>
+              <span>
+                {renderedPageCount
+                  ? labels.pdfPageStatus(pdfReaderPage, renderedPageCount)
+                  : labels.pdfPageStatus(pdfReaderPage, pdfReaderPage)}
+              </span>
+              <button
+                type="button"
+                disabled={
+                  isRenderingPdfPage ||
+                  (renderedPageCount !== null && pdfReaderPage >= renderedPageCount)
+                }
+                onClick={() => onPdfReaderPageChange(pdfReaderPage + 1)}
+              >
+                {labels.nextPdfPage}
+              </button>
+              <label htmlFor="pdf-reader-zoom">
+                {labels.pdfZoomLabel}
+                <select
+                  id="pdf-reader-zoom"
+                  value={String(pdfReaderZoom)}
+                  onChange={(event) => onPdfReaderZoomChange(Number(event.target.value))}
+                >
+                  <option value="0.85">85%</option>
+                  <option value="1">100%</option>
+                  <option value="1.25">125%</option>
+                  <option value="1.5">150%</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          {isRenderingPdfPage ? (
+            <p className="pdf-page-status" role="status">
+              {labels.renderingPdfPage}
+            </p>
+          ) : null}
+          {renderedPdfPage ? (
+            <div className="pdf-page-frame">
+              <img
+                alt={labels.pdfPageImageAlt(renderedPdfPage.page)}
+                src={renderedPdfPage.image_data_url}
+                style={{ width: `${Math.round(pdfReaderZoom * 100)}%` }}
+              />
+            </div>
+          ) : null}
+        </section>
       ) : null}
       <section className="document-reader" aria-labelledby="document-reader-title">
         <div className="document-reader-header">

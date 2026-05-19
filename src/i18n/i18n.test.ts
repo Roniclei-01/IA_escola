@@ -46,6 +46,12 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.nextReaderPage")).toBe(
       "Proxima pagina"
     );
+    expect(i18n.getResource("pt", "translation", "library.pdfReaderTitle")).toBe(
+      "PDF original"
+    );
+    expect(i18n.getResource("en", "translation", "library.nextPdfPage")).toBe(
+      "Next PDF page"
+    );
     expect(i18n.getResource("pt", "translation", "library.extractedTextTitle")).toBe(
       "Texto extraido"
     );

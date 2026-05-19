@@ -46,6 +46,11 @@ import {
   type TranslateDocumentResponse
 } from "../infrastructure/tauri/translate-document";
 import {
+  renderPdfPage as defaultRenderPdfPage,
+  type RenderPdfPageRequest,
+  type RenderPdfPageResponse
+} from "../infrastructure/tauri/render-pdf-page";
+import {
   loadDocumentTranslation as defaultLoadDocumentTranslation,
   type LoadDocumentTranslationResponse
 } from "../infrastructure/tauri/load-document-translation";
@@ -129,6 +134,7 @@ interface AppProps {
     options?: GenerateStudyCardsOptions
   ) => Promise<StudyCard[]>;
   translateDocument?: (request: TranslateDocumentRequest) => Promise<TranslateDocumentResponse>;
+  renderPdfPage?: (request: RenderPdfPageRequest) => Promise<RenderPdfPageResponse>;
   loadDocumentTranslation?: (
     documentId: string,
     targetLanguage: ImportTextBookResponse["language"]
@@ -1140,6 +1146,7 @@ export function App({
   chunkTextDocument = defaultChunkTextDocument,
   generateCards = generateStudyCardsWithOllama,
   translateDocument = defaultTranslateDocument,
+  renderPdfPage = defaultRenderPdfPage,
   loadDocumentTranslation = defaultLoadDocumentTranslation,
   saveStudyCards = defaultSaveStudyCards,
   deleteStudyCards = defaultDeleteStudyCards,
@@ -1184,6 +1191,10 @@ export function App({
   const [readerTargetLanguage, setReaderTargetLanguage] =
     useState<ImportTextBookResponse["language"]>("En");
   const [translatedDocumentPages, setTranslatedDocumentPages] = useState<Record<number, string>>({});
+  const [pdfReaderPage, setPdfReaderPage] = useState(1);
+  const [pdfReaderZoom, setPdfReaderZoom] = useState(1);
+  const [renderedPdfPage, setRenderedPdfPage] = useState<RenderPdfPageResponse | null>(null);
+  const [isRenderingPdfPage, setIsRenderingPdfPage] = useState(false);
   const [chunkCount, setChunkCount] = useState<number | null>(null);
   const [documentChunks, setDocumentChunks] = useState<ImportedDocumentChunk[]>([]);
   const [cards, setCards] = useState<StudyCard[]>([]);
@@ -1616,6 +1627,56 @@ export function App({
       isCurrent = false;
     };
   }, [testOcrDependencies, t]);
+
+  useEffect(() => {
+    setPdfReaderPage(1);
+    setPdfReaderZoom(1);
+    setRenderedPdfPage(null);
+  }, [document?.document_id]);
+
+  useEffect(() => {
+    if (!document || document.source_type !== "pdf" || !document.source_path) {
+      setRenderedPdfPage(null);
+      setIsRenderingPdfPage(false);
+      return;
+    }
+
+    let isCurrent = true;
+    setIsRenderingPdfPage(true);
+
+    renderPdfPage({
+      file_path: document.source_path,
+      page: pdfReaderPage,
+      dpi: 144
+    })
+      .then((response) => {
+        if (!isCurrent) {
+          return;
+        }
+
+        setRenderedPdfPage(response);
+        if (pdfReaderPage > response.page_count) {
+          setPdfReaderPage(response.page_count);
+        }
+      })
+      .catch((unknownError) => {
+        if (!isCurrent) {
+          return;
+        }
+
+        setRenderedPdfPage(null);
+        setError(getErrorMessage(unknownError, t("library.pdfRenderError")));
+      })
+      .finally(() => {
+        if (isCurrent) {
+          setIsRenderingPdfPage(false);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [document, pdfReaderPage, renderPdfPage, t]);
 
   async function handleUiLanguageChange(language: UiLanguage) {
     setUiLanguage(language);
@@ -2898,14 +2959,28 @@ export function App({
               nextReaderPage: t("library.nextReaderPage"),
               readerPageStatus: (currentPage, totalPages) =>
                 t("library.readerPageStatus", { currentPage, totalPages }),
+              pdfReaderTitle: t("library.pdfReaderTitle"),
+              previousPdfPage: t("library.previousPdfPage"),
+              nextPdfPage: t("library.nextPdfPage"),
+              pdfPageStatus: (currentPage, totalPages) =>
+                t("library.pdfPageStatus", { currentPage, totalPages }),
+              pdfZoomLabel: t("library.pdfZoomLabel"),
+              pdfPageImageAlt: (page) => t("library.pdfPageImageAlt", { page }),
+              renderingPdfPage: t("library.renderingPdfPage"),
               expandPreview: t("library.expandPreview"),
               collapsePreview: t("library.collapsePreview")
             }}
             originalLanguage={activeDocumentLanguage ?? document.language}
             readerTargetLanguage={readerTargetLanguage}
             translatedPagesByIndex={translatedDocumentPages}
+            renderedPdfPage={renderedPdfPage}
+            isRenderingPdfPage={isRenderingPdfPage}
+            pdfReaderPage={pdfReaderPage}
+            pdfReaderZoom={pdfReaderZoom}
             isGeneratingCards={isCardGenerationBusy}
             isTranslatingDocument={isTranslatingDocument}
+            onPdfReaderPageChange={setPdfReaderPage}
+            onPdfReaderZoomChange={setPdfReaderZoom}
             onGenerateCards={() => {
               void handleGenerateCardsForActiveDocument();
             }}

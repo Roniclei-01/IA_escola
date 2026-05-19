@@ -16,6 +16,8 @@ pub mod list_study_session_summaries;
 pub mod load_document_translation;
 pub mod notification_settings;
 pub mod ollama_settings;
+pub mod pdf_reader_preferences;
+pub mod render_pdf_page;
 pub mod restore_imported_document;
 pub mod save_study_cards;
 pub mod save_study_review;
@@ -57,6 +59,10 @@ pub use load_document_translation::load_document_translation;
 pub use notification_settings::{load_notification_settings, save_notification_settings};
 #[cfg(feature = "tauri-app")]
 pub use ollama_settings::{load_ollama_settings, save_ollama_settings};
+#[cfg(feature = "tauri-app")]
+pub use pdf_reader_preferences::{load_pdf_reader_preference, save_pdf_reader_preference};
+#[cfg(feature = "tauri-app")]
+pub use render_pdf_page::render_pdf_page;
 #[cfg(feature = "tauri-app")]
 pub use restore_imported_document::restore_imported_document;
 #[cfg(feature = "tauri-app")]
@@ -116,6 +122,13 @@ pub use notification_settings::{
 pub use ollama_settings::{
     default_ollama_settings, load_ollama_settings_from_storage, save_ollama_settings_with_storage,
     OllamaSettings,
+};
+pub use pdf_reader_preferences::{
+    load_pdf_reader_preference_from_storage, save_pdf_reader_preference_with_storage,
+    PdfReaderPreference,
+};
+pub use render_pdf_page::{
+    render_pdf_page_from_request, RenderPdfPageRequest, RenderPdfPageResponse,
 };
 pub use restore_imported_document::{
     restore_imported_document_with_storage, RestoreImportedDocumentRequest,

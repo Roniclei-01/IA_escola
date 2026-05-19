@@ -49,6 +49,11 @@ const testOcrDependencies = vi.fn().mockResolvedValue({
   tesseract_available: true
 });
 const loadNoDocumentTranslation = vi.fn().mockResolvedValue({ translation: null });
+const renderDefaultPdfPage = vi.fn().mockResolvedValue({
+  page: 1,
+  page_count: 1,
+  image_data_url: "data:image/png;base64,UE5H"
+});
 
 function renderApp(props: ComponentProps<typeof App> = {}) {
   return render(
@@ -68,6 +73,7 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       saveNotificationSettings={saveNotificationSettings}
       testOcrDependencies={testOcrDependencies}
       loadDocumentTranslation={loadNoDocumentTranslation}
+      renderPdfPage={renderDefaultPdfPage}
       {...props}
     />
   );
@@ -79,6 +85,7 @@ describe("App", () => {
     await act(async () => {
       await i18n.changeLanguage("pt");
     });
+    renderDefaultPdfPage.mockClear();
   });
 
   it("renders the product name", async () => {
@@ -1401,6 +1408,72 @@ describe("App", () => {
       });
     });
     expect(await screen.findByText("Translated text for reading.")).toBeInTheDocument();
+  });
+
+  it("renders the original PDF page with navigation and zoom controls", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-visual-pdf",
+      book_id: "book-visual-pdf",
+      content: "Texto extraido do PDF.",
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/visual.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const renderPdfPage = vi
+      .fn()
+      .mockImplementation(async ({ page }: { page: number }) => ({
+        page,
+        page_count: 2,
+        image_data_url:
+          page === 2
+            ? "data:image/png;base64,UEFHSU5BMg=="
+            : "data:image/png;base64,UEFHSU5BMQ=="
+      }));
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      renderPdfPage
+    });
+
+    fireEvent.change(screen.getByLabelText("Caminho do arquivo .txt ou .pdf"), {
+      target: { value: "/tmp/visual.pdf" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "PDF original" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(renderPdfPage).toHaveBeenCalledWith({
+        file_path: "/tmp/visual.pdf",
+        page: 1,
+        dpi: 144
+      });
+    });
+    expect(await screen.findByAltText("Pagina PDF 1")).toHaveAttribute(
+      "src",
+      "data:image/png;base64,UEFHSU5BMQ=="
+    );
+    expect(screen.getByText("Pagina PDF 1 de 2")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Zoom do PDF"), {
+      target: { value: "1.25" }
+    });
+    expect(screen.getByAltText("Pagina PDF 1")).toHaveStyle({ width: "125%" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Proxima pagina do PDF" }));
+
+    await waitFor(() => {
+      expect(renderPdfPage).toHaveBeenLastCalledWith({
+        file_path: "/tmp/visual.pdf",
+        page: 2,
+        dpi: 144
+      });
+    });
+    expect(await screen.findByAltText("Pagina PDF 2")).toHaveAttribute(
+      "src",
+      "data:image/png;base64,UEFHSU5BMg=="
+    );
   });
 
   it("paginates the full imported document in the reader", async () => {

@@ -17,6 +17,7 @@ default = ["tauri-app"]
 tauri-app = ["dep:tauri"]
 
 [dependencies]
+base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 lopdf = "0.34"
 rusqlite = { version = "0.32", features = ["bundled"] }

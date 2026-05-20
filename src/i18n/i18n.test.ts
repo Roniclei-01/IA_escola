@@ -24,6 +24,18 @@ describe("i18n", () => {
     );
   });
 
+  it("has interface theme labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "settings.uiThemeLabel")).toBe(
+      "Tema da interface"
+    );
+    expect(i18n.getResource("en", "translation", "settings.uiThemeLabel")).toBe(
+      "Interface theme"
+    );
+    expect(i18n.getResource("es", "translation", "settings.uiThemeLabel")).toBe(
+      "Tema de la interfaz"
+    );
+  });
+
   it("has import labels in every supported language", () => {
     expect(i18n.getResource("pt", "translation", "library.import")).toBe("Importar");
     expect(i18n.getResource("en", "translation", "library.import")).toBe("Import");

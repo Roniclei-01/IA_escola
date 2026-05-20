@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StudyCard } from "../domain/model-adapter";
 import type { GenerateStudyCardsOptions } from "../infrastructure/tauri/generate-study-cards";
 import i18n, { UI_LANGUAGE_STORAGE_KEY } from "../i18n";
-import { App } from "./App";
+import { App, UI_THEME_STORAGE_KEY } from "./App";
 
 const listNoDocuments = vi.fn().mockResolvedValue({ documents: [] });
 const listNoArchivedDocuments = vi.fn().mockResolvedValue({ documents: [] });
@@ -199,6 +199,7 @@ function selectLibraryCategory(category = "Geral") {
 describe("App", () => {
   afterEach(async () => {
     window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+    window.localStorage.removeItem(UI_THEME_STORAGE_KEY);
     await act(async () => {
       await i18n.changeLanguage("pt");
     });
@@ -285,6 +286,45 @@ describe("App", () => {
     expect(screen.getByRole("option", { name: "Tecnologia y Computacion" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Tecnologia y Computacion/ })).toBeInTheDocument();
     expect(window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY)).toBe("es");
+  });
+
+  it("changes the visual theme and persists the selected option", async () => {
+    renderApp();
+
+    await screen.findByRole("heading", { name: "Categorias academicas" });
+    const themeSwitch = screen.getByRole("switch", { name: "Tema da interface" });
+    expect(screen.getByRole("main")).toHaveAttribute("data-theme", "light");
+    expect(themeSwitch).toHaveAttribute("aria-checked", "false");
+
+    await act(async () => {
+      fireEvent.click(themeSwitch);
+    });
+
+    expect(screen.getByRole("main")).toHaveAttribute("data-theme", "dark");
+    expect(themeSwitch).toHaveAttribute("aria-checked", "true");
+    expect(themeSwitch).toHaveTextContent("Escuro");
+    expect(window.localStorage.getItem(UI_THEME_STORAGE_KEY)).toBe("dark");
+
+    await act(async () => {
+      fireEvent.click(themeSwitch);
+    });
+
+    expect(screen.getByRole("main")).toHaveAttribute("data-theme", "light");
+    expect(themeSwitch).toHaveAttribute("aria-checked", "false");
+    expect(themeSwitch).toHaveTextContent("Claro");
+    expect(window.localStorage.getItem(UI_THEME_STORAGE_KEY)).toBe("light");
+  });
+
+  it("loads the saved visual theme on startup", async () => {
+    window.localStorage.setItem(UI_THEME_STORAGE_KEY, "dark");
+
+    renderApp();
+
+    await screen.findByRole("heading", { name: "Categorias academicas" });
+    const themeSwitch = screen.getByRole("switch", { name: "Tema da interface" });
+    expect(screen.getByRole("main")).toHaveAttribute("data-theme", "dark");
+    expect(themeSwitch).toHaveAttribute("aria-checked", "true");
+    expect(themeSwitch).toHaveTextContent("Escuro");
   });
 
   it("loads saved documents on startup", async () => {
@@ -2070,8 +2110,14 @@ describe("App", () => {
     expect(originalPaneToggle).toHaveAttribute("aria-expanded", "false");
     expect(readerQueries.queryByText("Texto original para leitura.")).not.toBeInTheDocument();
 
-    fireEvent.click(originalPaneToggle);
-    expect(originalPaneToggle).toHaveAttribute("aria-expanded", "true");
+    await act(async () => {
+      fireEvent.click(originalPaneToggle);
+    });
+    await waitFor(() => {
+      expect(
+        readerQueries.getByRole("button", { name: "Ocultar idioma original" })
+      ).toHaveAttribute("aria-expanded", "true");
+    });
     expect(readerQueries.getByRole("heading", { name: "Idioma original" })).toBeInTheDocument();
     expect(readerQueries.getAllByText("Texto original para leitura.").length).toBeGreaterThan(0);
 

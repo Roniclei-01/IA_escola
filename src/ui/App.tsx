@@ -156,6 +156,7 @@ import { DueStudyQueue, type DueStudyQueueItem } from "./components/DueStudyQueu
 import { StudySessionHistory } from "./components/StudySessionHistory";
 import { ArchivedDocumentsList } from "./components/ArchivedDocumentsList";
 import { OcrDependenciesPanel } from "./components/OcrDependenciesPanel";
+import { CategoryManagerDialog } from "./components/CategoryManagerDialog";
 
 interface AppProps {
   importTextBook?: (
@@ -274,8 +275,10 @@ type MetricPeriodFilter = "all" | "last7" | "last30";
 type StudyGoalRecurrence = StudyGoal["recurrence"];
 type DocumentLanguage = ImportTextBookResponse["language"];
 type AppView = "library" | "study";
+type UiTheme = "light" | "dark";
 const INITIAL_CARD_GENERATION_CHUNK_LIMIT = 3;
 const STUDY_GOAL_REMINDER_NOTIFICATION_ID = 1001;
+export const UI_THEME_STORAGE_KEY = "estudo-ia-local.ui-theme";
 const DEFAULT_STUDY_CATEGORY = "Geral";
 const DEFAULT_STUDY_SUBCATEGORY = "Sem subcategoria";
 const ACADEMIC_CATEGORIES = [
@@ -552,6 +555,22 @@ function normalizeUiLanguage(language: string): UiLanguage {
   return SUPPORTED_UI_LANGUAGES.includes(shortLanguage) ? shortLanguage : "pt";
 }
 
+function normalizeUiTheme(theme: string | null | undefined): UiTheme {
+  return theme === "dark" ? "dark" : "light";
+}
+
+function getInitialUiTheme(): UiTheme {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  try {
+    return normalizeUiTheme(window.localStorage?.getItem(UI_THEME_STORAGE_KEY));
+  } catch {
+    return "light";
+  }
+}
+
 function persistUiLanguage(language: UiLanguage) {
   if (typeof window === "undefined") {
     return;
@@ -561,6 +580,18 @@ function persistUiLanguage(language: UiLanguage) {
     window.localStorage?.setItem(UI_LANGUAGE_STORAGE_KEY, language);
   } catch {
     // Some embedded runtimes disable localStorage; language still changes for the session.
+  }
+}
+
+function persistUiTheme(theme: UiTheme) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage?.setItem(UI_THEME_STORAGE_KEY, theme);
+  } catch {
+    // Some embedded runtimes disable localStorage; theme still changes for the session.
   }
 }
 
@@ -1539,6 +1570,163 @@ function getAcademicSubcategoryDisplayName(
   return translateMappedLabel(subcategory, ACADEMIC_SUBCATEGORY_LABEL_KEYS, translate);
 }
 
+const ACADEMIC_CATEGORY_ICON_KEYS: Record<string, string> = {
+  [DEFAULT_STUDY_CATEGORY]: "general",
+  "Artes e Cultura": "arts",
+  "Ciencias da Natureza": "nature",
+  "Ciencias Humanas": "humanities",
+  "Direito e Politicas Publicas": "law",
+  "Educacao e Pedagogia": "education",
+  "Engenharia e Arquitetura": "engineering",
+  "Linguagens e Comunicacao": "languages",
+  "Matematica e Estatistica": "math",
+  "Negocios e Gestao": "business",
+  "Pesquisa e Metodologia": "research",
+  Saude: "health",
+  "Tecnologia e Computacao": "technology"
+};
+
+function AcademicCategoryIcon({ category }: { category: string }) {
+  const iconKey = ACADEMIC_CATEGORY_ICON_KEYS[category] ?? "custom";
+  const className = `category-card-icon category-card-icon-${iconKey}`;
+
+  switch (iconKey) {
+    case "arts":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M12 4a8 8 0 0 0-2 15.7c1.2.3 2-.5 1.7-1.7-.3-1.1.4-1.9 1.5-1.9H15a5 5 0 0 0 0-10h-.4A8 8 0 0 0 12 4Z" />
+            <circle cx="8.4" cy="10" r="1" />
+            <circle cx="11.5" cy="8" r="1" />
+            <circle cx="14.6" cy="10" r="1" />
+          </svg>
+        </span>
+      );
+    case "business":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4 18h16" />
+            <path d="M6 15v-4" />
+            <path d="M12 15V7" />
+            <path d="M18 15V9" />
+            <path d="m5 10 5-4 4 3 5-5" />
+          </svg>
+        </span>
+      );
+    case "education":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="m3 9 9-5 9 5-9 5-9-5Z" />
+            <path d="M7 12v4c2.8 2 7.2 2 10 0v-4" />
+            <path d="M20 10v6" />
+          </svg>
+        </span>
+      );
+    case "engineering":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M5 20V7l7-3 7 3v13" />
+            <path d="M9 20v-5h6v5" />
+            <path d="M9 9h.1M12 9h.1M15 9h.1M9 12h.1M12 12h.1M15 12h.1" />
+          </svg>
+        </span>
+      );
+    case "health":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+            <path d="M8 5h8v14H8z" />
+          </svg>
+        </span>
+      );
+    case "humanities":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <circle cx="9" cy="9" r="3" />
+            <circle cx="16" cy="10" r="2.4" />
+            <path d="M4 19c.8-3 2.5-4.5 5-4.5s4.2 1.5 5 4.5" />
+            <path d="M13 18c.7-2 1.8-3 3.3-3 1.6 0 2.8 1 3.5 3" />
+          </svg>
+        </span>
+      );
+    case "languages":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M5 6h14v9H9l-4 3V6Z" />
+            <path d="M8 10h8" />
+            <path d="M8 13h5" />
+          </svg>
+        </span>
+      );
+    case "law":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M12 4v16" />
+            <path d="M6 7h12" />
+            <path d="M7 7 4 13h6L7 7Z" />
+            <path d="m17 7-3 6h6l-3-6Z" />
+            <path d="M9 20h6" />
+          </svg>
+        </span>
+      );
+    case "math":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <rect x="6" y="4" width="12" height="16" rx="2" />
+            <path d="M9 8h6" />
+            <path d="M9 12h.1M12 12h.1M15 12h.1M9 15h.1M12 15h.1M15 15h.1" />
+          </svg>
+        </span>
+      );
+    case "nature":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M19 4c-7.5.4-12 4.5-12 10.5 0 2.5 1.7 4.5 4.2 4.5C16 19 19 13.6 19 4Z" />
+            <path d="M7 19c2.5-4.4 5.5-7.4 9-9" />
+          </svg>
+        </span>
+      );
+    case "research":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <circle cx="10.5" cy="10.5" r="5.5" />
+            <path d="m15 15 5 5" />
+            <path d="M8 10.5h5" />
+            <path d="M10.5 8v5" />
+          </svg>
+        </span>
+      );
+    case "technology":
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <rect x="7" y="7" width="10" height="10" rx="2" />
+            <path d="M4 9h3M4 15h3M17 9h3M17 15h3M9 4v3M15 4v3M9 17v3M15 17v3" />
+          </svg>
+        </span>
+      );
+    default:
+      return (
+        <span className={className} aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M12 4 14.3 9l5.2.6-3.8 3.6 1 5.2L12 16l-4.7 2.4 1-5.2-3.8-3.6L9.7 9 12 4Z" />
+          </svg>
+        </span>
+      );
+  }
+}
+
 function categoryOptionsFromMetadata(
   metadataByDocumentId: Record<string, DocumentStudyMetadata>,
   studyCategories: StudyCategory[]
@@ -1694,6 +1882,7 @@ export function App({
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>(() =>
     normalizeUiLanguage(i18n.language)
   );
+  const [uiTheme, setUiTheme] = useState<UiTheme>(() => getInitialUiTheme());
   const [filePath, setFilePath] = useState("");
   const [currentView, setCurrentView] = useState<AppView>("library");
   const [isOcrEnabled, setIsOcrEnabled] = useState(false);
@@ -2672,6 +2861,11 @@ export function App({
     setUiLanguage(language);
     persistUiLanguage(language);
     await i18n.changeLanguage(language);
+  }
+
+  function handleUiThemeChange(theme: UiTheme) {
+    setUiTheme(theme);
+    persistUiTheme(theme);
   }
 
   async function loadPersistedTranslationForDocument(
@@ -4412,61 +4606,6 @@ export function App({
     </div>
   ) : null;
 
-  const renderStudyCategoryManagerItem = (category: StudyCategory) => {
-    const linkedBookCount = countDocumentsByCategory(
-      savedDocuments,
-      documentStudyMetadataById,
-      category.name
-    );
-    const isDeleteBlocked = linkedBookCount > 0;
-
-    return (
-      <li key={category.id}>
-        <div>
-          <strong>{category.name}</strong>
-          <span>{category.subcategories.join(", ")}</span>
-          <span>{t("library.studyCategoryUsage", { count: linkedBookCount })}</span>
-        </div>
-        <div className="category-manager-item-actions">
-          <button type="button" onClick={() => handleEditStudyCategory(category)}>
-            {t("library.editStudyCategory")}
-          </button>
-          {category.archived ? (
-            <button
-              type="button"
-              onClick={() => {
-                void handleRestoreStudyCategory(category);
-              }}
-            >
-              {t("library.restoreStudyCategory")}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                void handleArchiveStudyCategory(category);
-              }}
-            >
-              {t("library.archiveStudyCategory")}
-            </button>
-          )}
-          <button
-            type="button"
-            disabled={isDeleteBlocked}
-            title={
-              isDeleteBlocked ? t("library.deleteStudyCategoryBlockedByBooks") : undefined
-            }
-            onClick={() => {
-              void handleDeleteStudyCategory(category);
-            }}
-          >
-            {t("library.deleteStudyCategory")}
-          </button>
-        </div>
-      </li>
-    );
-  };
-
   const workspaceFeedback =
     error || warning || operationStatus ? (
       <div className="workspace-feedback" aria-live="polite">
@@ -4496,13 +4635,130 @@ export function App({
     ) : null;
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-theme={uiTheme}>
+      <aside className="app-sidebar" aria-label={t("app.title")}>
+        <div className="app-brand">
+          <span className="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 3 4.5 6.8v8.4L12 21l7.5-5.8V6.8L12 3Z" />
+              <path d="m4.5 6.8 7.5 4 7.5-4" />
+              <path d="M12 10.8V21" />
+            </svg>
+          </span>
+          <strong>{t("app.title")}</strong>
+        </div>
+
+        <nav className="app-sidebar-nav" aria-label={t("library.breadcrumbLabel")}>
+          <button
+            type="button"
+            className={isLibraryView ? "is-active" : undefined}
+            aria-label={t("layout.library")}
+            onClick={() => setCurrentView("library")}
+          >
+            <span className="sidebar-icon sidebar-icon-book" aria-hidden="true" />
+            <span aria-hidden="true">{t("layout.library")}</span>
+          </button>
+          <button
+            type="button"
+            aria-label={t("app.sidebarMyBooksAction")}
+            onClick={() => setIsBooksPanelOpen(true)}
+          >
+            <span className="sidebar-icon sidebar-icon-bookmark" aria-hidden="true" />
+            <span aria-hidden="true">{t("library.myBooks")}</span>
+          </button>
+          <button
+            type="button"
+            aria-label={t("app.sidebarCategoriesAction")}
+            onClick={() => setSelectedCategoryFilter("")}
+          >
+            <span className="sidebar-icon sidebar-icon-grid" aria-hidden="true" />
+            <span aria-hidden="true">{t("app.sidebarCategories")}</span>
+          </button>
+          <button type="button" aria-label={t("app.sidebarSettingsAction")}>
+            <span className="sidebar-icon sidebar-icon-settings" aria-hidden="true" />
+            <span aria-hidden="true">{t("app.sidebarSettings")}</span>
+          </button>
+        </nav>
+
+        <div className="sidebar-knowledge-card">
+          <div className="sidebar-book-stack" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <strong>{t("app.sidebarKnowledgeTitle")}</strong>
+          <p>{t("app.sidebarKnowledgeDescription")}</p>
+          <div className="sidebar-card-dots" aria-hidden="true">
+            <span className="is-active" />
+            <span />
+            <span />
+          </div>
+        </div>
+      </aside>
+
       <section className="workspace" aria-labelledby="app-title">
         <header className="workspace-header">
-          <div>
-            <p className="eyebrow">{t("app.stage")}</p>
-            <h1 id="app-title">{t("app.title")}</h1>
-          </div>
+          <section className="hero-panel" aria-labelledby="app-title">
+            <div className="hero-copy">
+              <p className="eyebrow">{t("app.stage")}</p>
+              <h1 id="app-title">{t("app.title")}</h1>
+              <p className="summary">{t("app.summary")}</p>
+              <ul className="hero-feature-list">
+                <li>
+                  <span className="hero-feature-icon hero-feature-private" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                      <path d="M12 4 18 6.5v5.2c0 3.6-2.4 6.8-6 8.3-3.6-1.5-6-4.7-6-8.3V6.5L12 4Z" />
+                      <path d="m9.5 12 1.7 1.7 3.5-4" />
+                    </svg>
+                  </span>
+                  <strong>{t("app.privateFeatureTitle")}</strong>
+                  <span className="hero-feature-description">{t("app.privateFeatureDescription")}</span>
+                </li>
+                <li>
+                  <span className="hero-feature-icon hero-feature-offline" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                      <path d="M5 10.5A9.5 9.5 0 0 1 19 10.5" />
+                      <path d="M8 13.5a5.5 5.5 0 0 1 8 0" />
+                      <path d="M11 16.5a1.5 1.5 0 0 1 2 0" />
+                      <path d="m4 4 16 16" />
+                    </svg>
+                  </span>
+                  <strong>{t("app.offlineFeatureTitle")}</strong>
+                  <span className="hero-feature-description">{t("app.offlineFeatureDescription")}</span>
+                </li>
+                <li>
+                  <span className="hero-feature-icon hero-feature-localAi" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                      <path d="M12 3v4" />
+                      <path d="M12 17v4" />
+                      <path d="M3 12h4" />
+                      <path d="M17 12h4" />
+                      <path d="m5.6 5.6 2.8 2.8" />
+                      <path d="m15.6 15.6 2.8 2.8" />
+                      <path d="m18.4 5.6-2.8 2.8" />
+                      <path d="m8.4 15.6-2.8 2.8" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </span>
+                  <strong>{t("app.localAiFeatureTitle")}</strong>
+                  <span className="hero-feature-description">
+                    {t("app.localAiFeatureDescription", { model: ollamaModel })}
+                  </span>
+                </li>
+              </ul>
+            </div>
+            <div className="hero-illustration" aria-hidden="true">
+              <span className="hero-orbit" />
+              <span className="hero-plant">
+                <span />
+                <span />
+                <span />
+              </span>
+              <span className="hero-book hero-book-one" />
+              <span className="hero-book hero-book-two" />
+              <span className="hero-pot" />
+            </div>
+          </section>
           <div className="workspace-header-actions">
             <label className="language-selector" htmlFor="ui-language">
               <span>{t("settings.uiLanguageLabel")}</span>
@@ -4518,6 +4774,26 @@ export function App({
                 <option value="es">{t("settings.uiLanguageSpanish")}</option>
               </select>
             </label>
+            <div className="theme-selector">
+              <span id="ui-theme-label">{t("settings.uiThemeLabel")}</span>
+              <button
+                type="button"
+                className="theme-switch"
+                role="switch"
+                aria-checked={uiTheme === "dark"}
+                aria-labelledby="ui-theme-label"
+                onClick={() => {
+                  handleUiThemeChange(uiTheme === "dark" ? "light" : "dark");
+                }}
+              >
+                <span className="theme-switch-track" aria-hidden="true">
+                  <span className="theme-switch-thumb" />
+                </span>
+                <span className="theme-switch-value">
+                  {uiTheme === "dark" ? t("settings.uiThemeDark") : t("settings.uiThemeLight")}
+                </span>
+              </button>
+            </div>
             {isLibraryView ? (
               <>
                 <label className="library-category-control" htmlFor="library-category-filter">
@@ -4736,161 +5012,93 @@ export function App({
         ) : null}
 
         {isCategoryManagerOpen ? (
-          <div className="my-books-overlay" role="presentation">
-            <section
-              className="my-books-panel category-manager-panel"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="category-manager-title"
-            >
-              <div className="my-books-panel-header">
-                <div>
-                  <h2 id="category-manager-title">{t("library.manageCategories")}</h2>
-                  <span>{t("library.manageCategoriesDescription")}</span>
-                </div>
-                <button
-                  type="button"
-                  aria-label={t("library.closeManageCategories")}
-                  onClick={() => setIsCategoryManagerOpen(false)}
-                >
-                  x
-                </button>
-              </div>
-
-              <div className="category-manager-default">
-                <div>
-                  <h3>{t("library.defaultStudyCategoryTitle")}</h3>
-                  <p>{t("library.defaultStudyCategoryDescription")}</p>
-                </div>
-                <label htmlFor="default-study-category">
-                  {t("library.defaultStudyCategoryLabel")}
-                  <select
-                    id="default-study-category"
-                    value={defaultCategoryDraft}
-                    disabled={isSavingStudyCategoryDefault}
-                    onChange={(event) => handleDefaultStudyCategoryChange(event.target.value)}
-                  >
-                    {categoryOptions.map((category) => (
-                      <option key={category} value={category}>
-                        {getAcademicCategoryDisplayName(category, t)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label htmlFor="default-study-subcategory">
-                  {t("library.defaultStudySubcategoryLabel")}
-                  <select
-                    id="default-study-subcategory"
-                    value={defaultSubcategoryDraft}
-                    disabled={isSavingStudyCategoryDefault}
-                    onChange={(event) => {
-                      setDefaultSubcategoryDraft(event.target.value);
-                      setCategoryManagerStatus(null);
-                    }}
-                  >
-                    {defaultSubcategoryOptions.map((subcategory) => (
-                      <option key={subcategory} value={subcategory}>
-                        {getAcademicSubcategoryDisplayName(subcategory, t)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  disabled={isStudyCategoryDefaultSaveDisabled}
-                  onClick={() => {
-                    void handleSaveStudyCategoryDefault();
-                  }}
-                >
-                  {isSavingStudyCategoryDefault
-                    ? t("library.savingStudyCategoryDefault")
-                    : t("library.saveStudyCategoryDefault")}
-                </button>
-              </div>
-
-              <div className="category-manager-form">
-                {categoryManagerDraftId ? (
-                  <p className="category-manager-editing">
-                    {t("library.editingStudyCategory", {
-                      category: categoryManagerNameDraft
-                    })}
-                  </p>
-                ) : null}
-                <label htmlFor="study-category-name">
-                  {t("library.studyCategoryNameLabel")}
-                  <input
-                    id="study-category-name"
-                    value={categoryManagerNameDraft}
-                    disabled={isSavingStudyCategory}
-                    onChange={(event) => {
-                      setCategoryManagerNameDraft(event.target.value);
-                      setCategoryManagerStatus(null);
-                    }}
-                  />
-                </label>
-                <label htmlFor="study-category-subcategories">
-                  {t("library.studyCategorySubcategoriesLabel")}
-                  <textarea
-                    id="study-category-subcategories"
-                    value={categoryManagerSubcategoriesDraft}
-                    disabled={isSavingStudyCategory}
-                    placeholder={t("library.studyCategorySubcategoriesPlaceholder")}
-                    onChange={(event) => {
-                      setCategoryManagerSubcategoriesDraft(event.target.value);
-                      setCategoryManagerStatus(null);
-                    }}
-                  />
-                </label>
-                <div className="category-manager-actions">
-                  <button
-                    type="button"
-                    disabled={isStudyCategorySaveDisabled}
-                    onClick={() => {
-                      void handleSaveStudyCategory();
-                    }}
-                  >
-                    {isSavingStudyCategory
-                      ? t("library.savingStudyCategory")
-                      : categoryManagerDraftId
-                        ? t("library.updateStudyCategory")
-                        : t("library.saveStudyCategory")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isSavingStudyCategory}
-                    onClick={resetStudyCategoryManagerDraft}
-                  >
-                    {t("library.clearStudyCategoryForm")}
-                  </button>
-                </div>
-                {categoryManagerStatus ? (
-                  <span role="status">{categoryManagerStatus}</span>
-                ) : null}
-              </div>
-
-              <section className="category-manager-section">
-                <h3>{t("library.activeStudyCategoriesTitle")}</h3>
-                {activeStudyCategories.length > 0 ? (
-                  <ul className="category-manager-list">
-                    {activeStudyCategories.map(renderStudyCategoryManagerItem)}
-                  </ul>
-                ) : (
-                  <p>{t("library.noCustomStudyCategories")}</p>
-                )}
-              </section>
-
-              <section className="category-manager-section">
-                <h3>{t("library.archivedStudyCategoriesTitle")}</h3>
-                {archivedStudyCategories.length > 0 ? (
-                  <ul className="category-manager-list">
-                    {archivedStudyCategories.map(renderStudyCategoryManagerItem)}
-                  </ul>
-                ) : (
-                  <p>{t("library.noArchivedStudyCategories")}</p>
-                )}
-              </section>
-            </section>
-          </div>
+          <CategoryManagerDialog
+            labels={{
+              title: t("library.manageCategories"),
+              description: t("library.manageCategoriesDescription"),
+              close: t("library.closeManageCategories"),
+              defaultTitle: t("library.defaultStudyCategoryTitle"),
+              defaultDescription: t("library.defaultStudyCategoryDescription"),
+              defaultCategoryLabel: t("library.defaultStudyCategoryLabel"),
+              defaultSubcategoryLabel: t("library.defaultStudySubcategoryLabel"),
+              saveDefault: t("library.saveStudyCategoryDefault"),
+              savingDefault: t("library.savingStudyCategoryDefault"),
+              categoryNameLabel: t("library.studyCategoryNameLabel"),
+              subcategoriesLabel: t("library.studyCategorySubcategoriesLabel"),
+              subcategoriesPlaceholder: t("library.studyCategorySubcategoriesPlaceholder"),
+              saveCategory: t("library.saveStudyCategory"),
+              updateCategory: t("library.updateStudyCategory"),
+              savingCategory: t("library.savingStudyCategory"),
+              clearForm: t("library.clearStudyCategoryForm"),
+              editingCategory: (category) => t("library.editingStudyCategory", { category }),
+              activeCategoriesTitle: t("library.activeStudyCategoriesTitle"),
+              archivedCategoriesTitle: t("library.archivedStudyCategoriesTitle"),
+              noActiveCategories: t("library.noCustomStudyCategories"),
+              noArchivedCategories: t("library.noArchivedStudyCategories"),
+              categoryUsage: (count) => t("library.studyCategoryUsage", { count }),
+              deleteBlockedTitle: t("library.deleteStudyCategoryBlockedByBooks"),
+              editCategory: t("library.editStudyCategory"),
+              archiveCategory: t("library.archiveStudyCategory"),
+              restoreCategory: t("library.restoreStudyCategory"),
+              deleteCategory: t("library.deleteStudyCategory")
+            }}
+            categoryOptions={categoryOptions}
+            defaultCategoryDraft={defaultCategoryDraft}
+            defaultSubcategoryDraft={defaultSubcategoryDraft}
+            defaultSubcategoryOptions={defaultSubcategoryOptions}
+            categoryManagerDraftId={categoryManagerDraftId}
+            categoryManagerNameDraft={categoryManagerNameDraft}
+            categoryManagerSubcategoriesDraft={categoryManagerSubcategoriesDraft}
+            categoryManagerStatus={categoryManagerStatus}
+            activeStudyCategories={activeStudyCategories}
+            archivedStudyCategories={archivedStudyCategories}
+            isSavingStudyCategoryDefault={isSavingStudyCategoryDefault}
+            isSavingStudyCategory={isSavingStudyCategory}
+            isStudyCategoryDefaultSaveDisabled={isStudyCategoryDefaultSaveDisabled}
+            isStudyCategorySaveDisabled={isStudyCategorySaveDisabled}
+            getCategoryDisplayName={(category) => getAcademicCategoryDisplayName(category, t)}
+            getSubcategoryDisplayName={(subcategory) =>
+              getAcademicSubcategoryDisplayName(subcategory, t)
+            }
+            getLinkedBookCount={(category) =>
+              countDocumentsByCategory(
+                savedDocuments,
+                documentStudyMetadataById,
+                category.name
+              )
+            }
+            onClose={() => setIsCategoryManagerOpen(false)}
+            onDefaultCategoryChange={handleDefaultStudyCategoryChange}
+            onDefaultSubcategoryChange={(subcategory) => {
+              setDefaultSubcategoryDraft(subcategory);
+              setCategoryManagerStatus(null);
+            }}
+            onCategoryNameChange={(name) => {
+              setCategoryManagerNameDraft(name);
+              setCategoryManagerStatus(null);
+            }}
+            onCategorySubcategoriesChange={(subcategories) => {
+              setCategoryManagerSubcategoriesDraft(subcategories);
+              setCategoryManagerStatus(null);
+            }}
+            onSaveDefault={() => {
+              void handleSaveStudyCategoryDefault();
+            }}
+            onSaveCategory={() => {
+              void handleSaveStudyCategory();
+            }}
+            onClearCategoryForm={resetStudyCategoryManagerDraft}
+            onEditCategory={handleEditStudyCategory}
+            onArchiveCategory={(category) => {
+              void handleArchiveStudyCategory(category);
+            }}
+            onRestoreCategory={(category) => {
+              void handleRestoreStudyCategory(category);
+            }}
+            onDeleteCategory={(category) => {
+              void handleDeleteStudyCategory(category);
+            }}
+          />
         ) : null}
 
         {workspaceFeedback}
@@ -4899,15 +5107,27 @@ export function App({
           {isLibraryView ? (
             <>
           <section className="workspace-panel import-settings-panel" aria-labelledby="import-settings-title">
-            <h2 id="import-settings-title">{t("layout.importAndAi")}</h2>
-            <button
-              type="button"
-              className="import-book-button"
-              disabled={isWorkspaceBusy}
-              onClick={openImportDialog}
-            >
-              {t("library.openImportDialog")}
-            </button>
+            <div className="import-cta-card">
+              <div>
+                <h2 id="import-settings-title">{t("layout.importAndAi")}</h2>
+                <strong>{t("library.openImportDialog")}</strong>
+                <p>{t("app.importCtaDescription")}</p>
+                <button
+                  type="button"
+                  className="import-book-button"
+                  disabled={isWorkspaceBusy}
+                  onClick={openImportDialog}
+                >
+                  {t("library.openImportDialog")}
+                </button>
+              </div>
+              <div className="import-cta-illustration" aria-hidden="true">
+                <span className="import-paper" />
+                <span className="import-upload" />
+                <span className="import-spark import-spark-one" />
+                <span className="import-spark import-spark-two" />
+              </div>
+            </div>
 
             <OllamaSettingsPanel
               baseUrl={ollamaBaseUrl}
@@ -4970,6 +5190,7 @@ export function App({
                   {categoryOptions.map((category) => (
                     <li key={category}>
                       <button type="button" onClick={() => handleLibraryCategoryChange(category)}>
+                        <AcademicCategoryIcon category={category} />
                         <strong>{getAcademicCategoryDisplayName(category, t)}</strong>
                         <span>
                           {t("library.categoryBookCount", {

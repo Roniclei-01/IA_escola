@@ -175,16 +175,16 @@ Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 
 ## 8. Biblioteca e categorias
 
-- [ ] Confirmar que a tela inicial da biblioteca mostra primeiro as categorias academicas.
-- [ ] Confirmar que os livros nao aparecem todos juntos antes da escolha de categoria.
-- [ ] Selecionar uma categoria e confirmar que aparecem apenas livros dessa categoria.
-- [ ] Selecionar uma subcategoria e confirmar que aparecem apenas livros dessa subcategoria.
-- [ ] Confirmar o caminho curto da biblioteca com categoria, subcategoria e documento ativo.
-- [ ] Abrir `Importar livro` e confirmar que categoria/subcategoria sao escolhidas antes da importacao.
-- [ ] Confirmar que o livro importado entra automaticamente na categoria/subcategoria escolhida.
-- [ ] Confirmar que o estudo ativo abre em pagina secundaria apos importar ou selecionar um livro.
-- [ ] Confirmar que `Voltar para biblioteca` retorna para a tela principal sem manter `Estudo ativo` na mesma aba.
-- [ ] Abrir `Meus Livros` e confirmar que a lista sobreposta respeita a categoria/subcategoria ativa.
+- [x] Confirmar que a tela inicial da biblioteca mostra primeiro as categorias academicas.
+- [x] Confirmar que os livros nao aparecem todos juntos antes da escolha de categoria.
+- [x] Selecionar uma categoria e confirmar que aparecem apenas livros dessa categoria.
+- [x] Selecionar uma subcategoria e confirmar que aparecem apenas livros dessa subcategoria.
+- [x] Confirmar o caminho curto da biblioteca com categoria, subcategoria e documento ativo.
+- [x] Abrir `Importar livro` e confirmar que categoria/subcategoria sao escolhidas antes da importacao.
+- [x] Confirmar que o livro importado entra automaticamente na categoria/subcategoria escolhida.
+- [x] Confirmar que o estudo ativo abre em pagina secundaria apos importar ou selecionar um livro.
+- [x] Confirmar que `Voltar para biblioteca` retorna para a tela principal sem manter `Estudo ativo` na mesma aba.
+- [x] Abrir `Meus Livros` e confirmar que a lista sobreposta respeita a categoria/subcategoria ativa.
 - [x] Digitar no campo `Buscar na biblioteca`.
 - [x] Pressionar Enter e confirmar filtragem.
 - [x] Clicar em `Pesquisar` e confirmar filtragem.

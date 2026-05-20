@@ -3289,6 +3289,7 @@ export function App({
     setError(null);
 
     try {
+      const isEditingStudyCategory = categoryManagerDraftId !== null;
       const savedCategory = await saveStudyCategory({
         id: categoryManagerDraftId,
         name: categoryManagerNameDraft,
@@ -3300,7 +3301,11 @@ export function App({
         savedCategory
       ]);
       resetStudyCategoryManagerDraft();
-      setCategoryManagerStatus(t("library.studyCategorySaved"));
+      setCategoryManagerStatus(
+        isEditingStudyCategory
+          ? t("library.studyCategoryUpdated")
+          : t("library.studyCategorySaved")
+      );
     } catch (unknownError) {
       setError(getErrorMessage(unknownError, t("library.studyCategorySaveError")));
     } finally {
@@ -4804,6 +4809,13 @@ export function App({
               </div>
 
               <div className="category-manager-form">
+                {categoryManagerDraftId ? (
+                  <p className="category-manager-editing">
+                    {t("library.editingStudyCategory", {
+                      category: categoryManagerNameDraft
+                    })}
+                  </p>
+                ) : null}
                 <label htmlFor="study-category-name">
                   {t("library.studyCategoryNameLabel")}
                   <input
@@ -4839,7 +4851,9 @@ export function App({
                   >
                     {isSavingStudyCategory
                       ? t("library.savingStudyCategory")
-                      : t("library.saveStudyCategory")}
+                      : categoryManagerDraftId
+                        ? t("library.updateStudyCategory")
+                        : t("library.saveStudyCategory")}
                   </button>
                   <button
                     type="button"

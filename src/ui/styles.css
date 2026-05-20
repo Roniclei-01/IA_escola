@@ -628,6 +628,17 @@ h1 {
   resize: vertical;
 }
 
+.category-manager-editing {
+  width: fit-content;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid #d8ddd4;
+  border-radius: 6px;
+  color: #315b7c;
+  background: #eef5f9;
+  font-weight: 800;
+}
+
 .category-manager-actions,
 .category-manager-item-actions {
   display: flex;

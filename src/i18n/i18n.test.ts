@@ -345,6 +345,15 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.noArchivedStudyCategories")).toBe(
       "Nenhuma categoria arquivada."
     );
+    expect(i18n.getResource("pt", "translation", "library.updateStudyCategory")).toBe(
+      "Atualizar categoria"
+    );
+    expect(i18n.getResource("pt", "translation", "library.editingStudyCategory")).toBe(
+      "Editando categoria: {{category}}"
+    );
+    expect(i18n.getResource("pt", "translation", "library.studyCategoryUpdated")).toBe(
+      "Categoria atualizada."
+    );
     expect(i18n.getResource("pt", "translation", "library.studyCategoryUsage_one")).toBe(
       "{{count}} livro vinculado"
     );

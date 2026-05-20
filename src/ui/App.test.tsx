@@ -640,6 +640,63 @@ describe("App", () => {
     expect(within(archivedSection as HTMLElement).getByRole("button", { name: "Restaurar" })).toBeInTheDocument();
   });
 
+  it("shows an explicit edit mode when updating a study category", async () => {
+    const listStudyCategories = vi.fn().mockResolvedValue({
+      categories: [
+        {
+          id: "category-network",
+          name: "Redes",
+          subcategories: ["TCP/IP"],
+          archived: false
+        }
+      ]
+    });
+    const saveStudyCategory = vi.fn().mockImplementation(async (request) => ({
+      id: request.id,
+      name: request.name,
+      subcategories: request.subcategories,
+      archived: false
+    }));
+
+    renderApp({ listStudyCategories, saveStudyCategory });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Gerenciar categorias" }));
+    const categoriesDialog = await screen.findByRole("dialog", {
+      name: "Gerenciar categorias"
+    });
+    const categoriesQueries = within(categoriesDialog);
+    fireEvent.click(categoriesQueries.getByRole("button", { name: "Editar" }));
+
+    expect(categoriesQueries.getByText("Editando categoria: Redes")).toBeInTheDocument();
+    expect(categoriesQueries.getByLabelText("Nome da categoria")).toHaveValue("Redes");
+    expect(categoriesQueries.getByLabelText("Subcategorias")).toHaveValue("TCP/IP");
+    expect(categoriesQueries.getByRole("button", { name: "Atualizar categoria" })).toBeInTheDocument();
+
+    fireEvent.change(categoriesQueries.getByLabelText("Nome da categoria"), {
+      target: { value: "Redes Avancadas" }
+    });
+    fireEvent.change(categoriesQueries.getByLabelText("Subcategorias"), {
+      target: { value: "TCP/IP\nBGP" }
+    });
+    fireEvent.click(categoriesQueries.getByRole("button", { name: "Atualizar categoria" }));
+
+    await waitFor(() => {
+      expect(saveStudyCategory).toHaveBeenCalledWith({
+        id: "category-network",
+        name: "Redes Avancadas",
+        subcategories: ["BGP", "TCP/IP"]
+      });
+    });
+    expect(await categoriesQueries.findByText("Categoria atualizada.")).toBeInTheDocument();
+    const activeSection = categoriesQueries
+      .getByRole("heading", { name: "Categorias ativas" })
+      .closest("section");
+
+    expect(activeSection).not.toBeNull();
+    expect(within(activeSection as HTMLElement).getByText("Redes Avancadas")).toBeInTheDocument();
+    expect(categoriesQueries.getByRole("button", { name: "Salvar categoria" })).toBeInTheDocument();
+  });
+
   it("filters saved books by category and opens them from Meus Livros", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [

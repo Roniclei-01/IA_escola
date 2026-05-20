@@ -76,6 +76,12 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.retranslateDocument")).toBe(
       "Retraduzir pagina"
     );
+    expect(i18n.getResource("pt", "translation", "library.retryTranslationPage")).toBe(
+      "Tentar novamente"
+    );
+    expect(i18n.getResource("pt", "translation", "library.translationCurrentPageError")).toBe(
+      "A traducao desta pagina falhou. Tente novamente para gerar a leitura traduzida."
+    );
     expect(i18n.getResource("pt", "translation", "library.translationStatusCached")).toBe(
       "Traducao carregada do cache local."
     );
@@ -128,6 +134,9 @@ describe("i18n", () => {
     );
     expect(i18n.getResource("pt", "translation", "library.translatedReaderPages")).toBe(
       "Paginas traduzidas: {{pages}}"
+    );
+    expect(i18n.getResource("pt", "translation", "library.translationErrorReaderPages")).toBe(
+      "Paginas com erro: {{pages}}"
     );
   });
 

@@ -48,12 +48,15 @@ interface DocumentSummaryProps {
     translationProviderLabel: (provider: TranslationProviderId) => string;
     translateDocument: string;
     retranslateDocument: string;
+    retryTranslationPage: string;
     translatingDocument: string;
+    translationCurrentPageError: string;
     previousReaderPage: string;
     nextReaderPage: string;
     readerPageStatus: (currentPage: number, totalPages: number) => string;
     readerBookmarkStatus: (currentPage: number, totalPages: number) => string;
     translatedReaderPages: (pages: string) => string;
+    translationErrorReaderPages: (pages: string) => string;
     pdfReaderTitle: string;
     previousPdfPage: string;
     previousPdfPageLabel: string;
@@ -70,6 +73,7 @@ interface DocumentSummaryProps {
   translatedPageSourcesByIndex: Record<number, ReaderPageTranslationSource>;
   translatedPageProvidersByIndex: Record<number, TranslationProviderId>;
   translatedReaderPageIndexes: number[];
+  translationErrorReaderPageIndexes: number[];
   renderedPdfPage: RenderPdfPageResponse | null;
   isRenderingPdfPage?: boolean;
   readerPage: number;
@@ -99,6 +103,7 @@ export function DocumentSummary({
   translatedPageSourcesByIndex,
   translatedPageProvidersByIndex,
   translatedReaderPageIndexes,
+  translationErrorReaderPageIndexes,
   renderedPdfPage,
   isRenderingPdfPage = false,
   readerPage,
@@ -134,6 +139,8 @@ export function DocumentSummary({
     : translatedPagesByIndex[currentReaderPage] ?? "";
   const currentTranslationSource = translatedPageSourcesByIndex[currentReaderPage];
   const currentTranslationProvider = translatedPageProvidersByIndex[currentReaderPage];
+  const hasCurrentTranslationError =
+    !isSameLanguage && translationErrorReaderPageIndexes.includes(currentReaderPage);
   const isPdfDocument = document.source_type === "pdf" && Boolean(document.source_path);
   const renderedPageCount = renderedPdfPage?.page_count ?? null;
   const translatedReaderPageLabels = useMemo(
@@ -142,6 +149,13 @@ export function DocumentSummary({
         .filter((pageIndex) => pageIndex >= 0 && pageIndex < totalReaderPages)
         .map((pageIndex) => String(pageIndex + 1)),
     [totalReaderPages, translatedReaderPageIndexes]
+  );
+  const translationErrorReaderPageLabels = useMemo(
+    () =>
+      translationErrorReaderPageIndexes
+        .filter((pageIndex) => pageIndex >= 0 && pageIndex < totalReaderPages)
+        .map((pageIndex) => String(pageIndex + 1)),
+    [totalReaderPages, translationErrorReaderPageIndexes]
   );
 
   useEffect(() => {
@@ -290,12 +304,14 @@ export function DocumentSummary({
                 pageIndex: currentReaderPage,
                 pageContent: currentOriginalPage,
                 totalPages: totalReaderPages,
-                forceRefresh: Boolean(currentTranslatedPage)
+                forceRefresh: Boolean(currentTranslatedPage || hasCurrentTranslationError)
               })
             }
           >
             {isTranslatingDocument
               ? labels.translatingDocument
+              : hasCurrentTranslationError
+                ? labels.retryTranslationPage
               : currentTranslatedPage && !isSameLanguage
                 ? labels.retranslateDocument
                 : labels.translateDocument}
@@ -327,6 +343,11 @@ export function DocumentSummary({
         {!isSameLanguage && translatedReaderPageLabels.length > 0 ? (
           <p className="reader-translated-pages">
             {labels.translatedReaderPages(translatedReaderPageLabels.join(", "))}
+          </p>
+        ) : null}
+        {!isSameLanguage && translationErrorReaderPageLabels.length > 0 ? (
+          <p className="reader-translation-errors">
+            {labels.translationErrorReaderPages(translationErrorReaderPageLabels.join(", "))}
           </p>
         ) : null}
         {isSameLanguage ? <p className="reader-note">{labels.translationSameLanguage}</p> : null}
@@ -377,6 +398,10 @@ export function DocumentSummary({
             </div>
             {currentTranslatedPage ? (
               <p>{currentTranslatedPage}</p>
+            ) : hasCurrentTranslationError ? (
+              <p className="reader-placeholder reader-placeholder-error">
+                {labels.translationCurrentPageError}
+              </p>
             ) : (
               <p className="reader-placeholder">{labels.translationPlaceholder}</p>
             )}

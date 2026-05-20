@@ -1357,6 +1357,26 @@ h1 {
   font-weight: 700;
 }
 
+.reader-translation-errors {
+  width: fit-content;
+  margin: -4px auto 0;
+  padding: 6px 10px;
+  border: 1px solid #f1c9c5;
+  border-radius: 6px;
+  color: #7a1f17;
+  background: #fde8e5;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.reader-placeholder-error {
+  width: fit-content;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: #7a1f17;
+  background: #fde8e5;
+}
+
 .pdf-page-reader {
   display: grid;
   gap: 12px;

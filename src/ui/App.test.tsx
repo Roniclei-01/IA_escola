@@ -2060,6 +2060,71 @@ describe("App", () => {
     expect(await screen.findByText("Translated page with progress.")).toBeInTheDocument();
   });
 
+  it("marks failed translated reader pages without removing successful translations", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-translation-error-pages",
+      book_id: "book-translation-error-pages",
+      content: "Texto longo para leitura paginada. ".repeat(80),
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/erros-traducao.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const translateDocument = vi
+      .fn()
+      .mockResolvedValueOnce({
+        document_id: "document-translation-error-pages",
+        source_language: "Pt",
+        target_language: "En",
+        translated_content: "First page translated.",
+        translation_provider: "libretranslate",
+        page_index: 0
+      })
+      .mockRejectedValueOnce(new Error("Falha controlada do tradutor."))
+      .mockResolvedValueOnce({
+        document_id: "document-translation-error-pages",
+        source_language: "Pt",
+        target_language: "En",
+        translated_content: "Second page translated after retry.",
+        translation_provider: "ollama",
+        page_index: 1
+      });
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      translateDocument
+    });
+
+    fillImportFilePath("/tmp/erros-traducao.pdf");
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Traduzir pagina atual" }));
+
+    expect(await screen.findByText("First page translated.")).toBeInTheDocument();
+    expect(screen.getByText("Paginas traduzidas: 1")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Proxima pagina" }));
+    fireEvent.click(screen.getByRole("button", { name: "Traduzir pagina atual" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Falha controlada do tradutor.");
+    expect(screen.getByText("Paginas traduzidas: 1")).toBeInTheDocument();
+    expect(screen.getByText("Paginas com erro: 2")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "A traducao desta pagina falhou. Tente novamente para gerar a leitura traduzida."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+
+    expect(await screen.findByText("Second page translated after retry.")).toBeInTheDocument();
+    expect(screen.getByText("Paginas traduzidas: 1, 2")).toBeInTheDocument();
+    expect(screen.queryByText("Paginas com erro: 2")).not.toBeInTheDocument();
+  });
+
   it("ignores empty cached reader translations and calls the model", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-empty-cache-reader",

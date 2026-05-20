@@ -659,6 +659,16 @@ h1 {
   opacity: 0.65;
 }
 
+.category-manager-section {
+  display: grid;
+  gap: 10px;
+}
+
+.category-manager-section h3,
+.category-manager-section p {
+  margin: 0;
+}
+
 .category-manager-list {
   display: grid;
   gap: 10px;

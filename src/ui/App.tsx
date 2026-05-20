@@ -1913,6 +1913,8 @@ export function App({
     defaultCategoryDraft,
     importCategory
   ]);
+  const activeStudyCategories = studyCategories.filter((category) => !category.archived);
+  const archivedStudyCategories = studyCategories.filter((category) => category.archived);
   const subcategoryOptions = subcategoryOptionsFromMetadata(
     documentStudyMetadataById,
     selectedCategoryFilter,
@@ -4405,6 +4407,61 @@ export function App({
     </div>
   ) : null;
 
+  const renderStudyCategoryManagerItem = (category: StudyCategory) => {
+    const linkedBookCount = countDocumentsByCategory(
+      savedDocuments,
+      documentStudyMetadataById,
+      category.name
+    );
+    const isDeleteBlocked = linkedBookCount > 0;
+
+    return (
+      <li key={category.id}>
+        <div>
+          <strong>{category.name}</strong>
+          <span>{category.subcategories.join(", ")}</span>
+          <span>{t("library.studyCategoryUsage", { count: linkedBookCount })}</span>
+        </div>
+        <div className="category-manager-item-actions">
+          <button type="button" onClick={() => handleEditStudyCategory(category)}>
+            {t("library.editStudyCategory")}
+          </button>
+          {category.archived ? (
+            <button
+              type="button"
+              onClick={() => {
+                void handleRestoreStudyCategory(category);
+              }}
+            >
+              {t("library.restoreStudyCategory")}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                void handleArchiveStudyCategory(category);
+              }}
+            >
+              {t("library.archiveStudyCategory")}
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={isDeleteBlocked}
+            title={
+              isDeleteBlocked ? t("library.deleteStudyCategoryBlockedByBooks") : undefined
+            }
+            onClick={() => {
+              void handleDeleteStudyCategory(category);
+            }}
+          >
+            {t("library.deleteStudyCategory")}
+          </button>
+        </div>
+      </li>
+    );
+  };
+
   const workspaceFeedback =
     error || warning || operationStatus ? (
       <div className="workspace-feedback" aria-live="polite">
@@ -4797,71 +4854,27 @@ export function App({
                 ) : null}
               </div>
 
-              {studyCategories.length > 0 ? (
-                <ul className="category-manager-list">
-                  {studyCategories.map((category) => {
-                    const linkedBookCount = countDocumentsByCategory(
-                      savedDocuments,
-                      documentStudyMetadataById,
-                      category.name
-                    );
-                    const isDeleteBlocked = linkedBookCount > 0;
+              <section className="category-manager-section">
+                <h3>{t("library.activeStudyCategoriesTitle")}</h3>
+                {activeStudyCategories.length > 0 ? (
+                  <ul className="category-manager-list">
+                    {activeStudyCategories.map(renderStudyCategoryManagerItem)}
+                  </ul>
+                ) : (
+                  <p>{t("library.noCustomStudyCategories")}</p>
+                )}
+              </section>
 
-                    return (
-                      <li key={category.id}>
-                        <div>
-                          <strong>{category.name}</strong>
-                          <span>{category.subcategories.join(", ")}</span>
-                          <span>{t("library.studyCategoryUsage", { count: linkedBookCount })}</span>
-                          {category.archived ? (
-                            <span>{t("library.studyCategoryArchived")}</span>
-                          ) : null}
-                        </div>
-                        <div className="category-manager-item-actions">
-                          <button type="button" onClick={() => handleEditStudyCategory(category)}>
-                            {t("library.editStudyCategory")}
-                          </button>
-                          {category.archived ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                void handleRestoreStudyCategory(category);
-                              }}
-                            >
-                              {t("library.restoreStudyCategory")}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                void handleArchiveStudyCategory(category);
-                              }}
-                            >
-                              {t("library.archiveStudyCategory")}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            disabled={isDeleteBlocked}
-                            title={
-                              isDeleteBlocked
-                                ? t("library.deleteStudyCategoryBlockedByBooks")
-                                : undefined
-                            }
-                            onClick={() => {
-                              void handleDeleteStudyCategory(category);
-                            }}
-                          >
-                            {t("library.deleteStudyCategory")}
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p>{t("library.noCustomStudyCategories")}</p>
-              )}
+              <section className="category-manager-section">
+                <h3>{t("library.archivedStudyCategoriesTitle")}</h3>
+                {archivedStudyCategories.length > 0 ? (
+                  <ul className="category-manager-list">
+                    {archivedStudyCategories.map(renderStudyCategoryManagerItem)}
+                  </ul>
+                ) : (
+                  <p>{t("library.noArchivedStudyCategories")}</p>
+                )}
+              </section>
             </section>
           </div>
         ) : null}

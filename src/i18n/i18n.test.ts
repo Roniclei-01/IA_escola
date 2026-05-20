@@ -336,6 +336,15 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.manageCategories")).toBe(
       "Gerenciar categorias"
     );
+    expect(i18n.getResource("pt", "translation", "library.activeStudyCategoriesTitle")).toBe(
+      "Categorias ativas"
+    );
+    expect(i18n.getResource("pt", "translation", "library.archivedStudyCategoriesTitle")).toBe(
+      "Categorias arquivadas"
+    );
+    expect(i18n.getResource("pt", "translation", "library.noArchivedStudyCategories")).toBe(
+      "Nenhuma categoria arquivada."
+    );
     expect(i18n.getResource("pt", "translation", "library.studyCategoryUsage_one")).toBe(
       "{{count}} livro vinculado"
     );

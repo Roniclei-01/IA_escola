@@ -96,10 +96,13 @@ export const resources = {
         deleteStudyCategoryConfirmation: "Excluir esta categoria?",
         deleteStudyCategoryBlockedByBooks:
           "Arquive a categoria ou remova os livros vinculados antes de excluir.",
+        activeStudyCategoriesTitle: "Categorias ativas",
+        archivedStudyCategoriesTitle: "Categorias arquivadas",
         studyCategoryUsage_zero: "{{count}} livros vinculados",
         studyCategoryUsage_one: "{{count}} livro vinculado",
         studyCategoryUsage_other: "{{count}} livros vinculados",
         noCustomStudyCategories: "Nenhuma categoria personalizada.",
+        noArchivedStudyCategories: "Nenhuma categoria arquivada.",
         academicCategories: {
           general: "Geral",
           languages: "Linguagens e Comunicacao",
@@ -581,10 +584,13 @@ export const resources = {
         deleteStudyCategoryConfirmation: "Delete this category?",
         deleteStudyCategoryBlockedByBooks:
           "Archive the category or remove linked books before deleting it.",
+        activeStudyCategoriesTitle: "Active categories",
+        archivedStudyCategoriesTitle: "Archived categories",
         studyCategoryUsage_zero: "{{count}} linked books",
         studyCategoryUsage_one: "{{count}} linked book",
         studyCategoryUsage_other: "{{count}} linked books",
         noCustomStudyCategories: "No custom category.",
+        noArchivedStudyCategories: "No archived category.",
         academicCategories: {
           general: "General",
           languages: "Languages and Communication",
@@ -1066,10 +1072,13 @@ export const resources = {
         deleteStudyCategoryConfirmation: "Eliminar esta categoria?",
         deleteStudyCategoryBlockedByBooks:
           "Archive la categoria o quite los libros vinculados antes de eliminarla.",
+        activeStudyCategoriesTitle: "Categorias activas",
+        archivedStudyCategoriesTitle: "Categorias archivadas",
         studyCategoryUsage_zero: "{{count}} libros vinculados",
         studyCategoryUsage_one: "{{count}} libro vinculado",
         studyCategoryUsage_other: "{{count}} libros vinculados",
         noCustomStudyCategories: "Ninguna categoria personalizada.",
+        noArchivedStudyCategories: "Ninguna categoria archivada.",
         academicCategories: {
           general: "General",
           languages: "Lenguajes y Comunicacion",

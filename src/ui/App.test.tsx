@@ -598,6 +598,48 @@ describe("App", () => {
     expect(within(freeCategoryItem as HTMLElement).getByRole("button", { name: "Excluir" })).toBeEnabled();
   });
 
+  it("separates active and archived categories in category management", async () => {
+    const listStudyCategories = vi.fn().mockResolvedValue({
+      categories: [
+        {
+          id: "category-active",
+          name: "Redes",
+          subcategories: ["TCP/IP"],
+          archived: false
+        },
+        {
+          id: "category-archived",
+          name: "Legado",
+          subcategories: ["Antigo"],
+          archived: true
+        }
+      ]
+    });
+
+    renderApp({ listStudyCategories });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Gerenciar categorias" }));
+    const categoriesDialog = await screen.findByRole("dialog", {
+      name: "Gerenciar categorias"
+    });
+    const categoriesQueries = within(categoriesDialog);
+    const activeSection = categoriesQueries
+      .getByRole("heading", { name: "Categorias ativas" })
+      .closest("section");
+    const archivedSection = categoriesQueries
+      .getByRole("heading", { name: "Categorias arquivadas" })
+      .closest("section");
+
+    expect(activeSection).not.toBeNull();
+    expect(archivedSection).not.toBeNull();
+    expect(within(activeSection as HTMLElement).getByText("Redes")).toBeInTheDocument();
+    expect(within(activeSection as HTMLElement).queryByText("Legado")).not.toBeInTheDocument();
+    expect(within(activeSection as HTMLElement).getByRole("button", { name: "Arquivar" })).toBeInTheDocument();
+    expect(within(archivedSection as HTMLElement).getByText("Legado")).toBeInTheDocument();
+    expect(within(archivedSection as HTMLElement).queryByText("Redes")).not.toBeInTheDocument();
+    expect(within(archivedSection as HTMLElement).getByRole("button", { name: "Restaurar" })).toBeInTheDocument();
+  });
+
   it("filters saved books by category and opens them from Meus Livros", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [

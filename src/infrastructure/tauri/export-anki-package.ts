@@ -7,6 +7,21 @@ export interface ExportAnkiPackageResponse {
   card_count: number;
 }
 
+function toExportCard(card: StudyCard) {
+  return {
+    id: card.id,
+    front: card.front,
+    back: card.back,
+    tags: card.tags,
+    ...(card.cardType ? { card_type: card.cardType } : {}),
+    ...(card.choices ? { choices: card.choices } : {}),
+    ...(card.correctChoiceIndex !== undefined
+      ? { correct_choice_index: card.correctChoiceIndex }
+      : {}),
+    ...(card.explanation !== undefined ? { explanation: card.explanation } : {})
+  };
+}
+
 export async function exportAnkiPackage(
   fileName: string,
   deckName: string,
@@ -25,11 +40,6 @@ export async function exportAnkiPackage(
   return invoke<ExportAnkiPackageResponse>("export_anki_package", {
     filePath,
     deckName,
-    cards: cards.map((card) => ({
-      id: card.id,
-      front: card.front,
-      back: card.back,
-      tags: card.tags
-    }))
+    cards: cards.map(toExportCard)
   });
 }

@@ -63,4 +63,41 @@ describe("exportAnkiPackage", () => {
     expect(response).toBeNull();
     expect(invokeMock).not.toHaveBeenCalled();
   });
+
+  it("sends multiple choice metadata to the APKG exporter", async () => {
+    saveMock.mockResolvedValue("/tmp/anki-documento.apkg");
+    invokeMock.mockResolvedValue({ file_path: "/tmp/anki-documento.apkg", card_count: 1 });
+
+    await exportAnkiPackage("anki-documento.apkg", "Documento", [
+      {
+        id: "card-1",
+        bookId: "book-1",
+        chunkId: "chunk-1",
+        front: "Qual protocolo confirma entrega?",
+        back: "TCP",
+        tags: ["redes"],
+        cardType: "multiple_choice",
+        choices: ["TCP", "UDP", "ARP", "ICMP"],
+        correctChoiceIndex: 0,
+        explanation: "TCP controla entrega e retransmissao."
+      }
+    ]);
+
+    expect(invokeMock).toHaveBeenCalledWith("export_anki_package", {
+      filePath: "/tmp/anki-documento.apkg",
+      deckName: "Documento",
+      cards: [
+        {
+          id: "card-1",
+          front: "Qual protocolo confirma entrega?",
+          back: "TCP",
+          tags: ["redes"],
+          card_type: "multiple_choice",
+          choices: ["TCP", "UDP", "ARP", "ICMP"],
+          correct_choice_index: 0,
+          explanation: "TCP controla entrega e retransmissao."
+        }
+      ]
+    });
+  });
 });

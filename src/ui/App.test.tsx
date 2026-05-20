@@ -2672,8 +2672,12 @@ describe("App", () => {
     expect(reader).not.toBeNull();
     const readerQueries = within(reader as HTMLElement);
 
-    fireEvent.click(readerQueries.getByRole("button", { name: "Mostrar idioma original" }));
-    expect(readerQueries.getAllByText(textIncludes("Inicio do livro.")).length).toBeGreaterThan(0);
+    await act(async () => {
+      fireEvent.click(readerQueries.getByRole("button", { name: "Mostrar idioma original" }));
+    });
+    await waitFor(() => {
+      expect(readerQueries.getAllByText(textIncludes("Inicio do livro.")).length).toBeGreaterThan(0);
+    });
     expect(screen.getByText(/Pagina 1 de/)).toBeInTheDocument();
     expect(readerQueries.queryAllByText(textIncludes(finalLine))).toHaveLength(0);
 
@@ -3628,6 +3632,65 @@ describe("App", () => {
     expect(screen.getByText("Card 1 de 2")).toBeInTheDocument();
   });
 
+  it("renders multiple choice study cards with choices and explanation", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-1",
+      book_id: "book-1",
+      content: "Conteudo importado para estudo.",
+      language: "Pt"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-1",
+          book_id: "book-1",
+          document_id: "document-1",
+          position: 0,
+          content: "TCP entrega dados de forma confiavel.",
+          token_estimate: 2
+        }
+      ]
+    });
+    const generateCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-1",
+        bookId: "book-1",
+        chunkId: "chunk-1",
+        front: "Qual protocolo entrega dados de forma confiavel?",
+        back: "TCP",
+        tags: ["redes"],
+        cardType: "multiple_choice",
+        choices: ["TCP", "UDP", "ARP", "ICMP"],
+        correctChoiceIndex: 0,
+        explanation: "TCP confirma entrega e reenvia pacotes perdidos."
+      }
+    ]);
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      generateCards,
+      saveStudyCards: saveCards,
+      enableDevelopmentFallback: false
+    });
+
+    fillImportFilePath("/tmp/book.txt");
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
+
+    expect(await screen.findByText("Qual protocolo entrega dados de forma confiavel?")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Alternativas" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /UDP/ }));
+    expect(screen.getByRole("button", { name: /UDP/ })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Revelar resposta" }));
+
+    expect(screen.getByText(/Resposta correta:/)).toBeInTheDocument();
+    expect(screen.getByText(/Sua escolha:/)).toBeInTheDocument();
+    expect(screen.getByText("TCP confirma entrega e reenvia pacotes perdidos.")).toBeInTheDocument();
+  });
+
   it("records review results while studying cards", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-1",
@@ -4470,6 +4533,18 @@ describe("App", () => {
         front: "Funcao da mitocondria?",
         back: "Produzir energia.",
         tags: ["biologia"]
+      },
+      {
+        id: "card-3",
+        bookId: "book-anki",
+        chunkId: "chunk-2",
+        front: "Qual estrutura produz ATP?",
+        back: "Mitocondria",
+        tags: ["biologia", "multipla escolha"],
+        cardType: "multiple_choice",
+        choices: ["Mitocondria", "Ribossomo", "Lisossomo", "Nucleo"],
+        correctChoiceIndex: 0,
+        explanation: "A mitocondria participa da respiracao celular."
       }
     ]);
 
@@ -4494,7 +4569,8 @@ describe("App", () => {
         "#guid column:1",
         "#columns:GUID Front Back Tags",
         "estudo_ia_local_card-1\tO que e celula? Explique.\tUnidade basica da vida.\testudo_ia_local document_document-anki source_txt biologia celula_animal",
-        "estudo_ia_local_card-2\tFuncao da mitocondria?\tProduzir energia.\testudo_ia_local document_document-anki source_txt biologia"
+        "estudo_ia_local_card-2\tFuncao da mitocondria?\tProduzir energia.\testudo_ia_local document_document-anki source_txt biologia",
+        "estudo_ia_local_card-3\tQual estrutura produz ATP? A) Mitocondria | B) Ribossomo | C) Lisossomo | D) Nucleo\tResposta correta: Mitocondria. Explicacao: A mitocondria participa da respiracao celular.\testudo_ia_local document_document-anki source_txt biologia multipla_escolha"
       ].join("\n")
     );
   });

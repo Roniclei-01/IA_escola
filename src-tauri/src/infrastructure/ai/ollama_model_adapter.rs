@@ -14,7 +14,7 @@ use crate::{
 };
 
 const TEXT_GENERATION_NUM_PREDICT: i32 = 2048;
-const FLASHCARD_GENERATION_NUM_PREDICT: i32 = 1024;
+const FLASHCARD_GENERATION_NUM_PREDICT: i32 = 1536;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OllamaModelConfig {
@@ -341,15 +341,17 @@ fn build_flashcard_prompt(chunks: &[DocumentChunk], config: &FlashcardConfig) ->
         .join("\n\n");
 
     format!(
-        "Voce gera flashcards para estudo. \
+        "Voce gera cards de estudo em formato de multipla escolha. \
 Responda em {language}. \
 Retorne somente um array JSON valido, sem markdown e sem texto fora do JSON. \
 Crie exatamente {cards_per_chunk} card(s) por chunk. \
 Cada item deve ter este formato: {example}. \
+Cada card precisa ter uma pergunta clara, quatro alternativas coerentes, apenas uma alternativa correta e uma explicacao curta. \
+Use correct_choice_index com indice baseado em zero, entre 0 e 3. \
 Use exatamente o chunk_id informado em cada chunk.\n\nChunks:\n{chunk_lines}",
         cards_per_chunk = config.cards_per_chunk,
         language = language,
-        example = r#"{"chunk_id":"uuid","front":"pergunta","back":"resposta","tags":["tag"]}"#,
+        example = r#"{"chunk_id":"uuid","front":"pergunta","choices":["alternativa A","alternativa B","alternativa C","alternativa D"],"correct_choice_index":0,"explanation":"por que a alternativa correta esta certa","tags":["tag"]}"#,
         chunk_lines = chunk_lines
     )
 }
@@ -362,6 +364,30 @@ struct RawFlashcard {
     front: Option<String>,
     #[serde(default, alias = "answer", alias = "resposta")]
     back: Option<String>,
+    #[serde(
+        default,
+        alias = "options",
+        alias = "alternatives",
+        alias = "alternativas"
+    )]
+    choices: Vec<String>,
+    #[serde(
+        default,
+        alias = "correctIndex",
+        alias = "correctAnswerIndex",
+        alias = "correct_answer_index",
+        alias = "indice_correto"
+    )]
+    correct_choice_index: Option<Value>,
+    #[serde(
+        default,
+        alias = "correctAnswer",
+        alias = "correct_answer",
+        alias = "resposta_correta"
+    )]
+    correct_answer: Option<String>,
+    #[serde(default, alias = "explicacao", alias = "justificativa")]
+    explanation: Option<String>,
     #[serde(default)]
     tags: Vec<String>,
 }
@@ -371,6 +397,9 @@ struct ParsedFlashcard {
     front: String,
     back: String,
     tags: Vec<String>,
+    choices: Vec<String>,
+    correct_choice_index: Option<usize>,
+    explanation: Option<String>,
 }
 
 fn parse_flashcards_response(
@@ -395,16 +424,35 @@ fn parse_flashcards_response(
             })
             .ok_or_else(|| invalid_flashcards_reason("chunk_id nao corresponde a nenhum chunk"))?;
 
-        cards.push(
-            StudyCard::new(
-                chunk.book_id,
-                chunk.id,
-                raw_card.front,
-                raw_card.back,
-                raw_card.tags,
-            )
-            .map_err(|error| invalid_flashcards_reason(&error.to_string()))?,
-        );
+        if raw_card.choices.is_empty() {
+            cards.push(
+                StudyCard::new(
+                    chunk.book_id,
+                    chunk.id,
+                    raw_card.front,
+                    raw_card.back,
+                    raw_card.tags,
+                )
+                .map_err(|error| invalid_flashcards_reason(&error.to_string()))?,
+            );
+        } else {
+            let correct_choice_index = raw_card
+                .correct_choice_index
+                .ok_or_else(|| invalid_flashcards_reason("campo correct_choice_index ausente"))?;
+
+            cards.push(
+                StudyCard::new_multiple_choice(
+                    chunk.book_id,
+                    chunk.id,
+                    raw_card.front,
+                    raw_card.choices,
+                    correct_choice_index,
+                    raw_card.explanation,
+                    raw_card.tags,
+                )
+                .map_err(|error| invalid_flashcards_reason(&error.to_string()))?,
+            );
+        }
     }
 
     Ok(cards)
@@ -451,16 +499,88 @@ fn parsed_flashcard_from_value(value: &Value) -> Result<ParsedFlashcard, ModelAd
     let front = raw_card
         .front
         .ok_or_else(|| invalid_flashcards_reason("campo front/question/pergunta ausente"))?;
-    let back = raw_card
-        .back
-        .ok_or_else(|| invalid_flashcards_reason("campo back/answer/resposta ausente"))?;
+    let (back, correct_choice_index) = if raw_card.choices.is_empty() {
+        (
+            raw_card
+                .back
+                .ok_or_else(|| invalid_flashcards_reason("campo back/answer/resposta ausente"))?,
+            None,
+        )
+    } else {
+        let correct_choice_index = parse_correct_choice_index(
+            raw_card.correct_choice_index.as_ref(),
+            raw_card.correct_answer.as_deref(),
+            &raw_card.choices,
+        )?;
+        let back = raw_card
+            .back
+            .or(raw_card.correct_answer)
+            .unwrap_or_else(|| raw_card.choices[correct_choice_index].clone());
+
+        (back, Some(correct_choice_index))
+    };
 
     Ok(ParsedFlashcard {
         chunk_id: raw_card.chunk_id,
         front,
         back,
         tags: raw_card.tags,
+        choices: raw_card.choices,
+        correct_choice_index,
+        explanation: raw_card.explanation,
     })
+}
+
+fn parse_correct_choice_index(
+    raw_index: Option<&Value>,
+    correct_answer: Option<&str>,
+    choices: &[String],
+) -> Result<usize, ModelAdapterError> {
+    if let Some(correct_answer) = correct_answer {
+        if let Some(index) = choices
+            .iter()
+            .position(|choice| choice.trim().eq_ignore_ascii_case(correct_answer.trim()))
+        {
+            return Ok(index);
+        }
+    }
+
+    let raw_index =
+        raw_index.ok_or_else(|| invalid_flashcards_reason("campo correct_choice_index ausente"))?;
+
+    if let Some(index) = raw_index.as_u64() {
+        return usize::try_from(index)
+            .map_err(|_| invalid_flashcards_reason("correct_choice_index invalido"));
+    }
+
+    if let Some(index) = raw_index.as_i64() {
+        return usize::try_from(index)
+            .map_err(|_| invalid_flashcards_reason("correct_choice_index invalido"));
+    }
+
+    if let Some(index) = raw_index.as_str().and_then(parse_correct_choice_index_text) {
+        return Ok(index);
+    }
+
+    Err(invalid_flashcards_reason(
+        "campo correct_choice_index precisa ser numero ou letra",
+    ))
+}
+
+fn parse_correct_choice_index_text(value: &str) -> Option<usize> {
+    let value = value.trim();
+
+    if value.len() == 1 {
+        match value.to_ascii_uppercase().as_str() {
+            "A" => return Some(0),
+            "B" => return Some(1),
+            "C" => return Some(2),
+            "D" => return Some(3),
+            _ => {}
+        }
+    }
+
+    value.parse::<usize>().ok()
 }
 
 fn invalid_flashcards_reason(reason: &str) -> ModelAdapterError {
@@ -518,7 +638,7 @@ mod tests {
     };
     use crate::{
         app::{FlashcardConfig, ModelAdapter, ModelAdapterError},
-        domain::{DocumentChunk, Language},
+        domain::{DocumentChunk, Language, StudyCardType},
     };
 
     struct FakeOllamaClient {
@@ -614,6 +734,7 @@ mod tests {
         assert_eq!(cards.len(), 1);
         assert_eq!(cards[0].book_id, chunk.book_id);
         assert_eq!(cards[0].chunk_id, chunk.id);
+        assert_eq!(cards[0].card_type, StudyCardType::Basic);
         assert_eq!(cards[0].front, "Pergunta");
         assert_eq!(cards[0].back, "Resposta");
         assert_eq!(cards[0].tags, vec!["ollama"]);
@@ -625,8 +746,54 @@ mod tests {
                 .options
                 .as_ref()
                 .map(|options| options.num_predict),
-            Some(1024)
+            Some(1536)
         );
+        assert!(adapter.client.requests.borrow()[0]
+            .prompt
+            .contains("multipla escolha"));
+    }
+
+    #[test]
+    fn creates_multiple_choice_flashcards_from_ollama_json_response() {
+        let chunk = chunk();
+        let response = format!(
+            r#"[{{"chunk_id":"{}","front":"Qual protocolo entrega dados de forma confiavel?","choices":["TCP","UDP","ARP","ICMP"],"correct_choice_index":0,"explanation":"TCP confirma entrega e reenvia dados perdidos.","tags":["redes"]}}]"#,
+            chunk.id
+        );
+        let client = FakeOllamaClient::available(response);
+        let adapter = OllamaModelAdapter::new(
+            client,
+            OllamaModelConfig {
+                model: "llama3.2".to_owned(),
+            },
+        );
+
+        let cards = adapter
+            .create_flashcards(
+                &[chunk.clone()],
+                &FlashcardConfig {
+                    cards_per_chunk: 1,
+                    language: Language::Pt,
+                },
+            )
+            .unwrap();
+
+        assert_eq!(cards.len(), 1);
+        assert_eq!(cards[0].book_id, chunk.book_id);
+        assert_eq!(cards[0].chunk_id, chunk.id);
+        assert_eq!(cards[0].card_type, StudyCardType::MultipleChoice);
+        assert_eq!(
+            cards[0].front,
+            "Qual protocolo entrega dados de forma confiavel?"
+        );
+        assert_eq!(cards[0].back, "TCP");
+        assert_eq!(cards[0].choices, vec!["TCP", "UDP", "ARP", "ICMP"]);
+        assert_eq!(cards[0].correct_choice_index, Some(0));
+        assert_eq!(
+            cards[0].explanation.as_deref(),
+            Some("TCP confirma entrega e reenvia dados perdidos.")
+        );
+        assert_eq!(cards[0].tags, vec!["redes"]);
     }
 
     #[test]

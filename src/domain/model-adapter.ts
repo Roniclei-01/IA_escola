@@ -16,6 +16,10 @@ export interface StudyCard {
   front: string;
   back: string;
   tags: string[];
+  cardType?: "basic" | "multiple_choice";
+  choices?: string[];
+  correctChoiceIndex?: number | null;
+  explanation?: string | null;
 }
 
 export interface FlashcardConfig {

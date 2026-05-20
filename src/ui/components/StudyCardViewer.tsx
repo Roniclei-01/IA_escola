@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { StudyCard } from "../../domain/model-adapter";
 
 export type CardReview = "again" | "hard" | "easy";
@@ -19,6 +20,10 @@ interface StudyCardViewerProps {
     again: string;
     hard: string;
     easy: string;
+    multipleChoiceOptions: string;
+    correctChoice: string;
+    selectedChoice: string;
+    explanation: string;
   };
   onRevealAnswer: () => void;
   onPreviousCard: () => void;
@@ -39,6 +44,24 @@ export function StudyCardViewer({
   onNextCard,
   onReviewCard
 }: StudyCardViewerProps) {
+  const [selectedChoiceIndex, setSelectedChoiceIndex] = useState<number | null>(null);
+  const choices = card.choices ?? [];
+  const correctChoiceIndex = card.correctChoiceIndex ?? null;
+  const isMultipleChoice =
+    card.cardType === "multiple_choice" && choices.length > 0 && correctChoiceIndex !== null;
+  const correctChoice =
+    isMultipleChoice && correctChoiceIndex >= 0 && correctChoiceIndex < choices.length
+      ? choices[correctChoiceIndex]
+      : card.back;
+  const selectedChoice =
+    selectedChoiceIndex !== null && selectedChoiceIndex >= 0 && selectedChoiceIndex < choices.length
+      ? choices[selectedChoiceIndex]
+      : null;
+
+  useEffect(() => {
+    setSelectedChoiceIndex(null);
+  }, [card.id]);
+
   return (
     <article className="card-preview" aria-labelledby="card-preview-title">
       <div className="study-header">
@@ -48,7 +71,58 @@ export function StudyCardViewer({
       <p className="review-summary">{labels.reviewSummary}</p>
       {reviewSchedule ? <p className="review-schedule">{reviewSchedule}</p> : null}
       <p className="card-front">{card.front}</p>
-      {isAnswerVisible ? <p className="card-back">{card.back}</p> : null}
+      {isMultipleChoice ? (
+        <div className="multiple-choice-options" role="group" aria-label={labels.multipleChoiceOptions}>
+          {choices.map((choice, index) => {
+            const isSelected = selectedChoiceIndex === index;
+            const isCorrect = correctChoiceIndex === index;
+            const answerState = isAnswerVisible
+              ? isCorrect
+                ? "correct"
+                : isSelected
+                  ? "incorrect"
+                  : "neutral"
+              : "pending";
+
+            return (
+              <button
+                key={`${card.id}-${index}`}
+                type="button"
+                className="multiple-choice-option"
+                data-answer-state={answerState}
+                aria-pressed={isSelected}
+                onClick={() => setSelectedChoiceIndex(index)}
+              >
+                <span className="multiple-choice-option-marker">
+                  {String.fromCharCode(65 + index)}
+                </span>
+                <span>{choice}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+      {isAnswerVisible ? (
+        isMultipleChoice ? (
+          <div className="card-back">
+            <p>
+              <strong>{labels.correctChoice}:</strong> {correctChoice}
+            </p>
+            {selectedChoice ? (
+              <p>
+                <strong>{labels.selectedChoice}:</strong> {selectedChoice}
+              </p>
+            ) : null}
+            {card.explanation ? (
+              <p>
+                <strong>{labels.explanation}:</strong> {card.explanation}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="card-back">{card.back}</p>
+        )
+      ) : null}
       <div className="review-actions" aria-label={labels.reviewSummary}>
         <button
           type="button"

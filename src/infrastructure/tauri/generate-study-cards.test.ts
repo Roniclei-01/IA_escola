@@ -41,7 +41,11 @@ describe("generateStudyCardsWithOllama", () => {
           chunk_id: "chunk-1",
           front: "Pergunta",
           back: "Resposta",
-          tags: ["ollama"]
+          tags: ["ollama"],
+          card_type: "multiple_choice",
+          choices: ["Resposta", "Distrator A", "Distrator B", "Distrator C"],
+          correct_choice_index: 0,
+          explanation: "Resposta e a alternativa correta."
         }
       ]
     });
@@ -62,7 +66,11 @@ describe("generateStudyCardsWithOllama", () => {
         chunkId: "chunk-1",
         front: "Pergunta",
         back: "Resposta",
-        tags: ["ollama"]
+        tags: ["ollama"],
+        cardType: "multiple_choice",
+        choices: ["Resposta", "Distrator A", "Distrator B", "Distrator C"],
+        correctChoiceIndex: 0,
+        explanation: "Resposta e a alternativa correta."
       }
     ]);
   });

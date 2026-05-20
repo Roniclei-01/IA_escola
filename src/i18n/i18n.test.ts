@@ -251,6 +251,16 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "study.exportFileError")).toBe(
       "Nao foi possivel exportar o arquivo."
     );
+    expect(i18n.getResource("pt", "translation", "study.multipleChoiceOptions")).toBe(
+      "Alternativas"
+    );
+    expect(i18n.getResource("pt", "translation", "study.correctChoice")).toBe(
+      "Resposta correta"
+    );
+    expect(i18n.getResource("pt", "translation", "study.selectedChoice")).toBe(
+      "Sua escolha"
+    );
+    expect(i18n.getResource("pt", "translation", "study.explanation")).toBe("Explicacao");
     expect(i18n.getResource("pt", "translation", "study.meditationTitle")).toBe("Anotacao");
     expect(i18n.getResource("pt", "translation", "study.addMeditation")).toBe(
       "Adicionar anotacao"

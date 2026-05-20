@@ -6,8 +6,8 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::domain::{
-    Document, DocumentChunk, DocumentSourceType, Language, StudyCard, StudyReview,
-    StudyReviewRating, StudySession, StudySessionSummary,
+    Document, DocumentChunk, DocumentSourceType, Language, StudyCard, StudyCardError,
+    StudyCardType, StudyReview, StudyReviewRating, StudySession, StudySessionSummary,
 };
 
 #[derive(Debug, Error)]
@@ -94,6 +94,14 @@ pub enum StorageError {
     InvalidStudyCardChunkId(#[source] uuid::Error),
     #[error("stored study card has invalid tags")]
     InvalidStudyCardTags(#[source] serde_json::Error),
+    #[error("stored study card has invalid choices")]
+    InvalidStudyCardChoices(#[source] serde_json::Error),
+    #[error("stored study card has invalid type")]
+    InvalidStudyCardType(String),
+    #[error("stored study card correct choice index is invalid")]
+    InvalidStudyCardCorrectChoiceIndex(i64),
+    #[error("stored study card is invalid")]
+    InvalidStoredStudyCard(#[source] StudyCardError),
     #[error("stored study review has invalid id")]
     InvalidStudyReviewId(#[source] uuid::Error),
     #[error("stored study review has invalid card id")]
@@ -570,6 +578,11 @@ impl SQLiteStorage {
     }
 
     pub fn save_study_cards(&mut self, cards: &[StudyCard]) -> Result<(), StorageError> {
+        for card in cards {
+            card.validate()
+                .map_err(StorageError::InvalidStoredStudyCard)?;
+        }
+
         let transaction = self
             .connection
             .transaction()
@@ -592,12 +605,15 @@ impl SQLiteStorage {
         for card in cards {
             let tags =
                 serde_json::to_string(&card.tags).map_err(StorageError::InvalidStudyCardTags)?;
+            let choices = serde_json::to_string(&card.choices)
+                .map_err(StorageError::InvalidStudyCardChoices)?;
+            let correct_choice_index = card.correct_choice_index.map(|index| index as i64);
 
             transaction
                 .execute(
                     "INSERT OR REPLACE INTO study_cards
-                        (id, book_id, chunk_id, front, back, tags)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                        (id, book_id, chunk_id, front, back, tags, card_type, choices, correct_choice_index, explanation)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                     params![
                         card.id.to_string(),
                         card.book_id.to_string(),
@@ -605,6 +621,10 @@ impl SQLiteStorage {
                         card.front,
                         card.back,
                         tags,
+                        study_card_type_to_code(&card.card_type),
+                        choices,
+                        correct_choice_index,
+                        card.explanation.as_deref(),
                     ],
                 )
                 .map_err(StorageError::SaveStudyCardsFailed)?;
@@ -629,7 +649,11 @@ impl SQLiteStorage {
                         study_cards.chunk_id,
                         study_cards.front,
                         study_cards.back,
-                        study_cards.tags
+                        study_cards.tags,
+                        study_cards.card_type,
+                        study_cards.choices,
+                        study_cards.correct_choice_index,
+                        study_cards.explanation
                  FROM study_cards
                  INNER JOIN document_chunks ON document_chunks.id = study_cards.chunk_id
                  WHERE document_chunks.document_id = ?1
@@ -646,6 +670,10 @@ impl SQLiteStorage {
                     front: row.get(3)?,
                     back: row.get(4)?,
                     tags: row.get(5)?,
+                    card_type: row.get(6)?,
+                    choices: row.get(7)?,
+                    correct_choice_index: row.get(8)?,
+                    explanation: row.get(9)?,
                 })
             })
             .map_err(StorageError::ListStudyCardsFailed)?;
@@ -1208,6 +1236,10 @@ impl SQLiteStorage {
                     front TEXT NOT NULL,
                     back TEXT NOT NULL,
                     tags TEXT NOT NULL,
+                    card_type TEXT NOT NULL DEFAULT 'basic',
+                    choices TEXT NOT NULL DEFAULT '[]',
+                    correct_choice_index INTEGER,
+                    explanation TEXT,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -1246,6 +1278,7 @@ impl SQLiteStorage {
             .map_err(StorageError::MigrationFailed)?;
 
         self.ensure_documents_metadata_columns()?;
+        self.ensure_study_card_columns()?;
         self.ensure_study_review_columns()
     }
 
@@ -1305,6 +1338,43 @@ impl SQLiteStorage {
         Ok(())
     }
 
+    fn ensure_study_card_columns(&self) -> Result<(), StorageError> {
+        if !self.has_column("study_cards", "card_type")? {
+            self.connection
+                .execute(
+                    "ALTER TABLE study_cards ADD COLUMN card_type TEXT NOT NULL DEFAULT 'basic'",
+                    [],
+                )
+                .map_err(StorageError::MigrationFailed)?;
+        }
+
+        if !self.has_column("study_cards", "choices")? {
+            self.connection
+                .execute(
+                    "ALTER TABLE study_cards ADD COLUMN choices TEXT NOT NULL DEFAULT '[]'",
+                    [],
+                )
+                .map_err(StorageError::MigrationFailed)?;
+        }
+
+        if !self.has_column("study_cards", "correct_choice_index")? {
+            self.connection
+                .execute(
+                    "ALTER TABLE study_cards ADD COLUMN correct_choice_index INTEGER",
+                    [],
+                )
+                .map_err(StorageError::MigrationFailed)?;
+        }
+
+        if !self.has_column("study_cards", "explanation")? {
+            self.connection
+                .execute("ALTER TABLE study_cards ADD COLUMN explanation TEXT", [])
+                .map_err(StorageError::MigrationFailed)?;
+        }
+
+        Ok(())
+    }
+
     fn has_column(&self, table: &str, column: &str) -> Result<bool, StorageError> {
         let mut statement = self
             .connection
@@ -1357,6 +1427,10 @@ struct RawStudyCard {
     front: String,
     back: String,
     tags: String,
+    card_type: String,
+    choices: String,
+    correct_choice_index: Option<i64>,
+    explanation: Option<String>,
 }
 
 struct RawStudyReview {
@@ -1444,7 +1518,14 @@ impl TryFrom<RawStudyCard> for StudyCard {
     type Error = StorageError;
 
     fn try_from(raw: RawStudyCard) -> Result<Self, Self::Error> {
-        Ok(Self {
+        let correct_choice_index = raw
+            .correct_choice_index
+            .map(|index| {
+                usize::try_from(index)
+                    .map_err(|_| StorageError::InvalidStudyCardCorrectChoiceIndex(index))
+            })
+            .transpose()?;
+        let card = Self {
             id: Uuid::parse_str(&raw.id).map_err(StorageError::InvalidStudyCardId)?,
             book_id: Uuid::parse_str(&raw.book_id).map_err(StorageError::InvalidBookId)?,
             chunk_id: Uuid::parse_str(&raw.chunk_id)
@@ -1452,7 +1533,17 @@ impl TryFrom<RawStudyCard> for StudyCard {
             front: raw.front,
             back: raw.back,
             tags: serde_json::from_str(&raw.tags).map_err(StorageError::InvalidStudyCardTags)?,
-        })
+            card_type: study_card_type_from_code(&raw.card_type)?,
+            choices: serde_json::from_str(&raw.choices)
+                .map_err(StorageError::InvalidStudyCardChoices)?,
+            correct_choice_index,
+            explanation: raw.explanation,
+        };
+
+        card.validate()
+            .map_err(StorageError::InvalidStoredStudyCard)?;
+
+        Ok(card)
     }
 }
 
@@ -1589,6 +1680,21 @@ fn source_type_from_code(code: &str) -> Result<DocumentSourceType, StorageError>
     }
 }
 
+fn study_card_type_to_code(card_type: &StudyCardType) -> &'static str {
+    match card_type {
+        StudyCardType::Basic => "basic",
+        StudyCardType::MultipleChoice => "multiple_choice",
+    }
+}
+
+fn study_card_type_from_code(code: &str) -> Result<StudyCardType, StorageError> {
+    match code {
+        "basic" => Ok(StudyCardType::Basic),
+        "multiple_choice" => Ok(StudyCardType::MultipleChoice),
+        value => Err(StorageError::InvalidStudyCardType(value.to_owned())),
+    }
+}
+
 fn rating_to_code(rating: &StudyReviewRating) -> &'static str {
     match rating {
         StudyReviewRating::Again => "again",
@@ -1638,8 +1744,8 @@ mod tests {
 
     use super::{DocumentStudyMetadataRecord, SQLiteStorage};
     use crate::domain::{
-        Document, DocumentChunk, DocumentSourceType, Language, StudyCard, StudyReview,
-        StudyReviewRating, StudySession, StudySessionSummary,
+        Document, DocumentChunk, DocumentSourceType, Language, StudyCard, StudyCardType,
+        StudyReview, StudyReviewRating, StudySession, StudySessionSummary,
     };
 
     #[test]
@@ -2146,6 +2252,43 @@ mod tests {
     }
 
     #[test]
+    fn saves_and_lists_multiple_choice_study_cards_by_document() {
+        let mut storage = SQLiteStorage::open_in_memory().unwrap();
+        let book_id = Uuid::new_v4();
+        let document_id = Uuid::new_v4();
+        let chunk = DocumentChunk::new(book_id, document_id, 1, "chunk").unwrap();
+        let card = StudyCard::new_multiple_choice(
+            book_id,
+            chunk.id,
+            "Qual opcao define TCP?",
+            vec![
+                "Protocolo orientado a conexao".to_owned(),
+                "Formato de imagem".to_owned(),
+                "Sistema de arquivos".to_owned(),
+                "Linguagem de consulta".to_owned(),
+            ],
+            0,
+            Some("TCP estabelece conexao e entrega confiavel.".to_owned()),
+            vec!["redes".to_owned()],
+        )
+        .unwrap();
+
+        storage.save_chunks(&[chunk]).unwrap();
+        storage.save_study_cards(&[card.clone()]).unwrap();
+
+        let cards = storage.list_study_cards_by_document(document_id).unwrap();
+
+        assert_eq!(cards, vec![card.clone()]);
+        assert_eq!(cards[0].card_type, StudyCardType::MultipleChoice);
+        assert_eq!(cards[0].choices.len(), 4);
+        assert_eq!(cards[0].correct_choice_index, Some(0));
+        assert_eq!(
+            cards[0].explanation.as_deref(),
+            Some("TCP estabelece conexao e entrega confiavel.")
+        );
+    }
+
+    #[test]
     fn replaces_study_card_set_for_chunk() {
         let mut storage = SQLiteStorage::open_in_memory().unwrap();
         let book_id = Uuid::new_v4();
@@ -2360,6 +2503,12 @@ mod tests {
             .has_column("study_reviews", "next_review_at")
             .unwrap());
         assert!(storage.has_column("study_reviews", "session_id").unwrap());
+        assert!(storage.has_column("study_cards", "card_type").unwrap());
+        assert!(storage.has_column("study_cards", "choices").unwrap());
+        assert!(storage
+            .has_column("study_cards", "correct_choice_index")
+            .unwrap());
+        assert!(storage.has_column("study_cards", "explanation").unwrap());
     }
 
     #[test]

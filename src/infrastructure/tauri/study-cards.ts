@@ -8,6 +8,10 @@ export interface PersistedStudyCard {
   front: string;
   back: string;
   tags: string[];
+  card_type?: "basic" | "multiple_choice";
+  choices?: string[];
+  correct_choice_index?: number | null;
+  explanation?: string | null;
 }
 
 export interface SaveStudyCardsResponse {
@@ -24,7 +28,7 @@ export interface DeleteStudyCardsResponse {
 }
 
 export function toPersistedStudyCard(card: StudyCard): PersistedStudyCard {
-  return {
+  const persistedCard: PersistedStudyCard = {
     id: card.id,
     book_id: card.bookId,
     chunk_id: card.chunkId,
@@ -32,10 +36,28 @@ export function toPersistedStudyCard(card: StudyCard): PersistedStudyCard {
     back: card.back,
     tags: card.tags
   };
+
+  if (card.cardType) {
+    persistedCard.card_type = card.cardType;
+  }
+
+  if (card.choices) {
+    persistedCard.choices = card.choices;
+  }
+
+  if (card.correctChoiceIndex !== undefined) {
+    persistedCard.correct_choice_index = card.correctChoiceIndex;
+  }
+
+  if (card.explanation !== undefined) {
+    persistedCard.explanation = card.explanation;
+  }
+
+  return persistedCard;
 }
 
 export function toStudyCard(card: PersistedStudyCard): StudyCard {
-  return {
+  const studyCard: StudyCard = {
     id: card.id,
     bookId: card.book_id,
     chunkId: card.chunk_id,
@@ -43,6 +65,24 @@ export function toStudyCard(card: PersistedStudyCard): StudyCard {
     back: card.back,
     tags: card.tags
   };
+
+  if (card.card_type) {
+    studyCard.cardType = card.card_type;
+  }
+
+  if (card.choices) {
+    studyCard.choices = card.choices;
+  }
+
+  if (card.correct_choice_index !== undefined) {
+    studyCard.correctChoiceIndex = card.correct_choice_index;
+  }
+
+  if (card.explanation !== undefined) {
+    studyCard.explanation = card.explanation;
+  }
+
+  return studyCard;
 }
 
 export async function saveStudyCards(cards: StudyCard[]): Promise<StudyCard[]> {

@@ -1372,6 +1372,44 @@ function toAnkiGuid(card: StudyCard): string {
   return toAnkiTag(`estudo_ia_local_${card.id}`);
 }
 
+function isMultipleChoiceCard(card: StudyCard): boolean {
+  return (
+    card.cardType === "multiple_choice" &&
+    Array.isArray(card.choices) &&
+    card.choices.length > 0 &&
+    typeof card.correctChoiceIndex === "number" &&
+    card.correctChoiceIndex >= 0 &&
+    card.correctChoiceIndex < card.choices.length
+  );
+}
+
+function formatMultipleChoiceQuestion(card: StudyCard): string {
+  if (!isMultipleChoiceCard(card)) {
+    return card.front;
+  }
+
+  const choices = card.choices ?? [];
+  const formattedChoices = choices
+    .map((choice, index) => `${String.fromCharCode(65 + index)}) ${choice}`)
+    .join(" | ");
+
+  return `${card.front} ${formattedChoices}`;
+}
+
+function formatMultipleChoiceAnswer(card: StudyCard): string {
+  if (!isMultipleChoiceCard(card)) {
+    return card.back;
+  }
+
+  const choices = card.choices ?? [];
+  const correctChoice = choices[card.correctChoiceIndex ?? 0] ?? card.back;
+  const explanation = card.explanation?.trim();
+
+  return explanation
+    ? `Resposta correta: ${correctChoice}. Explicacao: ${explanation}`
+    : `Resposta correta: ${correctChoice}`;
+}
+
 function buildAnkiTsv(cards: StudyCard[], document: ImportTextBookResponse): string {
   const documentTag = toAnkiTag(`document_${document.document_id}`);
   const sourceTypeTag = toAnkiTag(`source_${document.source_type ?? "txt"}`);
@@ -1385,8 +1423,8 @@ function buildAnkiTsv(cards: StudyCard[], document: ImportTextBookResponse): str
   const rows = cards.map((card) =>
     [
       toAnkiGuid(card),
-      toAnkiField(card.front),
-      toAnkiField(card.back),
+      toAnkiField(formatMultipleChoiceQuestion(card)),
+      toAnkiField(formatMultipleChoiceAnswer(card)),
       toAnkiTags(["estudo_ia_local", documentTag, sourceTypeTag, ...card.tags])
     ].join("\t")
   );
@@ -5533,7 +5571,11 @@ export function App({
                   nextCard: t("study.nextCard"),
                   again: t("study.again"),
                   hard: t("study.hard"),
-                  easy: t("study.easy")
+                  easy: t("study.easy"),
+                  multipleChoiceOptions: t("study.multipleChoiceOptions"),
+                  correctChoice: t("study.correctChoice"),
+                  selectedChoice: t("study.selectedChoice"),
+                  explanation: t("study.explanation")
                 }}
                 onRevealAnswer={() => setIsAnswerVisible(true)}
                 onPreviousCard={() => {

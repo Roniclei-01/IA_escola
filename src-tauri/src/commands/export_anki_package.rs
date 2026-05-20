@@ -16,6 +16,14 @@ pub struct ExportAnkiPackageCard {
     pub front: String,
     pub back: String,
     pub tags: Vec<String>,
+    #[serde(default)]
+    pub card_type: Option<String>,
+    #[serde(default)]
+    pub choices: Vec<String>,
+    #[serde(default)]
+    pub correct_choice_index: Option<usize>,
+    #[serde(default)]
+    pub explanation: Option<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
@@ -52,6 +60,16 @@ pub fn export_anki_package_to_path(
     for card in &request.cards {
         if card.front.trim().is_empty() || card.back.trim().is_empty() {
             return Err("Todos os cards precisam ter frente e verso.".to_owned());
+        }
+
+        if is_multiple_choice_card(card)
+            && (card.choices.len() != 4
+                || card
+                    .correct_choice_index
+                    .map(|index| index >= card.choices.len())
+                    .unwrap_or(true))
+        {
+            return Err("Cards de multipla escolha precisam ter quatro alternativas e uma resposta correta.".to_owned());
         }
     }
 
@@ -115,10 +133,11 @@ fn create_anki_collection(
     for (index, card) in cards.iter().enumerate() {
         let note_id = base_id + ((index as i64) * 2);
         let card_id = note_id + 1;
-        let front = to_anki_field_html(&card.front);
-        let back = to_anki_field_html(&card.back);
+        let front = to_anki_field_html(&card_front_for_export(card));
+        let back = to_anki_field_html(&card_back_for_export(card));
         let fields = format!("{front}\x1f{back}");
         let tags = to_anki_tags(&card.tags);
+        let sort_field = card_front_for_export(card);
 
         transaction.execute(
             "insert into notes (id, guid, mid, mod, usn, tags, flds, sfld, csum, flags, data)
@@ -130,8 +149,8 @@ fn create_anki_collection(
                 now_seconds,
                 tags,
                 fields,
-                to_plain_sort_field(&card.front),
-                checksum(&card.front),
+                to_plain_sort_field(&sort_field),
+                checksum(&sort_field),
             ],
         )?;
 
@@ -343,6 +362,50 @@ fn insert_collection_metadata(connection: &Connection, deck_name: &str) -> rusql
 
 fn to_anki_field_html(value: &str) -> String {
     escape_html(value.trim()).replace('\n', "<br>")
+}
+
+fn is_multiple_choice_card(card: &ExportAnkiPackageCard) -> bool {
+    card.card_type.as_deref() == Some("multiple_choice")
+}
+
+fn card_front_for_export(card: &ExportAnkiPackageCard) -> String {
+    if !is_multiple_choice_card(card) {
+        return card.front.clone();
+    }
+
+    let choices = card
+        .choices
+        .iter()
+        .enumerate()
+        .map(|(index, choice)| format!("{}) {}", (b'A' + index as u8) as char, choice))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    format!("{}\n\n{}", card.front, choices)
+}
+
+fn card_back_for_export(card: &ExportAnkiPackageCard) -> String {
+    if !is_multiple_choice_card(card) {
+        return card.back.clone();
+    }
+
+    let correct_choice = card
+        .correct_choice_index
+        .and_then(|index| card.choices.get(index))
+        .map(String::as_str)
+        .unwrap_or(card.back.as_str());
+    let explanation = card
+        .explanation
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+
+    match explanation {
+        Some(explanation) => {
+            format!("Resposta correta: {correct_choice}\n\nExplicacao: {explanation}")
+        }
+        None => format!("Resposta correta: {correct_choice}"),
+    }
 }
 
 fn to_plain_sort_field(value: &str) -> String {
@@ -559,12 +622,20 @@ mod tests {
                     front: "O que e Rust?".to_owned(),
                     back: "Uma linguagem de sistemas.".to_owned(),
                     tags: vec!["programacao".to_owned(), "rust basico".to_owned()],
+                    card_type: None,
+                    choices: Vec::new(),
+                    correct_choice_index: None,
+                    explanation: None,
                 },
                 ExportAnkiPackageCard {
                     id: "card-2".to_owned(),
                     front: "O que e ownership?".to_owned(),
                     back: "Regra de posse de memoria.".to_owned(),
                     tags: vec!["memoria".to_owned()],
+                    card_type: None,
+                    choices: Vec::new(),
+                    correct_choice_index: None,
+                    explanation: None,
                 },
             ],
         })
@@ -609,6 +680,51 @@ mod tests {
         assert!(fields.contains("Uma linguagem de sistemas."));
         assert!(tags.contains("programacao"));
         assert!(tags.contains("rust_basico"));
+    }
+
+    #[test]
+    fn exports_multiple_choice_cards_with_choices_and_explanation() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("deck-multipla-escolha.apkg");
+
+        export_anki_package_to_path(ExportAnkiPackageRequest {
+            file_path: file_path.to_string_lossy().to_string(),
+            deck_name: "Estudo IA Local".to_owned(),
+            cards: vec![ExportAnkiPackageCard {
+                id: "card-mc-1".to_owned(),
+                front: "Qual protocolo confirma entrega de dados?".to_owned(),
+                back: "TCP".to_owned(),
+                tags: vec!["redes".to_owned()],
+                card_type: Some("multiple_choice".to_owned()),
+                choices: vec![
+                    "TCP".to_owned(),
+                    "UDP".to_owned(),
+                    "ARP".to_owned(),
+                    "ICMP".to_owned(),
+                ],
+                correct_choice_index: Some(0),
+                explanation: Some("TCP usa controle de entrega e retransmissao.".to_owned()),
+            }],
+        })
+        .unwrap();
+
+        let package_bytes = fs::read(&file_path).unwrap();
+        let collection_bytes = extract_stored_zip_entry(&package_bytes, "collection.anki2");
+        let collection_path = temp_dir.path().join("collection-mc.anki2");
+        fs::write(&collection_path, collection_bytes).unwrap();
+
+        let connection = Connection::open(collection_path).unwrap();
+        let fields: String = connection
+            .query_row("select flds from notes order by id limit 1", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+
+        assert!(fields.contains("Qual protocolo confirma entrega de dados?"));
+        assert!(fields.contains("A) TCP"));
+        assert!(fields.contains("D) ICMP"));
+        assert!(fields.contains("Resposta correta: TCP"));
+        assert!(fields.contains("TCP usa controle de entrega e retransmissao."));
     }
 
     #[test]

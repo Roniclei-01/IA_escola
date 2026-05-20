@@ -5,8 +5,10 @@ use crate::infrastructure::storage::{SQLiteStorage, StorageError};
 
 const PDF_READER_PAGE_PREFIX: &str = "reader.pdf.page.";
 const PDF_READER_ZOOM_PREFIX: &str = "reader.pdf.zoom.";
+const DOCUMENT_READER_PAGE_PREFIX: &str = "reader.document.page.";
 const DEFAULT_PDF_READER_PAGE: u32 = 1;
 const DEFAULT_PDF_READER_ZOOM: f32 = 1.0;
+const DEFAULT_DOCUMENT_READER_PAGE: u32 = 1;
 const ALLOWED_ZOOM_LEVELS: [f32; 4] = [0.85, 1.0, 1.25, 1.5];
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -14,6 +16,7 @@ pub struct PdfReaderPreference {
     pub document_id: String,
     pub page: u32,
     pub zoom: f32,
+    pub reader_page: u32,
 }
 
 pub fn load_pdf_reader_preference_from_storage(
@@ -23,6 +26,7 @@ pub fn load_pdf_reader_preference_from_storage(
     let document_id = normalize_document_id(&document_id)?;
     let page_key = page_setting_key(&document_id);
     let zoom_key = zoom_setting_key(&document_id);
+    let reader_page_key = reader_page_setting_key(&document_id);
     let page = storage
         .load_setting(&page_key)
         .map_err(format_load_error)?
@@ -35,11 +39,18 @@ pub fn load_pdf_reader_preference_from_storage(
         .and_then(|value| value.parse::<f32>().ok())
         .filter(|zoom| is_allowed_zoom(*zoom))
         .unwrap_or(DEFAULT_PDF_READER_ZOOM);
+    let reader_page = storage
+        .load_setting(&reader_page_key)
+        .map_err(format_load_error)?
+        .and_then(|value| value.parse::<u32>().ok())
+        .filter(|reader_page| *reader_page > 0)
+        .unwrap_or(DEFAULT_DOCUMENT_READER_PAGE);
 
     Ok(PdfReaderPreference {
         document_id,
         page,
         zoom,
+        reader_page,
     })
 }
 
@@ -50,10 +61,22 @@ pub fn save_pdf_reader_preference_with_storage(
     let preference = normalize_preference(preference)?;
 
     storage
-        .save_setting(&page_setting_key(&preference.document_id), &preference.page.to_string())
+        .save_setting(
+            &page_setting_key(&preference.document_id),
+            &preference.page.to_string(),
+        )
         .map_err(format_save_error)?;
     storage
-        .save_setting(&zoom_setting_key(&preference.document_id), &preference.zoom.to_string())
+        .save_setting(
+            &zoom_setting_key(&preference.document_id),
+            &preference.zoom.to_string(),
+        )
+        .map_err(format_save_error)?;
+    storage
+        .save_setting(
+            &reader_page_setting_key(&preference.document_id),
+            &preference.reader_page.to_string(),
+        )
         .map_err(format_save_error)?;
 
     Ok(preference)
@@ -92,10 +115,15 @@ fn normalize_preference(preference: PdfReaderPreference) -> Result<PdfReaderPref
         return Err("Zoom do leitor PDF invalido.".to_owned());
     }
 
+    if preference.reader_page == 0 {
+        return Err("Marcador do leitor invalido.".to_owned());
+    }
+
     Ok(PdfReaderPreference {
         document_id,
         page: preference.page,
         zoom: preference.zoom,
+        reader_page: preference.reader_page,
     })
 }
 
@@ -123,6 +151,10 @@ fn page_setting_key(document_id: &str) -> String {
 
 fn zoom_setting_key(document_id: &str) -> String {
     format!("{PDF_READER_ZOOM_PREFIX}{document_id}")
+}
+
+fn reader_page_setting_key(document_id: &str) -> String {
+    format!("{DOCUMENT_READER_PAGE_PREFIX}{document_id}")
 }
 
 fn format_load_error(_error: StorageError) -> String {
@@ -156,6 +188,7 @@ mod tests {
                 document_id,
                 page: 1,
                 zoom: 1.0,
+                reader_page: 1,
             }
         );
     }
@@ -170,6 +203,7 @@ mod tests {
                 document_id: format!(" {document_id} "),
                 page: 12,
                 zoom: 1.25,
+                reader_page: 4,
             },
             &storage,
         )
@@ -184,6 +218,7 @@ mod tests {
                 document_id,
                 page: 12,
                 zoom: 1.25,
+                reader_page: 4,
             }
         );
     }
@@ -197,6 +232,7 @@ mod tests {
                 document_id: Uuid::new_v4().to_string(),
                 page: 0,
                 zoom: 1.0,
+                reader_page: 1,
             },
             &storage,
         );
@@ -208,10 +244,23 @@ mod tests {
                 document_id: Uuid::new_v4().to_string(),
                 page: 1,
                 zoom: 1.1,
+                reader_page: 1,
             },
             &storage,
         );
 
         assert_eq!(result.unwrap_err(), "Zoom do leitor PDF invalido.");
+
+        let result = save_pdf_reader_preference_with_storage(
+            PdfReaderPreference {
+                document_id: Uuid::new_v4().to_string(),
+                page: 1,
+                zoom: 1.0,
+                reader_page: 0,
+            },
+            &storage,
+        );
+
+        assert_eq!(result.unwrap_err(), "Marcador do leitor invalido.");
     }
 }

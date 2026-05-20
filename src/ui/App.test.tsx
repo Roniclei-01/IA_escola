@@ -97,7 +97,8 @@ const renderDefaultPdfPage = vi.fn().mockResolvedValue({
 const loadDefaultPdfReaderPreference = vi.fn().mockImplementation(async (documentId: string) => ({
   document_id: documentId,
   page: 1,
-  zoom: 1
+  zoom: 1,
+  reader_page: 1
 }));
 const saveDefaultPdfReaderPreference = vi.fn().mockImplementation(async (preference: unknown) => preference);
 
@@ -1996,7 +1997,8 @@ describe("App", () => {
     const loadPdfReaderPreference = vi.fn().mockResolvedValue({
       document_id: "document-pdf-position",
       page: 2,
-      zoom: 1.25
+      zoom: 1.25,
+      reader_page: 1
     });
     const savePdfReaderPreference = vi
       .fn()
@@ -2042,7 +2044,8 @@ describe("App", () => {
       expect(savePdfReaderPreference).toHaveBeenCalledWith({
         document_id: "document-pdf-position",
         page: 3,
-        zoom: 1.25
+        zoom: 1.25,
+        reader_page: 1
       });
     });
   });
@@ -2133,6 +2136,60 @@ describe("App", () => {
     }
 
     expect(readerQueries.getAllByText(textIncludes(finalLine)).length).toBeGreaterThan(0);
+  });
+
+  it("restores and updates the document reader bookmark", async () => {
+    const secondPageLine = "Conteudo retomado pelo marcador.";
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-reader-bookmark",
+      book_id: "book-reader-bookmark",
+      content: `${"A".repeat(1180)}\n\n${secondPageLine}\n\n${"Terceira pagina de leitura. ".repeat(90)}`,
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/bookmark.txt"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const loadPdfReaderPreference = vi.fn().mockResolvedValue({
+      document_id: "document-reader-bookmark",
+      page: 1,
+      zoom: 1,
+      reader_page: 2
+    });
+    const savePdfReaderPreference = vi
+      .fn()
+      .mockImplementation(async (preference: unknown) => preference);
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      loadPdfReaderPreference,
+      savePdfReaderPreference
+    });
+
+    fillImportFilePath("/tmp/bookmark.txt");
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    const readerHeading = await screen.findByRole("heading", { name: "Leitura do documento" });
+    const reader = readerHeading.closest(".document-reader");
+    expect(reader).not.toBeNull();
+    const readerQueries = within(reader as HTMLElement);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Marcador: pagina 2 de/)).toBeInTheDocument();
+    });
+    fireEvent.click(readerQueries.getByRole("button", { name: "Mostrar idioma original" }));
+    expect(screen.getByText(secondPageLine)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Proxima pagina" }));
+
+    await waitFor(() => {
+      expect(savePdfReaderPreference).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document_id: "document-reader-bookmark",
+          reader_page: 3
+        })
+      );
+    });
   });
 
   it("keeps translation available when the imported document language metadata is wrong", async () => {

@@ -156,12 +156,11 @@ fn extract_pdf_text(
     Ok(extracted_text)
 }
 
-fn extract_pdf_text_with_pdftotext(
-    path: &Path,
-    options: &TextBookParserOptions,
-) -> Option<String> {
-    let output_path =
-        std::env::temp_dir().join(format!("estudo-ia-local-pdftotext-{}.txt", uuid::Uuid::new_v4()));
+fn extract_pdf_text_with_pdftotext(path: &Path, options: &TextBookParserOptions) -> Option<String> {
+    let output_path = std::env::temp_dir().join(format!(
+        "estudo-ia-local-pdftotext-{}.txt",
+        uuid::Uuid::new_v4()
+    ));
     let mut command = Command::new(&options.pdf_text_extractor_path);
     command
         .arg("-layout")

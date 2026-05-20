@@ -211,6 +211,7 @@ Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 - [x] Fechar e abrir o app ou selecionar o documento novamente.
 - [x] Confirmar que a traducao salva reaparece sem precisar gerar novamente.
 - [x] Confirmar que a importacao nao gera traducao automaticamente.
+- [ ] Confirmar que o marcador de pagina retoma a leitura no ponto onde parou.
 
 ## 11. Funcionalidades futuras registradas
 

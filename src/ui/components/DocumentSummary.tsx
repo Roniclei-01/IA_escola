@@ -3,7 +3,7 @@ import type { ImportTextBookResponse } from "../../infrastructure/tauri/import-t
 import type { RenderPdfPageResponse } from "../../infrastructure/tauri/render-pdf-page";
 
 const COLLAPSED_PREVIEW_LENGTH = 900;
-const READER_PAGE_LENGTH = 2_200;
+const READER_PAGE_LENGTH = 1_200;
 
 export interface ReaderPageTranslationRequest {
   pageIndex: number;
@@ -48,6 +48,7 @@ interface DocumentSummaryProps {
     previousReaderPage: string;
     nextReaderPage: string;
     readerPageStatus: (currentPage: number, totalPages: number) => string;
+    readerBookmarkStatus: (currentPage: number, totalPages: number) => string;
     translatedReaderPages: (pages: string) => string;
     pdfReaderTitle: string;
     previousPdfPage: string;
@@ -66,6 +67,7 @@ interface DocumentSummaryProps {
   translatedReaderPageIndexes: number[];
   renderedPdfPage: RenderPdfPageResponse | null;
   isRenderingPdfPage?: boolean;
+  readerPage: number;
   pdfReaderPage: number;
   pdfReaderZoom: number;
   isGeneratingCards?: boolean;
@@ -93,6 +95,7 @@ export function DocumentSummary({
   translatedReaderPageIndexes,
   renderedPdfPage,
   isRenderingPdfPage = false,
+  readerPage,
   pdfReaderPage,
   pdfReaderZoom,
   isGeneratingCards = false,
@@ -135,9 +138,14 @@ export function DocumentSummary({
   );
 
   useEffect(() => {
-    setReaderPageIndex(0);
+    const nextReaderPageIndex = Math.min(Math.max(readerPage - 1, 0), totalReaderPages - 1);
+
+    setReaderPageIndex(nextReaderPageIndex);
+  }, [document.document_id, readerPage, totalReaderPages]);
+
+  useEffect(() => {
     setIsOriginalPaneOpen(false);
-  }, [document.document_id, readerTargetLanguage]);
+  }, [document.document_id]);
 
   function goToPreviousReaderPage() {
     const nextPage = Math.max(currentReaderPage - 1, 0);
@@ -305,6 +313,7 @@ export function DocumentSummary({
             >
               {labels.nextReaderPage}
             </button>
+            <em>{labels.readerBookmarkStatus(currentReaderPage + 1, totalReaderPages)}</em>
           </div>
         ) : null}
         {!isSameLanguage && translatedReaderPageLabels.length > 0 ? (

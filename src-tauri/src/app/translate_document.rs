@@ -5,7 +5,7 @@ use crate::{
     domain::Language,
 };
 
-const TRANSLATION_CHUNK_TARGET_CHARS: usize = 2_800;
+const TRANSLATION_CHUNK_TARGET_CHARS: usize = 900;
 
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum TranslateDocumentError {
@@ -63,8 +63,9 @@ fn build_translation_prompt(
     total_chunks: usize,
 ) -> String {
     format!(
-        "Traduza o trecho {chunk_number} de {total_chunks} abaixo de {source_language} para {target_language}. \
-Preserve quebras de linha, listas, termos tecnicos e sentido original. \
+        "Traduza integralmente o trecho {chunk_number} de {total_chunks} abaixo de {source_language} para {target_language}. \
+Nao resuma, nao omita linhas, tabelas, URLs, numeros ou termos tecnicos. \
+Preserve quebras de linha, listas, ordem e sentido original. \
 Retorne somente o texto traduzido deste trecho, sem comentarios, markdown adicional ou explicacoes.\n\nTexto:\n{content}",
         chunk_number = chunk_number,
         total_chunks = total_chunks,

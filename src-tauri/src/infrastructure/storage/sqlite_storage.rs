@@ -947,7 +947,10 @@ impl SQLiteStorage {
         let serialized_notes =
             serde_json::to_string(notes).map_err(StorageError::InvalidMeditationNotes)?;
 
-        self.save_setting(&meditation_notes_setting_key(document_id), &serialized_notes)
+        self.save_setting(
+            &meditation_notes_setting_key(document_id),
+            &serialized_notes,
+        )
     }
 
     pub fn load_meditation_notes(

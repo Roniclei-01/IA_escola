@@ -197,6 +197,7 @@ Execute este roteiro no app desktop com `npm run tauri dev` e registre o resulta
 8. Fechar e abrir o app ou selecionar o documento novamente.
 9. Confirmar que a traducao salva reaparece sem chamar a geracao novamente.
 10. Confirmar que a importacao do documento nao gera traducao automaticamente.
+11. Avancar paginas no leitor, fechar e reabrir o documento, e confirmar que o marcador retoma a pagina onde parou.
 
 ### Funcionalidades futuras documentadas
 

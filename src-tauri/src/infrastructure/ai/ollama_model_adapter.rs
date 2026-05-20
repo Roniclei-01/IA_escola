@@ -577,7 +577,13 @@ mod tests {
         assert_eq!(requests[0].model, "llama3.2");
         assert_eq!(requests[0].prompt, "ola");
         assert!(!requests[0].stream);
-        assert_eq!(requests[0].options.as_ref().map(|options| options.num_predict), Some(2048));
+        assert_eq!(
+            requests[0]
+                .options
+                .as_ref()
+                .map(|options| options.num_predict),
+            Some(2048)
+        );
     }
 
     #[test]

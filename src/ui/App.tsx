@@ -1648,9 +1648,10 @@ export function App({
   const [translatedReaderPageIndexes, setTranslatedReaderPageIndexes] = useState<number[]>([]);
   const [pdfReaderPage, setPdfReaderPage] = useState(1);
   const [pdfReaderZoom, setPdfReaderZoom] = useState(1);
+  const [readerPage, setReaderPage] = useState(1);
   const [renderedPdfPage, setRenderedPdfPage] = useState<RenderPdfPageResponse | null>(null);
   const [isRenderingPdfPage, setIsRenderingPdfPage] = useState(false);
-  const [isPdfReaderPreferenceLoaded, setIsPdfReaderPreferenceLoaded] = useState(false);
+  const [isReaderPreferenceLoaded, setIsReaderPreferenceLoaded] = useState(false);
   const [chunkCount, setChunkCount] = useState<number | null>(null);
   const [documentChunks, setDocumentChunks] = useState<ImportedDocumentChunk[]>([]);
   const [cards, setCards] = useState<StudyCard[]>([]);
@@ -2367,11 +2368,12 @@ export function App({
 
     setPdfReaderPage(1);
     setPdfReaderZoom(1);
+    setReaderPage(1);
     setRenderedPdfPage(null);
-    setIsPdfReaderPreferenceLoaded(false);
+    setIsReaderPreferenceLoaded(false);
 
-    if (!document || document.source_type !== "pdf" || !document.source_path) {
-      setIsPdfReaderPreferenceLoaded(true);
+    if (!document) {
+      setIsReaderPreferenceLoaded(true);
       return;
     }
 
@@ -2381,44 +2383,43 @@ export function App({
           return;
         }
 
-        setPdfReaderPage(preference.page);
-        setPdfReaderZoom(preference.zoom);
+        setPdfReaderPage(document.source_type === "pdf" ? preference.page : 1);
+        setPdfReaderZoom(document.source_type === "pdf" ? preference.zoom : 1);
+        setReaderPage(preference.reader_page && preference.reader_page > 0 ? preference.reader_page : 1);
       })
       .catch(() => {
         if (pdfReaderPreferenceTokenRef.current === preferenceToken) {
           setPdfReaderPage(1);
           setPdfReaderZoom(1);
+          setReaderPage(1);
         }
       })
       .finally(() => {
         if (pdfReaderPreferenceTokenRef.current === preferenceToken) {
-          setIsPdfReaderPreferenceLoaded(true);
+          setIsReaderPreferenceLoaded(true);
         }
       });
   }, [document, loadPdfReaderPreference, t]);
 
   useEffect(() => {
-    if (
-      !document ||
-      document.source_type !== "pdf" ||
-      !document.source_path ||
-      !isPdfReaderPreferenceLoaded
-    ) {
+    if (!document || !isReaderPreferenceLoaded) {
       return;
     }
 
     savePdfReaderPreference({
       document_id: document.document_id,
-      page: pdfReaderPage,
-      zoom: pdfReaderZoom
+      page: document.source_type === "pdf" ? pdfReaderPage : 1,
+      zoom: document.source_type === "pdf" ? pdfReaderZoom : 1,
+      reader_page: readerPage
     }).catch(() => {
       setError(t("library.pdfReaderPreferenceSaveError"));
     });
   }, [
     document,
-    isPdfReaderPreferenceLoaded,
+    isReaderPreferenceLoaded,
     pdfReaderPage,
     pdfReaderZoom,
+    readerPage,
     savePdfReaderPreference,
     t
   ]);
@@ -2428,7 +2429,7 @@ export function App({
       !document ||
       document.source_type !== "pdf" ||
       !document.source_path ||
-      !isPdfReaderPreferenceLoaded
+      !isReaderPreferenceLoaded
     ) {
       setRenderedPdfPage(null);
       setIsRenderingPdfPage(false);
@@ -2470,7 +2471,7 @@ export function App({
     return () => {
       isCurrent = false;
     };
-  }, [document, isPdfReaderPreferenceLoaded, pdfReaderPage, renderPdfPage, t]);
+  }, [document, isReaderPreferenceLoaded, pdfReaderPage, renderPdfPage, t]);
 
   async function handleUiLanguageChange(language: UiLanguage) {
     setUiLanguage(language);
@@ -2599,6 +2600,11 @@ export function App({
         setError(t("library.translationLoadError"));
       }
     }
+  }
+
+  function handleReaderPageChange(request: ReaderPageTranslationRequest) {
+    setReaderPage(request.pageIndex + 1);
+    void handleLoadCachedReaderPage(request);
   }
 
   async function handleTranslateActiveDocument({
@@ -4602,6 +4608,8 @@ export function App({
               nextReaderPage: t("library.nextReaderPage"),
               readerPageStatus: (currentPage, totalPages) =>
                 t("library.readerPageStatus", { currentPage, totalPages }),
+              readerBookmarkStatus: (currentPage, totalPages) =>
+                t("library.readerBookmarkStatus", { currentPage, totalPages }),
               translatedReaderPages: (pages) =>
                 t("library.translatedReaderPages", { pages }),
               pdfReaderTitle: t("library.pdfReaderTitle"),
@@ -4624,6 +4632,7 @@ export function App({
             translatedReaderPageIndexes={translatedReaderPageIndexes}
             renderedPdfPage={renderedPdfPage}
             isRenderingPdfPage={isRenderingPdfPage}
+            readerPage={readerPage}
             pdfReaderPage={pdfReaderPage}
             pdfReaderZoom={pdfReaderZoom}
             isGeneratingCards={isCardGenerationBusy}
@@ -4634,9 +4643,7 @@ export function App({
               void handleGenerateCardsForActiveDocument();
             }}
             onReaderTargetLanguageChange={handleReaderTargetLanguageChange}
-            onReaderPageChange={(request) => {
-              void handleLoadCachedReaderPage(request);
-            }}
+            onReaderPageChange={handleReaderPageChange}
             onTranslateDocument={(request) => {
               void handleTranslateActiveDocument(request);
             }}

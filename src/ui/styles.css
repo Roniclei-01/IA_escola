@@ -1173,6 +1173,13 @@ h1 {
   text-align: center;
 }
 
+.reader-pagination em {
+  color: #526256;
+  font-size: 0.9rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
 .reader-pagination button {
   color: #23352b;
   background: #ffffff;

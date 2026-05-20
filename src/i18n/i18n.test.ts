@@ -96,6 +96,9 @@ describe("i18n", () => {
     expect(i18n.getResource("en", "translation", "library.readerPageStatus")).toBe(
       "Page {{currentPage}} of {{totalPages}}"
     );
+    expect(i18n.getResource("pt", "translation", "library.readerBookmarkStatus")).toBe(
+      "Marcador: pagina {{currentPage}} de {{totalPages}}"
+    );
     expect(i18n.getResource("pt", "translation", "library.translatedReaderPages")).toBe(
       "Paginas traduzidas: {{pages}}"
     );

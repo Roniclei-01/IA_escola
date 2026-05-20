@@ -20,7 +20,8 @@ describe("pdf-reader-preferences", () => {
     invokeMock.mockResolvedValue({
       document_id: "document-1",
       page: 4,
-      zoom: 1.25
+      zoom: 1.25,
+      reader_page: 3
     });
 
     const preference = await loadPdfReaderPreference("document-1");
@@ -31,7 +32,8 @@ describe("pdf-reader-preferences", () => {
     expect(preference).toEqual({
       document_id: "document-1",
       page: 4,
-      zoom: 1.25
+      zoom: 1.25,
+      reader_page: 3
     });
   });
 
@@ -39,26 +41,30 @@ describe("pdf-reader-preferences", () => {
     invokeMock.mockResolvedValue({
       document_id: "document-1",
       page: 5,
-      zoom: 1.5
+      zoom: 1.5,
+      reader_page: 2
     });
 
     const preference = await savePdfReaderPreference({
       document_id: "document-1",
       page: 5,
-      zoom: 1.5
+      zoom: 1.5,
+      reader_page: 2
     });
 
     expect(invokeMock).toHaveBeenCalledWith("save_pdf_reader_preference", {
       preference: {
         document_id: "document-1",
         page: 5,
-        zoom: 1.5
+        zoom: 1.5,
+        reader_page: 2
       }
     });
     expect(preference).toEqual({
       document_id: "document-1",
       page: 5,
-      zoom: 1.5
+      zoom: 1.5,
+      reader_page: 2
     });
   });
 });

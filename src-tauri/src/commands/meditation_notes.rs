@@ -103,7 +103,10 @@ pub fn update_meditation_note_with_storage(
 
     Ok(MeditationNotesResponse {
         document_id: request.document_id,
-        notes: notes.into_iter().map(MeditationNoteResponse::from).collect(),
+        notes: notes
+            .into_iter()
+            .map(MeditationNoteResponse::from)
+            .collect(),
     })
 }
 
@@ -127,7 +130,10 @@ pub fn delete_meditation_note_with_storage(
 
     Ok(MeditationNotesResponse {
         document_id: request.document_id,
-        notes: notes.into_iter().map(MeditationNoteResponse::from).collect(),
+        notes: notes
+            .into_iter()
+            .map(MeditationNoteResponse::from)
+            .collect(),
     })
 }
 

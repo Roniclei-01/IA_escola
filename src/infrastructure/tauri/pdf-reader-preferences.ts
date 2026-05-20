@@ -4,6 +4,7 @@ export interface PdfReaderPreference {
   document_id: string;
   page: number;
   zoom: number;
+  reader_page: number;
 }
 
 export async function loadPdfReaderPreference(

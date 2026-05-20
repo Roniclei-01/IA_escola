@@ -140,6 +140,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - leitura paginada lado a lado do documento original e da versao em idioma escolhido;
 - traducao sob demanda do conteudo ativo via Ollama em lotes menores, sem gerar automaticamente durante a importacao;
 - persistencia das traducoes geradas por documento para reutilizacao offline ao reabrir o material;
+- marcador automatico da pagina de leitura para retomar o estudo no ponto onde parou;
 - tela principal dedicada a `Importacao e IA` e `Biblioteca`, com `Estudo ativo` aberto em pagina secundaria;
 - testes unitarios cobrindo dominio, chunking e geracao de flashcards mockada.
 
@@ -166,9 +167,10 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 7. Clique em `Gerar cards` quando quiser iniciar a IA.
 8. Se o documento tiver muitos chunks, a acao de geracao processa apenas o lote inicial para evitar travamentos.
 9. Use `Gerar mais cards` para processar os proximos chunks sob demanda.
-10. No painel `Leitura do documento`, use `Proxima pagina` e `Pagina anterior` para ler o arquivo completo, escolha o idioma de leitura e clique em `Gerar leitura traduzida` quando desejar traduzir. Ao reabrir o documento, a traducao salva e reaproveitada.
-11. Use `Meus Livros` para abrir rapidamente os documentos da categoria e subcategoria selecionadas.
-12. Revise os cards gerados e acompanhe historico, fila de revisao e metas.
+10. No painel `Leitura do documento`, use `Proxima pagina` e `Pagina anterior` para ler o arquivo completo; o marcador da pagina atual e salvo para retomar depois.
+11. Escolha o idioma de leitura e clique em `Gerar leitura traduzida` quando desejar traduzir. Ao reabrir o documento, a traducao salva e reaproveitada.
+12. Use `Meus Livros` para abrir rapidamente os documentos da categoria e subcategoria selecionadas.
+13. Revise os cards gerados e acompanhe historico, fila de revisao e metas.
 
 Durante operacoes longas, botoes de geracao e acoes da biblioteca ficam bloqueados para evitar cliques duplicados ou troca de documento no meio do processamento.
 

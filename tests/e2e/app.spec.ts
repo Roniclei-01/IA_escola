@@ -73,6 +73,40 @@ test("imports a document, generates a card and records a review", async ({ page 
             return document;
           case "chunk_text_document":
             return { chunks: [chunk] };
+          case "save_document_study_metadata":
+            return args?.request;
+          case "load_document_study_metadata":
+            return {
+              document_id: "document-e2e",
+              category: "Geral",
+              subcategory: "Sem subcategoria",
+              description: "Importado no fluxo E2E."
+            };
+          case "load_meditation_notes":
+            return { notes: [] };
+          case "load_pdf_reader_preference":
+            return {
+              document_id: "document-e2e",
+              page: 1,
+              zoom: 1,
+              reader_page: 1
+            };
+          case "save_pdf_reader_preference":
+            return args?.preference;
+          case "list_document_page_translations":
+            return { page_indexes: [] };
+          case "load_document_translation":
+            return { translation: null };
+          case "load_study_goal":
+            return null;
+          case "list_study_cards":
+            return [];
+          case "list_study_reviews":
+            return [];
+          case "list_study_session_summaries":
+            return { summaries: [] };
+          case "list_document_chunks":
+            return { chunks: [chunk] };
           case "generate_study_cards":
             return { cards: [card] };
           case "save_study_cards":
@@ -126,8 +160,16 @@ test("imports a document, generates a card and records a review", async ({ page 
 
   await page.goto("/");
 
-  await page.getByLabel("Caminho do arquivo .txt ou .pdf").fill("/tmp/e2e.txt");
-  await page.getByRole("button", { name: "Importar" }).click();
+  await page
+    .getByLabel("Importacao e IA")
+    .getByRole("button", { name: "Importar livro" })
+    .click();
+  const importDialog = page.getByRole("dialog", { name: "Importar livro" });
+  await expect(importDialog).toBeVisible();
+  await importDialog.locator("#import-category").selectOption("Geral");
+  await importDialog.locator("#import-subcategory").selectOption("Sem subcategoria");
+  await importDialog.getByLabel("Caminho do arquivo .txt ou .pdf").fill("/tmp/e2e.txt");
+  await importDialog.getByRole("button", { name: "Importar" }).click();
 
   await expect(page.getByText("1 chunk gerado")).toBeVisible();
   await expect(page.getByText("0 card gerado")).toBeVisible();

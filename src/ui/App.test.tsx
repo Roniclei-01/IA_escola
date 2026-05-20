@@ -13,6 +13,35 @@ const listNoStudyReviews = vi.fn().mockResolvedValue([]);
 const listNoStudySessionSummaries = vi.fn().mockResolvedValue([]);
 const loadNoStudyGoal = vi.fn().mockResolvedValue(null);
 const loadNoDocumentStudyMetadata = vi.fn().mockResolvedValue(null);
+const listNoStudyCategories = vi.fn().mockResolvedValue({ categories: [] });
+const saveStudyCategory = vi.fn().mockImplementation(async (request: {
+  id?: string | null;
+  name: string;
+  subcategories: string[];
+}) => ({
+  id: request.id ?? "category-1",
+  name: request.name,
+  subcategories: request.subcategories,
+  archived: false
+}));
+const archiveStudyCategory = vi.fn().mockImplementation(async (id: string) => ({
+  id,
+  name: "Categoria arquivada",
+  subcategories: ["Subcategoria"],
+  archived: true
+}));
+const restoreStudyCategory = vi.fn().mockImplementation(async (id: string) => ({
+  id,
+  name: "Categoria restaurada",
+  subcategories: ["Subcategoria"],
+  archived: false
+}));
+const deleteStudyCategory = vi.fn().mockImplementation(async (id: string) => ({
+  id,
+  name: "Categoria removida",
+  subcategories: ["Subcategoria"],
+  archived: false
+}));
 const saveDocumentStudyMetadata = vi.fn().mockImplementation(
   async (documentId: string, category: string, subcategory: string, description: string) => ({
     document_id: documentId,
@@ -111,6 +140,11 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       listStudySessionSummaries={listNoStudySessionSummaries}
       loadStudyGoal={loadNoStudyGoal}
       loadDocumentStudyMetadata={loadNoDocumentStudyMetadata}
+      listStudyCategories={listNoStudyCategories}
+      saveStudyCategory={saveStudyCategory}
+      archiveStudyCategory={archiveStudyCategory}
+      restoreStudyCategory={restoreStudyCategory}
+      deleteStudyCategory={deleteStudyCategory}
       saveDocumentStudyMetadata={saveDocumentStudyMetadata}
       saveStudyGoal={saveStudyGoal}
       saveStudyReview={saveStudyReview}
@@ -163,6 +197,11 @@ describe("App", () => {
     saveDefaultPdfReaderPreference.mockClear();
     listNoDocumentPageTranslations.mockClear();
     loadNoDocumentStudyMetadata.mockClear();
+    listNoStudyCategories.mockClear();
+    saveStudyCategory.mockClear();
+    archiveStudyCategory.mockClear();
+    restoreStudyCategory.mockClear();
+    deleteStudyCategory.mockClear();
     saveDocumentStudyMetadata.mockClear();
     loadNoMeditationNotes.mockClear();
     addMeditationNote.mockClear();
@@ -377,6 +416,54 @@ describe("App", () => {
         "Trilha inicial de Python."
       );
     });
+  });
+
+  it("creates a custom study category and offers it during import", async () => {
+    const listStudyCategories = vi.fn().mockResolvedValue({ categories: [] });
+    const saveStudyCategory = vi.fn().mockResolvedValue({
+      id: "category-custom",
+      name: "Ciberseguranca",
+      subcategories: ["Pentest"],
+      archived: false
+    });
+
+    renderApp({
+      listStudyCategories,
+      saveStudyCategory
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerenciar categorias" }));
+    const categoriesDialog = await screen.findByRole("dialog", {
+      name: "Gerenciar categorias"
+    });
+    const categoriesQueries = within(categoriesDialog);
+
+    fireEvent.change(categoriesQueries.getByLabelText("Nome da categoria"), {
+      target: { value: "Ciberseguranca" }
+    });
+    fireEvent.change(categoriesQueries.getByLabelText("Subcategorias"), {
+      target: { value: "Pentest" }
+    });
+    fireEvent.click(categoriesQueries.getByRole("button", { name: "Salvar categoria" }));
+
+    await waitFor(() => {
+      expect(saveStudyCategory).toHaveBeenCalledWith({
+        id: null,
+        name: "Ciberseguranca",
+        subcategories: ["Pentest"]
+      });
+    });
+    expect(await categoriesQueries.findByText("Ciberseguranca")).toBeInTheDocument();
+
+    fireEvent.click(categoriesQueries.getByRole("button", { name: "Fechar categorias" }));
+    openImportDialog();
+
+    expect(screen.getByLabelText("Categoria")).toHaveValue("Geral");
+    fireEvent.change(screen.getByLabelText("Categoria"), {
+      target: { value: "Ciberseguranca" }
+    });
+
+    expect(screen.getByLabelText("Subcategoria")).toHaveValue("Pentest");
   });
 
   it("filters saved books by category and opens them from Meus Livros", async () => {

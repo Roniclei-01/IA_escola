@@ -91,6 +91,14 @@ import {
   saveDocumentStudyMetadata as defaultSaveDocumentStudyMetadata,
   type DocumentStudyMetadata
 } from "../infrastructure/tauri/document-study-metadata";
+import {
+  archiveStudyCategory as defaultArchiveStudyCategory,
+  deleteStudyCategory as defaultDeleteStudyCategory,
+  listStudyCategories as defaultListStudyCategories,
+  restoreStudyCategory as defaultRestoreStudyCategory,
+  saveStudyCategory as defaultSaveStudyCategory,
+  type StudyCategory
+} from "../infrastructure/tauri/study-categories";
 import { selectStudyFile as defaultSelectStudyFile } from "../infrastructure/tauri/file-dialog";
 import {
   testOllamaConnection as defaultTestOllamaConnection,
@@ -192,6 +200,17 @@ interface AppProps {
     recurrence: StudyGoalRecurrence
   ) => Promise<StudyGoal>;
   loadDocumentStudyMetadata?: (documentId: string) => Promise<DocumentStudyMetadata | null>;
+  listStudyCategories?: (options?: { includeArchived?: boolean }) => Promise<{
+    categories: StudyCategory[];
+  }>;
+  saveStudyCategory?: (request: {
+    id?: string | null;
+    name: string;
+    subcategories: string[];
+  }) => Promise<StudyCategory>;
+  archiveStudyCategory?: (id: string) => Promise<StudyCategory>;
+  restoreStudyCategory?: (id: string) => Promise<StudyCategory>;
+  deleteStudyCategory?: (id: string) => Promise<StudyCategory>;
   saveDocumentStudyMetadata?: (
     documentId: string,
     category: string,
@@ -1446,6 +1465,10 @@ function uniqueSortedValues(values: string[]): string[] {
   ).sort((firstValue, secondValue) => firstValue.localeCompare(secondValue));
 }
 
+function parseSubcategoryDraft(value: string): string[] {
+  return uniqueSortedValues(value.split(/[\n,]/));
+}
+
 function getAcademicSubcategories(category: string): string[] {
   const normalizedCategory = category.trim().toLowerCase();
   const academicCategory = ACADEMIC_CATEGORIES.find(
@@ -1455,8 +1478,23 @@ function getAcademicSubcategories(category: string): string[] {
   return academicCategory ? [...academicCategory.subcategories] : [];
 }
 
-function getDefaultSubcategoryForCategory(category: string): string {
-  return getAcademicSubcategories(category)[0] ?? DEFAULT_STUDY_SUBCATEGORY;
+function getStudySubcategories(category: string, studyCategories: StudyCategory[]): string[] {
+  const normalizedCategory = category.trim().toLowerCase();
+  const savedCategory = studyCategories.find(
+    (item) => item.name.trim().toLowerCase() === normalizedCategory && !item.archived
+  );
+
+  return uniqueSortedValues([
+    ...getAcademicSubcategories(category),
+    ...(savedCategory?.subcategories ?? [])
+  ]);
+}
+
+function getDefaultSubcategoryForCategory(
+  category: string,
+  studyCategories: StudyCategory[]
+): string {
+  return getStudySubcategories(category, studyCategories)[0] ?? DEFAULT_STUDY_SUBCATEGORY;
 }
 
 function translateMappedLabel(
@@ -1489,10 +1527,14 @@ function getAcademicSubcategoryDisplayName(
   return translateMappedLabel(subcategory, ACADEMIC_SUBCATEGORY_LABEL_KEYS, translate);
 }
 
-function categoryOptionsFromMetadata(metadataByDocumentId: Record<string, DocumentStudyMetadata>) {
+function categoryOptionsFromMetadata(
+  metadataByDocumentId: Record<string, DocumentStudyMetadata>,
+  studyCategories: StudyCategory[]
+) {
   return uniqueSortedValues(
     [
       ...ACADEMIC_CATEGORIES.map((item) => item.category),
+      ...studyCategories.filter((category) => !category.archived).map((category) => category.name),
       ...Object.values(metadataByDocumentId).map((metadata) => metadata.category)
     ]
   );
@@ -1500,13 +1542,14 @@ function categoryOptionsFromMetadata(metadataByDocumentId: Record<string, Docume
 
 function subcategoryOptionsFromMetadata(
   metadataByDocumentId: Record<string, DocumentStudyMetadata>,
-  categoryFilter: string
+  categoryFilter: string,
+  studyCategories: StudyCategory[]
 ) {
   const normalizedCategoryFilter = categoryFilter.trim().toLowerCase();
 
   return uniqueSortedValues(
     [
-      ...getAcademicSubcategories(categoryFilter),
+      ...getStudySubcategories(categoryFilter, studyCategories),
       ...Object.values(metadataByDocumentId)
         .filter(
           (metadata) =>
@@ -1600,6 +1643,11 @@ export function App({
   loadStudyGoal = defaultLoadStudyGoal,
   saveStudyGoal = defaultSaveStudyGoal,
   loadDocumentStudyMetadata = defaultLoadDocumentStudyMetadata,
+  listStudyCategories = defaultListStudyCategories,
+  saveStudyCategory = defaultSaveStudyCategory,
+  archiveStudyCategory = defaultArchiveStudyCategory,
+  restoreStudyCategory = defaultRestoreStudyCategory,
+  deleteStudyCategory = defaultDeleteStudyCategory,
   saveDocumentStudyMetadata = defaultSaveDocumentStudyMetadata,
   selectStudyFile = defaultSelectStudyFile,
   testOllamaConnection = defaultTestOllamaConnection,
@@ -1673,6 +1721,7 @@ export function App({
   const [documentStudyMetadataById, setDocumentStudyMetadataById] = useState<
     Record<string, DocumentStudyMetadata>
   >({});
+  const [studyCategories, setStudyCategories] = useState<StudyCategory[]>([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("");
   const [selectedSubcategoryFilter, setSelectedSubcategoryFilter] = useState("");
   const [importCategory, setImportCategory] = useState(DEFAULT_STUDY_CATEGORY);
@@ -1680,6 +1729,12 @@ export function App({
   const [importCategoryDescriptionDraft, setImportCategoryDescriptionDraft] = useState("");
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isBooksPanelOpen, setIsBooksPanelOpen] = useState(false);
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const [categoryManagerDraftId, setCategoryManagerDraftId] = useState<string | null>(null);
+  const [categoryManagerNameDraft, setCategoryManagerNameDraft] = useState("");
+  const [categoryManagerSubcategoriesDraft, setCategoryManagerSubcategoriesDraft] = useState("");
+  const [isSavingStudyCategory, setIsSavingStudyCategory] = useState(false);
+  const [categoryManagerStatus, setCategoryManagerStatus] = useState<string | null>(null);
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
   const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatusFilter>("all");
   const [librarySearchQuery, setLibrarySearchQuery] = useState("");
@@ -1815,14 +1870,15 @@ export function App({
   const visibleDocumentProgressSummaries = documentProgressSummaries.filter((summary) =>
     visibleDocumentIds.has(summary.documentId)
   );
-  const categoryOptions = categoryOptionsFromMetadata(documentStudyMetadataById);
+  const categoryOptions = categoryOptionsFromMetadata(documentStudyMetadataById, studyCategories);
   const subcategoryOptions = subcategoryOptionsFromMetadata(
     documentStudyMetadataById,
-    selectedCategoryFilter
+    selectedCategoryFilter,
+    studyCategories
   );
   const importSubcategoryOptions = uniqueSortedValues(
     [
-      ...subcategoryOptionsFromMetadata(documentStudyMetadataById, importCategory),
+      ...subcategoryOptionsFromMetadata(documentStudyMetadataById, importCategory, studyCategories),
       importSubcategory
     ]
   );
@@ -1840,6 +1896,10 @@ export function App({
   ].filter((item) => item.length > 0);
   const activeReviewSchedule = activeCard ? cardReviewSchedules[activeCard.id] ?? null : null;
   const isWorkspaceBusy = isImporting || operationStatus !== null;
+  const isStudyCategorySaveDisabled =
+    isSavingStudyCategory ||
+    categoryManagerNameDraft.trim().length === 0 ||
+    parseSubcategoryDraft(categoryManagerSubcategoriesDraft).length === 0;
   const isLibraryView = currentView === "library";
   const isTranslatingDocument = operationStatus === "translatingDocument";
   const isCardGenerationBusy =
@@ -2079,6 +2139,30 @@ export function App({
         }))
     );
   }
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadPersistedStudyCategories() {
+      try {
+        const response = await listStudyCategories({ includeArchived: true });
+
+        if (isCurrent) {
+          setStudyCategories(response.categories);
+        }
+      } catch {
+        if (isCurrent) {
+          setWarning(t("library.studyCategoriesLoadError"));
+        }
+      }
+    }
+
+    void loadPersistedStudyCategories();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [listStudyCategories, t]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -2772,7 +2856,8 @@ export function App({
       }
       const currentImportCategory = importCategory.trim() || DEFAULT_STUDY_CATEGORY;
       const currentImportSubcategory =
-        importSubcategory.trim() || getDefaultSubcategoryForCategory(currentImportCategory);
+        importSubcategory.trim() ||
+        getDefaultSubcategoryForCategory(currentImportCategory, studyCategories);
       const importedMetadata = await saveDocumentStudyMetadata(
         currentImportedDocument.document_id,
         currentImportCategory,
@@ -3014,7 +3099,7 @@ export function App({
   function openImportDialog() {
     const category = selectedCategoryFilter.trim() || DEFAULT_STUDY_CATEGORY;
     const subcategory =
-      selectedSubcategoryFilter.trim() || getDefaultSubcategoryForCategory(category);
+      selectedSubcategoryFilter.trim() || getDefaultSubcategoryForCategory(category, studyCategories);
 
     setImportCategory(category);
     setImportSubcategory(subcategory);
@@ -3030,7 +3115,96 @@ export function App({
     const nextCategory = category || DEFAULT_STUDY_CATEGORY;
 
     setImportCategory(nextCategory);
-    setImportSubcategory(getDefaultSubcategoryForCategory(nextCategory));
+    setImportSubcategory(getDefaultSubcategoryForCategory(nextCategory, studyCategories));
+  }
+
+  function resetStudyCategoryManagerDraft() {
+    setCategoryManagerDraftId(null);
+    setCategoryManagerNameDraft("");
+    setCategoryManagerSubcategoriesDraft("");
+    setCategoryManagerStatus(null);
+  }
+
+  function handleEditStudyCategory(category: StudyCategory) {
+    setCategoryManagerDraftId(category.id);
+    setCategoryManagerNameDraft(category.name);
+    setCategoryManagerSubcategoriesDraft(category.subcategories.join(", "));
+    setCategoryManagerStatus(null);
+  }
+
+  async function handleSaveStudyCategory() {
+    setIsSavingStudyCategory(true);
+    setCategoryManagerStatus(null);
+    setError(null);
+
+    try {
+      const savedCategory = await saveStudyCategory({
+        id: categoryManagerDraftId,
+        name: categoryManagerNameDraft,
+        subcategories: parseSubcategoryDraft(categoryManagerSubcategoriesDraft)
+      });
+
+      setStudyCategories((currentCategories) => [
+        ...currentCategories.filter((category) => category.id !== savedCategory.id),
+        savedCategory
+      ]);
+      resetStudyCategoryManagerDraft();
+      setCategoryManagerStatus(t("library.studyCategorySaved"));
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("library.studyCategorySaveError")));
+    } finally {
+      setIsSavingStudyCategory(false);
+    }
+  }
+
+  async function handleArchiveStudyCategory(category: StudyCategory) {
+    setError(null);
+
+    try {
+      const archivedCategory = await archiveStudyCategory(category.id);
+      setStudyCategories((currentCategories) =>
+        currentCategories.map((currentCategory) =>
+          currentCategory.id === archivedCategory.id ? archivedCategory : currentCategory
+        )
+      );
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("library.studyCategoryArchiveError")));
+    }
+  }
+
+  async function handleRestoreStudyCategory(category: StudyCategory) {
+    setError(null);
+
+    try {
+      const restoredCategory = await restoreStudyCategory(category.id);
+      setStudyCategories((currentCategories) =>
+        currentCategories.map((currentCategory) =>
+          currentCategory.id === restoredCategory.id ? restoredCategory : currentCategory
+        )
+      );
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("library.studyCategoryRestoreError")));
+    }
+  }
+
+  async function handleDeleteStudyCategory(category: StudyCategory) {
+    if (!confirmDelete(t("library.deleteStudyCategoryConfirmation"))) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const deletedCategory = await deleteStudyCategory(category.id);
+      setStudyCategories((currentCategories) =>
+        currentCategories.filter((currentCategory) => currentCategory.id !== deletedCategory.id)
+      );
+      if (categoryManagerDraftId === deletedCategory.id) {
+        resetStudyCategoryManagerDraft();
+      }
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("library.studyCategoryDeleteError")));
+    }
   }
 
   async function handleTestOllama(event: FormEvent<HTMLFormElement>) {
@@ -4159,6 +4333,13 @@ export function App({
                 >
                   {t("library.myBooks")}
                 </button>
+                <button
+                  type="button"
+                  className="my-books-button"
+                  onClick={() => setIsCategoryManagerOpen(true)}
+                >
+                  {t("library.manageCategories")}
+                </button>
               </>
             ) : null}
           </div>
@@ -4314,6 +4495,132 @@ export function App({
                 </ul>
               ) : (
                 <p>{t("library.noBooksInCategory")}</p>
+              )}
+            </section>
+          </div>
+        ) : null}
+
+        {isCategoryManagerOpen ? (
+          <div className="my-books-overlay" role="presentation">
+            <section
+              className="my-books-panel category-manager-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="category-manager-title"
+            >
+              <div className="my-books-panel-header">
+                <div>
+                  <h2 id="category-manager-title">{t("library.manageCategories")}</h2>
+                  <span>{t("library.manageCategoriesDescription")}</span>
+                </div>
+                <button
+                  type="button"
+                  aria-label={t("library.closeManageCategories")}
+                  onClick={() => setIsCategoryManagerOpen(false)}
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="category-manager-form">
+                <label htmlFor="study-category-name">
+                  {t("library.studyCategoryNameLabel")}
+                  <input
+                    id="study-category-name"
+                    value={categoryManagerNameDraft}
+                    disabled={isSavingStudyCategory}
+                    onChange={(event) => {
+                      setCategoryManagerNameDraft(event.target.value);
+                      setCategoryManagerStatus(null);
+                    }}
+                  />
+                </label>
+                <label htmlFor="study-category-subcategories">
+                  {t("library.studyCategorySubcategoriesLabel")}
+                  <textarea
+                    id="study-category-subcategories"
+                    value={categoryManagerSubcategoriesDraft}
+                    disabled={isSavingStudyCategory}
+                    placeholder={t("library.studyCategorySubcategoriesPlaceholder")}
+                    onChange={(event) => {
+                      setCategoryManagerSubcategoriesDraft(event.target.value);
+                      setCategoryManagerStatus(null);
+                    }}
+                  />
+                </label>
+                <div className="category-manager-actions">
+                  <button
+                    type="button"
+                    disabled={isStudyCategorySaveDisabled}
+                    onClick={() => {
+                      void handleSaveStudyCategory();
+                    }}
+                  >
+                    {isSavingStudyCategory
+                      ? t("library.savingStudyCategory")
+                      : t("library.saveStudyCategory")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSavingStudyCategory}
+                    onClick={resetStudyCategoryManagerDraft}
+                  >
+                    {t("library.clearStudyCategoryForm")}
+                  </button>
+                </div>
+                {categoryManagerStatus ? (
+                  <span role="status">{categoryManagerStatus}</span>
+                ) : null}
+              </div>
+
+              {studyCategories.length > 0 ? (
+                <ul className="category-manager-list">
+                  {studyCategories.map((category) => (
+                    <li key={category.id}>
+                      <div>
+                        <strong>{category.name}</strong>
+                        <span>{category.subcategories.join(", ")}</span>
+                        {category.archived ? (
+                          <span>{t("library.studyCategoryArchived")}</span>
+                        ) : null}
+                      </div>
+                      <div className="category-manager-item-actions">
+                        <button type="button" onClick={() => handleEditStudyCategory(category)}>
+                          {t("library.editStudyCategory")}
+                        </button>
+                        {category.archived ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void handleRestoreStudyCategory(category);
+                            }}
+                          >
+                            {t("library.restoreStudyCategory")}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void handleArchiveStudyCategory(category);
+                            }}
+                          >
+                            {t("library.archiveStudyCategory")}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void handleDeleteStudyCategory(category);
+                          }}
+                        >
+                          {t("library.deleteStudyCategory")}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>{t("library.noCustomStudyCategories")}</p>
               )}
             </section>
           </div>

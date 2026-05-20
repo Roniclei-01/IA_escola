@@ -75,6 +75,8 @@ test("imports a document, generates a card and records a review", async ({ page 
             return { chunks: [chunk] };
           case "save_document_study_metadata":
             return args?.request;
+          case "list_study_categories":
+            return { categories: [] };
           case "load_document_study_metadata":
             return {
               document_id: "document-e2e",

@@ -72,6 +72,18 @@ pub enum StorageError {
     InvalidMeditationNotes(#[source] serde_json::Error),
     #[error("stored document study metadata is invalid")]
     InvalidDocumentStudyMetadata(#[source] serde_json::Error),
+    #[error("failed to save study category")]
+    SaveStudyCategoryFailed(#[source] rusqlite::Error),
+    #[error("failed to list study categories")]
+    ListStudyCategoriesFailed(#[source] rusqlite::Error),
+    #[error("failed to update study category")]
+    UpdateStudyCategoryFailed(#[source] rusqlite::Error),
+    #[error("failed to delete study category")]
+    DeleteStudyCategoryFailed(#[source] rusqlite::Error),
+    #[error("stored study category has invalid id")]
+    InvalidStudyCategoryId(#[source] uuid::Error),
+    #[error("stored study category subcategories are invalid")]
+    InvalidStudyCategorySubcategories(#[source] serde_json::Error),
     #[error("stored chunk position is invalid")]
     InvalidChunkPosition(i64),
     #[error("stored chunk token estimate is invalid")]
@@ -132,6 +144,14 @@ pub struct DocumentStudyMetadataRecord {
     pub category: String,
     pub subcategory: String,
     pub description: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct StudyCategoryRecord {
+    pub id: Uuid,
+    pub name: String,
+    pub subcategories: Vec<String>,
+    pub archived: bool,
 }
 
 impl SQLiteStorage {
@@ -939,6 +959,153 @@ impl SQLiteStorage {
         Ok(Some(metadata))
     }
 
+    pub fn save_study_category(
+        &self,
+        category: &StudyCategoryRecord,
+    ) -> Result<(), StorageError> {
+        let serialized_subcategories = serde_json::to_string(&category.subcategories)
+            .map_err(StorageError::InvalidStudyCategorySubcategories)?;
+
+        self.connection
+            .execute(
+                "INSERT INTO study_categories
+                    (id, name, subcategories, archived, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, unixepoch())
+                 ON CONFLICT(id) DO UPDATE SET
+                    name = excluded.name,
+                    subcategories = excluded.subcategories,
+                    archived = excluded.archived,
+                    updated_at = unixepoch()",
+                params![
+                    category.id.to_string(),
+                    category.name,
+                    serialized_subcategories,
+                    bool_to_i64(category.archived),
+                ],
+            )
+            .map_err(StorageError::SaveStudyCategoryFailed)?;
+
+        Ok(())
+    }
+
+    pub fn list_study_categories(
+        &self,
+        include_archived: bool,
+    ) -> Result<Vec<StudyCategoryRecord>, StorageError> {
+        let query = if include_archived {
+            "SELECT id, name, subcategories, archived
+             FROM study_categories
+             ORDER BY name ASC"
+        } else {
+            "SELECT id, name, subcategories, archived
+             FROM study_categories
+             WHERE archived = 0
+             ORDER BY name ASC"
+        };
+        let mut statement = self
+            .connection
+            .prepare(query)
+            .map_err(StorageError::ListStudyCategoriesFailed)?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok(RawStudyCategory {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    subcategories: row.get(2)?,
+                    archived: row.get(3)?,
+                })
+            })
+            .map_err(StorageError::ListStudyCategoriesFailed)?;
+
+        let mut categories = Vec::new();
+
+        for row in rows {
+            let raw_category = row.map_err(StorageError::ListStudyCategoriesFailed)?;
+            categories.push(raw_category.try_into()?);
+        }
+
+        Ok(categories)
+    }
+
+    pub fn load_study_category(
+        &self,
+        category_id: Uuid,
+    ) -> Result<Option<StudyCategoryRecord>, StorageError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT id, name, subcategories, archived
+                 FROM study_categories
+                 WHERE id = ?1",
+            )
+            .map_err(StorageError::ListStudyCategoriesFailed)?;
+        let mut rows = statement
+            .query([category_id.to_string()])
+            .map_err(StorageError::ListStudyCategoriesFailed)?;
+
+        let Some(row) = rows.next().map_err(StorageError::ListStudyCategoriesFailed)? else {
+            return Ok(None);
+        };
+        let raw_category = RawStudyCategory {
+            id: row.get(0).map_err(StorageError::ListStudyCategoriesFailed)?,
+            name: row.get(1).map_err(StorageError::ListStudyCategoriesFailed)?,
+            subcategories: row.get(2).map_err(StorageError::ListStudyCategoriesFailed)?,
+            archived: row.get(3).map_err(StorageError::ListStudyCategoriesFailed)?,
+        };
+
+        raw_category.try_into().map(Some)
+    }
+
+    pub fn set_study_category_archived(
+        &self,
+        category_id: Uuid,
+        archived: bool,
+    ) -> Result<(), StorageError> {
+        self.connection
+            .execute(
+                "UPDATE study_categories
+                 SET archived = ?2, updated_at = unixepoch()
+                 WHERE id = ?1",
+                params![category_id.to_string(), bool_to_i64(archived)],
+            )
+            .map_err(StorageError::UpdateStudyCategoryFailed)?;
+
+        Ok(())
+    }
+
+    pub fn delete_study_category(&self, category_id: Uuid) -> Result<(), StorageError> {
+        self.connection
+            .execute(
+                "DELETE FROM study_categories WHERE id = ?1",
+                [category_id.to_string()],
+            )
+            .map_err(StorageError::DeleteStudyCategoryFailed)?;
+
+        Ok(())
+    }
+
+    pub fn is_study_category_in_use(&self, category_name: &str) -> Result<bool, StorageError> {
+        let mut statement = self
+            .connection
+            .prepare("SELECT value FROM app_settings WHERE key LIKE 'document_study_metadata.%'")
+            .map_err(StorageError::LoadSettingFailed)?;
+        let rows = statement
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(StorageError::LoadSettingFailed)?;
+        let normalized_category_name = category_name.trim().to_lowercase();
+
+        for row in rows {
+            let value = row.map_err(StorageError::LoadSettingFailed)?;
+            let metadata = serde_json::from_str::<DocumentStudyMetadataRecord>(&value)
+                .map_err(StorageError::InvalidDocumentStudyMetadata)?;
+            if metadata.category.trim().to_lowercase() == normalized_category_name {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
     pub fn save_meditation_notes(
         &self,
         document_id: Uuid,
@@ -1051,6 +1218,15 @@ impl SQLiteStorage {
                     document_id TEXT NOT NULL,
                     started_at INTEGER NOT NULL,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS study_categories (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    name TEXT NOT NULL UNIQUE,
+                    subcategories TEXT NOT NULL,
+                    archived INTEGER NOT NULL DEFAULT 0,
+                    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+                    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
                 );
 
                 CREATE TABLE IF NOT EXISTS app_settings (
@@ -1199,6 +1375,13 @@ struct RawStudySessionSummary {
     easy_count: i64,
 }
 
+struct RawStudyCategory {
+    id: String,
+    name: String,
+    subcategories: String,
+    archived: i64,
+}
+
 impl TryFrom<RawDocument> for Document {
     type Error = StorageError;
 
@@ -1322,12 +1505,36 @@ impl TryFrom<RawStudySessionSummary> for StudySessionSummary {
     }
 }
 
+impl TryFrom<RawStudyCategory> for StudyCategoryRecord {
+    type Error = StorageError;
+
+    fn try_from(raw: RawStudyCategory) -> Result<Self, Self::Error> {
+        let subcategories = serde_json::from_str::<Vec<String>>(&raw.subcategories)
+            .map_err(StorageError::InvalidStudyCategorySubcategories)?;
+
+        Ok(Self {
+            id: Uuid::parse_str(&raw.id).map_err(StorageError::InvalidStudyCategoryId)?,
+            name: raw.name,
+            subcategories,
+            archived: i64_to_bool(raw.archived),
+        })
+    }
+}
+
 fn language_to_code(language: &Language) -> &'static str {
     match language {
         Language::Pt => "pt",
         Language::En => "en",
         Language::Es => "es",
     }
+}
+
+fn bool_to_i64(value: bool) -> i64 {
+    i64::from(value)
+}
+
+fn i64_to_bool(value: i64) -> bool {
+    value != 0
 }
 
 fn language_from_code(code: &str) -> Result<Language, StorageError> {

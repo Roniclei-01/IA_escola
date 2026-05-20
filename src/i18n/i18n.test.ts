@@ -45,6 +45,21 @@ describe("i18n", () => {
     ).toBe("Computer networks");
   });
 
+  it("has default study category labels in every supported language", () => {
+    expect(i18n.getResource("pt", "translation", "library.defaultStudyCategoryTitle")).toBe(
+      "Padrao para novas importacoes"
+    );
+    expect(i18n.getResource("en", "translation", "library.defaultStudyCategoryTitle")).toBe(
+      "Default for new imports"
+    );
+    expect(i18n.getResource("es", "translation", "library.defaultStudyCategoryTitle")).toBe(
+      "Predeterminado para nuevas importaciones"
+    );
+    expect(i18n.getResource("pt", "translation", "library.defaultStudyCategorySaved")).toBe(
+      "Padrao salvo."
+    );
+  });
+
   it("has document reader labels in every supported language", () => {
     expect(i18n.getResource("pt", "translation", "library.readerTitle")).toBe(
       "Leitura do documento"

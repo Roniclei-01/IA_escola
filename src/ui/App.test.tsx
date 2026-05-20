@@ -14,6 +14,14 @@ const listNoStudySessionSummaries = vi.fn().mockResolvedValue([]);
 const loadNoStudyGoal = vi.fn().mockResolvedValue(null);
 const loadNoDocumentStudyMetadata = vi.fn().mockResolvedValue(null);
 const listNoStudyCategories = vi.fn().mockResolvedValue({ categories: [] });
+const loadDefaultStudyCategoryDefault = vi.fn().mockResolvedValue({
+  category: "Geral",
+  subcategory: "Sem subcategoria"
+});
+const saveStudyCategoryDefault = vi.fn().mockImplementation(async (settings: {
+  category: string;
+  subcategory: string;
+}) => settings);
 const saveStudyCategory = vi.fn().mockImplementation(async (request: {
   id?: string | null;
   name: string;
@@ -141,6 +149,8 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       loadStudyGoal={loadNoStudyGoal}
       loadDocumentStudyMetadata={loadNoDocumentStudyMetadata}
       listStudyCategories={listNoStudyCategories}
+      loadStudyCategoryDefault={loadDefaultStudyCategoryDefault}
+      saveStudyCategoryDefault={saveStudyCategoryDefault}
       saveStudyCategory={saveStudyCategory}
       archiveStudyCategory={archiveStudyCategory}
       restoreStudyCategory={restoreStudyCategory}
@@ -198,6 +208,8 @@ describe("App", () => {
     listNoDocumentPageTranslations.mockClear();
     loadNoDocumentStudyMetadata.mockClear();
     listNoStudyCategories.mockClear();
+    loadDefaultStudyCategoryDefault.mockClear();
+    saveStudyCategoryDefault.mockClear();
     saveStudyCategory.mockClear();
     archiveStudyCategory.mockClear();
     restoreStudyCategory.mockClear();
@@ -453,7 +465,7 @@ describe("App", () => {
         subcategories: ["Pentest"]
       });
     });
-    expect(await categoriesQueries.findByText("Ciberseguranca")).toBeInTheDocument();
+    expect((await categoriesQueries.findAllByText("Ciberseguranca")).length).toBeGreaterThan(0);
 
     fireEvent.click(categoriesQueries.getByRole("button", { name: "Fechar categorias" }));
     openImportDialog();
@@ -464,6 +476,62 @@ describe("App", () => {
     });
 
     expect(screen.getByLabelText("Subcategoria")).toHaveValue("Pentest");
+  });
+
+  it("uses the saved default study category when opening the import dialog", async () => {
+    const listStudyCategories = vi.fn().mockResolvedValue({
+      categories: [
+        {
+          id: "category-cyber",
+          name: "Ciberseguranca",
+          subcategories: ["Pentest"],
+          archived: false
+        }
+      ]
+    });
+    const loadStudyCategoryDefault = vi.fn().mockResolvedValue({
+      category: "Ciberseguranca",
+      subcategory: "Pentest"
+    });
+
+    renderApp({
+      listStudyCategories,
+      loadStudyCategoryDefault
+    });
+
+    await waitFor(() => {
+      expect(loadStudyCategoryDefault).toHaveBeenCalled();
+    });
+    openImportDialog();
+
+    expect(screen.getByLabelText("Categoria")).toHaveValue("Ciberseguranca");
+    expect(screen.getByLabelText("Subcategoria")).toHaveValue("Pentest");
+  });
+
+  it("saves the default study category from category management", async () => {
+    renderApp();
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerenciar categorias" }));
+    const categoriesDialog = await screen.findByRole("dialog", {
+      name: "Gerenciar categorias"
+    });
+    const categoriesQueries = within(categoriesDialog);
+
+    fireEvent.change(categoriesQueries.getByLabelText("Categoria padrao"), {
+      target: { value: "Tecnologia e Computacao" }
+    });
+    fireEvent.change(categoriesQueries.getByLabelText("Subcategoria padrao"), {
+      target: { value: "Programacao" }
+    });
+    fireEvent.click(categoriesQueries.getByRole("button", { name: "Salvar padrao" }));
+
+    await waitFor(() => {
+      expect(saveStudyCategoryDefault).toHaveBeenCalledWith({
+        category: "Tecnologia e Computacao",
+        subcategory: "Programacao"
+      });
+    });
+    expect(await categoriesQueries.findByText("Padrao salvo.")).toBeInTheDocument();
   });
 
   it("filters saved books by category and opens them from Meus Livros", async () => {

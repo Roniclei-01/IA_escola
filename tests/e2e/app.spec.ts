@@ -77,6 +77,10 @@ test("imports a document, generates a card and records a review", async ({ page 
             return args?.request;
           case "list_study_categories":
             return { categories: [] };
+          case "load_study_category_default":
+            return { category: "Geral", subcategory: "Sem subcategoria" };
+          case "save_study_category_default":
+            return args?.request;
           case "load_document_study_metadata":
             return {
               document_id: "document-e2e",

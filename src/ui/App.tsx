@@ -99,6 +99,11 @@ import {
   saveStudyCategory as defaultSaveStudyCategory,
   type StudyCategory
 } from "../infrastructure/tauri/study-categories";
+import {
+  loadStudyCategoryDefault as defaultLoadStudyCategoryDefault,
+  saveStudyCategoryDefault as defaultSaveStudyCategoryDefault,
+  type StudyCategoryDefault
+} from "../infrastructure/tauri/study-category-default";
 import { selectStudyFile as defaultSelectStudyFile } from "../infrastructure/tauri/file-dialog";
 import {
   testOllamaConnection as defaultTestOllamaConnection,
@@ -203,6 +208,8 @@ interface AppProps {
   listStudyCategories?: (options?: { includeArchived?: boolean }) => Promise<{
     categories: StudyCategory[];
   }>;
+  loadStudyCategoryDefault?: () => Promise<StudyCategoryDefault>;
+  saveStudyCategoryDefault?: (request: StudyCategoryDefault) => Promise<StudyCategoryDefault>;
   saveStudyCategory?: (request: {
     id?: string | null;
     name: string;
@@ -1644,6 +1651,8 @@ export function App({
   saveStudyGoal = defaultSaveStudyGoal,
   loadDocumentStudyMetadata = defaultLoadDocumentStudyMetadata,
   listStudyCategories = defaultListStudyCategories,
+  loadStudyCategoryDefault = defaultLoadStudyCategoryDefault,
+  saveStudyCategoryDefault = defaultSaveStudyCategoryDefault,
   saveStudyCategory = defaultSaveStudyCategory,
   archiveStudyCategory = defaultArchiveStudyCategory,
   restoreStudyCategory = defaultRestoreStudyCategory,
@@ -1722,6 +1731,10 @@ export function App({
     Record<string, DocumentStudyMetadata>
   >({});
   const [studyCategories, setStudyCategories] = useState<StudyCategory[]>([]);
+  const [studyCategoryDefault, setStudyCategoryDefault] = useState<StudyCategoryDefault>({
+    category: DEFAULT_STUDY_CATEGORY,
+    subcategory: DEFAULT_STUDY_SUBCATEGORY
+  });
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("");
   const [selectedSubcategoryFilter, setSelectedSubcategoryFilter] = useState("");
   const [importCategory, setImportCategory] = useState(DEFAULT_STUDY_CATEGORY);
@@ -1734,6 +1747,10 @@ export function App({
   const [categoryManagerNameDraft, setCategoryManagerNameDraft] = useState("");
   const [categoryManagerSubcategoriesDraft, setCategoryManagerSubcategoriesDraft] = useState("");
   const [isSavingStudyCategory, setIsSavingStudyCategory] = useState(false);
+  const [defaultCategoryDraft, setDefaultCategoryDraft] = useState(DEFAULT_STUDY_CATEGORY);
+  const [defaultSubcategoryDraft, setDefaultSubcategoryDraft] =
+    useState(DEFAULT_STUDY_SUBCATEGORY);
+  const [isSavingStudyCategoryDefault, setIsSavingStudyCategoryDefault] = useState(false);
   const [categoryManagerStatus, setCategoryManagerStatus] = useState<string | null>(null);
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
   const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatusFilter>("all");
@@ -1870,12 +1887,26 @@ export function App({
   const visibleDocumentProgressSummaries = documentProgressSummaries.filter((summary) =>
     visibleDocumentIds.has(summary.documentId)
   );
-  const categoryOptions = categoryOptionsFromMetadata(documentStudyMetadataById, studyCategories);
+  const categoryOptions = uniqueSortedValues([
+    ...categoryOptionsFromMetadata(documentStudyMetadataById, studyCategories),
+    studyCategoryDefault.category,
+    defaultCategoryDraft,
+    importCategory
+  ]);
   const subcategoryOptions = subcategoryOptionsFromMetadata(
     documentStudyMetadataById,
     selectedCategoryFilter,
     studyCategories
   );
+  const defaultSubcategoryOptions = uniqueSortedValues([
+    ...subcategoryOptionsFromMetadata(
+      documentStudyMetadataById,
+      defaultCategoryDraft,
+      studyCategories
+    ),
+    studyCategoryDefault.subcategory,
+    defaultSubcategoryDraft
+  ]);
   const importSubcategoryOptions = uniqueSortedValues(
     [
       ...subcategoryOptionsFromMetadata(documentStudyMetadataById, importCategory, studyCategories),
@@ -1900,6 +1931,10 @@ export function App({
     isSavingStudyCategory ||
     categoryManagerNameDraft.trim().length === 0 ||
     parseSubcategoryDraft(categoryManagerSubcategoriesDraft).length === 0;
+  const isStudyCategoryDefaultSaveDisabled =
+    isSavingStudyCategoryDefault ||
+    defaultCategoryDraft.trim().length === 0 ||
+    defaultSubcategoryDraft.trim().length === 0;
   const isLibraryView = currentView === "library";
   const isTranslatingDocument = operationStatus === "translatingDocument";
   const isCardGenerationBusy =
@@ -2163,6 +2198,32 @@ export function App({
       isCurrent = false;
     };
   }, [listStudyCategories, t]);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadPersistedStudyCategoryDefault() {
+      try {
+        const settings = await loadStudyCategoryDefault();
+
+        if (isCurrent) {
+          setStudyCategoryDefault(settings);
+          setDefaultCategoryDraft(settings.category);
+          setDefaultSubcategoryDraft(settings.subcategory);
+        }
+      } catch {
+        if (isCurrent) {
+          setWarning(t("library.defaultStudyCategoryLoadError"));
+        }
+      }
+    }
+
+    void loadPersistedStudyCategoryDefault();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [loadStudyCategoryDefault, t]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -3097,9 +3158,12 @@ export function App({
   }
 
   function openImportDialog() {
-    const category = selectedCategoryFilter.trim() || DEFAULT_STUDY_CATEGORY;
+    const category =
+      selectedCategoryFilter.trim() || studyCategoryDefault.category || DEFAULT_STUDY_CATEGORY;
     const subcategory =
-      selectedSubcategoryFilter.trim() || getDefaultSubcategoryForCategory(category, studyCategories);
+      selectedSubcategoryFilter.trim() ||
+      (category === studyCategoryDefault.category ? studyCategoryDefault.subcategory : "") ||
+      getDefaultSubcategoryForCategory(category, studyCategories);
 
     setImportCategory(category);
     setImportSubcategory(subcategory);
@@ -3116,6 +3180,14 @@ export function App({
 
     setImportCategory(nextCategory);
     setImportSubcategory(getDefaultSubcategoryForCategory(nextCategory, studyCategories));
+  }
+
+  function handleDefaultStudyCategoryChange(category: string) {
+    const nextCategory = category || DEFAULT_STUDY_CATEGORY;
+
+    setDefaultCategoryDraft(nextCategory);
+    setDefaultSubcategoryDraft(getDefaultSubcategoryForCategory(nextCategory, studyCategories));
+    setCategoryManagerStatus(null);
   }
 
   function resetStudyCategoryManagerDraft() {
@@ -3154,6 +3226,28 @@ export function App({
       setError(getErrorMessage(unknownError, t("library.studyCategorySaveError")));
     } finally {
       setIsSavingStudyCategory(false);
+    }
+  }
+
+  async function handleSaveStudyCategoryDefault() {
+    setIsSavingStudyCategoryDefault(true);
+    setCategoryManagerStatus(null);
+    setError(null);
+
+    try {
+      const savedSettings = await saveStudyCategoryDefault({
+        category: defaultCategoryDraft,
+        subcategory: defaultSubcategoryDraft
+      });
+
+      setStudyCategoryDefault(savedSettings);
+      setDefaultCategoryDraft(savedSettings.category);
+      setDefaultSubcategoryDraft(savedSettings.subcategory);
+      setCategoryManagerStatus(t("library.defaultStudyCategorySaved"));
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("library.defaultStudyCategorySaveError")));
+    } finally {
+      setIsSavingStudyCategoryDefault(false);
     }
   }
 
@@ -4519,6 +4613,57 @@ export function App({
                   onClick={() => setIsCategoryManagerOpen(false)}
                 >
                   x
+                </button>
+              </div>
+
+              <div className="category-manager-default">
+                <div>
+                  <h3>{t("library.defaultStudyCategoryTitle")}</h3>
+                  <p>{t("library.defaultStudyCategoryDescription")}</p>
+                </div>
+                <label htmlFor="default-study-category">
+                  {t("library.defaultStudyCategoryLabel")}
+                  <select
+                    id="default-study-category"
+                    value={defaultCategoryDraft}
+                    disabled={isSavingStudyCategoryDefault}
+                    onChange={(event) => handleDefaultStudyCategoryChange(event.target.value)}
+                  >
+                    {categoryOptions.map((category) => (
+                      <option key={category} value={category}>
+                        {getAcademicCategoryDisplayName(category, t)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label htmlFor="default-study-subcategory">
+                  {t("library.defaultStudySubcategoryLabel")}
+                  <select
+                    id="default-study-subcategory"
+                    value={defaultSubcategoryDraft}
+                    disabled={isSavingStudyCategoryDefault}
+                    onChange={(event) => {
+                      setDefaultSubcategoryDraft(event.target.value);
+                      setCategoryManagerStatus(null);
+                    }}
+                  >
+                    {defaultSubcategoryOptions.map((subcategory) => (
+                      <option key={subcategory} value={subcategory}>
+                        {getAcademicSubcategoryDisplayName(subcategory, t)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  disabled={isStudyCategoryDefaultSaveDisabled}
+                  onClick={() => {
+                    void handleSaveStudyCategoryDefault();
+                  }}
+                >
+                  {isSavingStudyCategoryDefault
+                    ? t("library.savingStudyCategoryDefault")
+                    : t("library.saveStudyCategoryDefault")}
                 </button>
               </div>
 

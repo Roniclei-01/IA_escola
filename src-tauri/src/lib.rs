@@ -54,6 +54,8 @@ pub fn run() {
             commands::study_categories::archive_study_category,
             commands::study_categories::restore_study_category,
             commands::study_categories::delete_study_category,
+            commands::study_category_default::load_study_category_default,
+            commands::study_category_default::save_study_category_default,
             commands::restore_imported_document::restore_imported_document,
             commands::generate_study_cards::generate_study_cards,
             commands::translate_document::translate_document,

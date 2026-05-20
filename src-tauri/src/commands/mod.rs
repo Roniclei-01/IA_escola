@@ -27,6 +27,7 @@ pub mod save_study_cards;
 pub mod save_study_review;
 pub mod start_study_session;
 pub mod study_categories;
+pub mod study_category_default;
 pub mod study_goals;
 pub mod test_ocr_dependencies;
 pub mod test_ollama_connection;
@@ -91,6 +92,8 @@ pub use study_categories::{
     archive_study_category, delete_study_category, list_study_categories, restore_study_category,
     save_study_category,
 };
+#[cfg(feature = "tauri-app")]
+pub use study_category_default::{load_study_category_default, save_study_category_default};
 #[cfg(feature = "tauri-app")]
 pub use study_goals::{load_study_goal, save_study_goal};
 #[cfg(feature = "tauri-app")]
@@ -184,6 +187,11 @@ pub use study_categories::{
     list_study_categories_from_storage, restore_study_category_with_storage,
     save_study_category_with_storage, DeleteStudyCategoryRequest, ListStudyCategoriesResponse,
     SaveStudyCategoryRequest, StudyCategoryResponse,
+};
+pub use study_category_default::{
+    default_study_category_default, load_study_category_default_from_storage,
+    save_study_category_default_with_storage, StudyCategoryDefault,
+    StudyCategoryDefaultRequest,
 };
 pub use study_goals::{
     load_study_goal_from_storage, save_study_goal_with_storage, SaveStudyGoalRequest,

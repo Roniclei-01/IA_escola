@@ -557,7 +557,11 @@ function persistUiLanguage(language: UiLanguage) {
     return;
   }
 
-  window.localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, language);
+  try {
+    window.localStorage?.setItem(UI_LANGUAGE_STORAGE_KEY, language);
+  } catch {
+    // Some embedded runtimes disable localStorage; language still changes for the session.
+  }
 }
 
 function defaultReaderTargetLanguage(
@@ -1698,6 +1702,10 @@ export function App({
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
+  const [translationOperationPage, setTranslationOperationPage] = useState<{
+    currentPage: number;
+    totalPages: number;
+  } | null>(null);
   const [cardGenerationProgress, setCardGenerationProgress] =
     useState<GenerateStudyCardsProgress | null>(null);
   const [cardGenerationQueueProgress, setCardGenerationQueueProgress] =
@@ -1813,7 +1821,12 @@ export function App({
   const activeCard = cards[activeCardIndex] ?? null;
   const activeDocumentLanguage = document ? inferDocumentLanguage(document) : null;
   const activeOperationMessage =
-    operationStatus === "generatingCardsWithOllama" && cardGenerationProgress
+    operationStatus === "translatingDocument" && translationOperationPage
+      ? t("library.translationPageProgress", {
+          currentPage: translationOperationPage.currentPage,
+          totalPages: translationOperationPage.totalPages
+        })
+      : operationStatus === "generatingCardsWithOllama" && cardGenerationProgress
       ? [
           `${t(`library.${operationStatus}`)} ${t("library.cardGenerationProgress", {
             current: cardGenerationProgress.current,
@@ -2049,6 +2062,7 @@ export function App({
     operationTokenRef.current += 1;
     setIsImporting(false);
     setOperationStatus(null);
+    setTranslationOperationPage(null);
     setCardGenerationProgress(null);
     setCardGenerationQueueProgress(null);
     setWarning(t("library.operationCanceled"));
@@ -2786,6 +2800,7 @@ export function App({
   async function handleTranslateActiveDocument({
     pageIndex,
     pageContent,
+    totalPages = pageIndex + 1,
     forceRefresh = false
   }: ReaderPageTranslationRequest) {
     if (!document) {
@@ -2801,6 +2816,7 @@ export function App({
       setTranslatedDocumentPageSources({});
       setTranslatedDocumentPageProviders({});
       setTranslatedReaderPageIndexes([]);
+      setTranslationOperationPage(null);
       return;
     }
 
@@ -2811,6 +2827,10 @@ export function App({
     setError(null);
     setWarning(null);
     setOperationStatus("translatingDocument");
+    setTranslationOperationPage({
+      currentPage: pageIndex + 1,
+      totalPages: Math.max(totalPages, pageIndex + 1)
+    });
     const operationToken = startCancellableOperation();
 
     try {
@@ -2881,6 +2901,7 @@ export function App({
     } finally {
       if (isCurrentOperation(operationToken)) {
         setOperationStatus(null);
+        setTranslationOperationPage(null);
         operationAbortControllerRef.current = null;
       }
     }

@@ -79,6 +79,9 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.translationStatusCached")).toBe(
       "Traducao carregada do cache local."
     );
+    expect(i18n.getResource("pt", "translation", "library.translationPageProgress")).toBe(
+      "Traduzindo pagina {{currentPage}} de {{totalPages}}."
+    );
     expect(i18n.getResource("pt", "translation", "library.translationProviderStatus")).toBe(
       "Provedor: {{provider}}."
     );

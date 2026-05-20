@@ -1989,6 +1989,77 @@ describe("App", () => {
     expect(screen.getByText("Traducao gerada agora e salva localmente.")).toBeInTheDocument();
   });
 
+  it("shows the current reader page while translating", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-translation-progress",
+      book_id: "book-translation-progress",
+      content: "Texto longo para leitura paginada. ".repeat(80),
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/progresso-traducao.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    let resolveTranslation: (response: {
+      document_id: string;
+      source_language: "Pt";
+      target_language: "En";
+      translated_content: string;
+      translation_provider: "ollama";
+      page_index: number;
+    }) => void = () => {};
+    const translateDocument = vi.fn(
+      () =>
+        new Promise<{
+          document_id: string;
+          source_language: "Pt";
+          target_language: "En";
+          translated_content: string;
+          translation_provider: "ollama";
+          page_index: number;
+        }>((resolve) => {
+          resolveTranslation = resolve;
+        })
+    );
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      translateDocument
+    });
+
+    fillImportFilePath("/tmp/progresso-traducao.pdf");
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Traduzir pagina atual" }));
+
+    expect(await screen.findByRole("dialog", { name: "Processando arquivo" })).toHaveTextContent(
+      "Traduzindo pagina 1 de 3."
+    );
+    await waitFor(() => {
+      expect(translateDocument).toHaveBeenCalledWith({
+        document_id: "document-translation-progress",
+        content: expect.any(String),
+        source_language: "Pt",
+        target_language: "En",
+        page_index: 0
+      });
+    });
+
+    await act(async () => {
+      resolveTranslation({
+        document_id: "document-translation-progress",
+        source_language: "Pt",
+        target_language: "En",
+        translated_content: "Translated page with progress.",
+        translation_provider: "ollama",
+        page_index: 0
+      });
+    });
+
+    expect(await screen.findByText("Translated page with progress.")).toBeInTheDocument();
+  });
+
   it("ignores empty cached reader translations and calls the model", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-empty-cache-reader",

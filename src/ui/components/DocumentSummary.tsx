@@ -9,6 +9,7 @@ const READER_PAGE_LENGTH = 1_200;
 export interface ReaderPageTranslationRequest {
   pageIndex: number;
   pageContent: string;
+  totalPages?: number;
   forceRefresh?: boolean;
 }
 
@@ -288,6 +289,7 @@ export function DocumentSummary({
               onTranslateDocument({
                 pageIndex: currentReaderPage,
                 pageContent: currentOriginalPage,
+                totalPages: totalReaderPages,
                 forceRefresh: Boolean(currentTranslatedPage)
               })
             }

@@ -14,7 +14,13 @@ function getInitialUiLanguage(): UiLanguage {
     return "pt";
   }
 
-  const storedLanguage = window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
+  let storedLanguage: string | null = null;
+
+  try {
+    storedLanguage = window.localStorage?.getItem(UI_LANGUAGE_STORAGE_KEY) ?? null;
+  } catch {
+    storedLanguage = null;
+  }
 
   return storedLanguage && isSupportedUiLanguage(storedLanguage) ? storedLanguage : "pt";
 }
@@ -291,6 +297,7 @@ export const resources = {
         translationSameLanguage: "O idioma escolhido e o mesmo do documento original.",
         translationStatusCached: "Traducao carregada do cache local.",
         translationStatusGenerated: "Traducao gerada agora e salva localmente.",
+        translationPageProgress: "Traduzindo pagina {{currentPage}} de {{totalPages}}.",
         translationProviderStatus: "Provedor: {{provider}}.",
         translationProviders: {
           unknown: "Nao identificado",
@@ -766,6 +773,7 @@ export const resources = {
         translationSameLanguage: "The selected language is the same as the original document.",
         translationStatusCached: "Translation loaded from the local cache.",
         translationStatusGenerated: "Translation generated now and saved locally.",
+        translationPageProgress: "Translating page {{currentPage}} of {{totalPages}}.",
         translationProviderStatus: "Provider: {{provider}}.",
         translationProviders: {
           unknown: "Unknown",
@@ -1241,6 +1249,7 @@ export const resources = {
         translationSameLanguage: "El idioma elegido es el mismo del documento original.",
         translationStatusCached: "Traduccion cargada desde la cache local.",
         translationStatusGenerated: "Traduccion generada ahora y guardada localmente.",
+        translationPageProgress: "Traduciendo pagina {{currentPage}} de {{totalPages}}.",
         translationProviderStatus: "Proveedor: {{provider}}.",
         translationProviders: {
           unknown: "No identificado",

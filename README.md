@@ -33,7 +33,7 @@ O usuario deve conseguir estudar a partir de livros e materiais proprios, manten
 
 ## MVP 0.1
 
-O primeiro MVP deve validar o fluxo mais importante do produto:
+O MVP 0.1 validou o fluxo mais importante do produto:
 
 1. importar arquivo `.txt` ou `.pdf`;
 2. extrair texto;
@@ -44,11 +44,13 @@ O primeiro MVP deve validar o fluxo mais importante do produto:
 7. trocar idioma da interface entre Portugues, Ingles e Espanhol;
 8. navegar pela biblioteca por categoria e subcategoria.
 
-EPUB, tutor, traducao completa persistida, exportacao avancada e calendario entram depois que esse fluxo estiver estavel.
+Status: **aprovado** em `docs/mvp-acceptance.md`.
+
+Funcionalidades como EPUB, AZW3, KPF, tutor, manutencao dedicada de categorias, busca semantica, licenciamento e sincronizacao opcional fazem parte do pos-MVP.
 
 ## Estado atual da implementacao
 
-Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes automatizados. A primeira fatia do pipeline tambem foi iniciada com desenvolvimento test-first:
+O MVP 0.1 esta fechado com Tauri, React, TypeScript, Rust, i18n, SQLite, empacotamento desktop e testes automatizados. O fluxo principal foi implementado com desenvolvimento test-first:
 
 - entidade `Document`;
 - metadados de origem do documento com tipo (`txt`/`pdf`) e caminho local;
@@ -251,9 +253,11 @@ docs/
 
 ## Proximos passos
 
-1. Validar manualmente a importacao com escolha de categoria/subcategoria.
-2. Validar manualmente a navegacao por categorias, subcategorias, caminho curto e modal `Meus Livros`.
-3. Rodar aceite final do MVP apos os ajustes de biblioteca.
+1. Manter o MVP 0.1 estabilizado com correcoes pequenas, sempre preservando `npm run check`, `npm run test:e2e` e o aceite manual quando houver mudanca de comportamento.
+2. Iniciar a fase pos-MVP pela manutencao dedicada de categorias e subcategorias em tela propria, porque essa area ja existe no fluxo atual e melhora a organizacao da biblioteca com menor risco.
+3. Evoluir a leitura rica com EPUB sem DRM antes de avaliar AZW3 por conversao local e KPF como experimento futuro.
+4. Planejar melhorias de leitura traduzida com configuracao visual do provedor, progresso por lote e reprocessamento por idioma.
+5. Evoluir `Anotacao` com busca e exportacao.
 
 ## Comandos de desenvolvimento
 

@@ -336,6 +336,18 @@ describe("i18n", () => {
     expect(i18n.getResource("pt", "translation", "library.manageCategories")).toBe(
       "Gerenciar categorias"
     );
+    expect(i18n.getResource("pt", "translation", "library.studyCategoryUsage_one")).toBe(
+      "{{count}} livro vinculado"
+    );
+    expect(i18n.getResource("pt", "translation", "library.studyCategoryUsage_other")).toBe(
+      "{{count}} livros vinculados"
+    );
+    expect(i18n.getResource("pt", "translation", "library.deleteStudyCategoryBlockedByBooks")).toBe(
+      "Arquive a categoria ou remova os livros vinculados antes de excluir."
+    );
+    expect(i18n.getResource("pt", "translation", "library.studyCategoryUsage_zero")).toBe(
+      "{{count}} livros vinculados"
+    );
     expect(i18n.getResource("en", "translation", "library.manageCategories")).toBe(
       "Manage categories"
     );

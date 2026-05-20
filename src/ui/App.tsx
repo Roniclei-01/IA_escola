@@ -4799,49 +4799,65 @@ export function App({
 
               {studyCategories.length > 0 ? (
                 <ul className="category-manager-list">
-                  {studyCategories.map((category) => (
-                    <li key={category.id}>
-                      <div>
-                        <strong>{category.name}</strong>
-                        <span>{category.subcategories.join(", ")}</span>
-                        {category.archived ? (
-                          <span>{t("library.studyCategoryArchived")}</span>
-                        ) : null}
-                      </div>
-                      <div className="category-manager-item-actions">
-                        <button type="button" onClick={() => handleEditStudyCategory(category)}>
-                          {t("library.editStudyCategory")}
-                        </button>
-                        {category.archived ? (
+                  {studyCategories.map((category) => {
+                    const linkedBookCount = countDocumentsByCategory(
+                      savedDocuments,
+                      documentStudyMetadataById,
+                      category.name
+                    );
+                    const isDeleteBlocked = linkedBookCount > 0;
+
+                    return (
+                      <li key={category.id}>
+                        <div>
+                          <strong>{category.name}</strong>
+                          <span>{category.subcategories.join(", ")}</span>
+                          <span>{t("library.studyCategoryUsage", { count: linkedBookCount })}</span>
+                          {category.archived ? (
+                            <span>{t("library.studyCategoryArchived")}</span>
+                          ) : null}
+                        </div>
+                        <div className="category-manager-item-actions">
+                          <button type="button" onClick={() => handleEditStudyCategory(category)}>
+                            {t("library.editStudyCategory")}
+                          </button>
+                          {category.archived ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleRestoreStudyCategory(category);
+                              }}
+                            >
+                              {t("library.restoreStudyCategory")}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleArchiveStudyCategory(category);
+                              }}
+                            >
+                              {t("library.archiveStudyCategory")}
+                            </button>
+                          )}
                           <button
                             type="button"
+                            disabled={isDeleteBlocked}
+                            title={
+                              isDeleteBlocked
+                                ? t("library.deleteStudyCategoryBlockedByBooks")
+                                : undefined
+                            }
                             onClick={() => {
-                              void handleRestoreStudyCategory(category);
+                              void handleDeleteStudyCategory(category);
                             }}
                           >
-                            {t("library.restoreStudyCategory")}
+                            {t("library.deleteStudyCategory")}
                           </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void handleArchiveStudyCategory(category);
-                            }}
-                          >
-                            {t("library.archiveStudyCategory")}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void handleDeleteStudyCategory(category);
-                          }}
-                        >
-                          {t("library.deleteStudyCategory")}
-                        </button>
-                      </div>
-                    </li>
-                  ))}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p>{t("library.noCustomStudyCategories")}</p>

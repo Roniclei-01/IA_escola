@@ -94,6 +94,11 @@ export const resources = {
         restoreStudyCategory: "Restaurar",
         deleteStudyCategory: "Excluir",
         deleteStudyCategoryConfirmation: "Excluir esta categoria?",
+        deleteStudyCategoryBlockedByBooks:
+          "Arquive a categoria ou remova os livros vinculados antes de excluir.",
+        studyCategoryUsage_zero: "{{count}} livros vinculados",
+        studyCategoryUsage_one: "{{count}} livro vinculado",
+        studyCategoryUsage_other: "{{count}} livros vinculados",
         noCustomStudyCategories: "Nenhuma categoria personalizada.",
         academicCategories: {
           general: "Geral",
@@ -574,6 +579,11 @@ export const resources = {
         restoreStudyCategory: "Restore",
         deleteStudyCategory: "Delete",
         deleteStudyCategoryConfirmation: "Delete this category?",
+        deleteStudyCategoryBlockedByBooks:
+          "Archive the category or remove linked books before deleting it.",
+        studyCategoryUsage_zero: "{{count}} linked books",
+        studyCategoryUsage_one: "{{count}} linked book",
+        studyCategoryUsage_other: "{{count}} linked books",
         noCustomStudyCategories: "No custom category.",
         academicCategories: {
           general: "General",
@@ -1054,6 +1064,11 @@ export const resources = {
         restoreStudyCategory: "Restaurar",
         deleteStudyCategory: "Eliminar",
         deleteStudyCategoryConfirmation: "Eliminar esta categoria?",
+        deleteStudyCategoryBlockedByBooks:
+          "Archive la categoria o quite los libros vinculados antes de eliminarla.",
+        studyCategoryUsage_zero: "{{count}} libros vinculados",
+        studyCategoryUsage_one: "{{count}} libro vinculado",
+        studyCategoryUsage_other: "{{count}} libros vinculados",
         noCustomStudyCategories: "Ninguna categoria personalizada.",
         academicCategories: {
           general: "General",

@@ -534,6 +534,70 @@ describe("App", () => {
     expect(await categoriesQueries.findByText("Padrao salvo.")).toBeInTheDocument();
   });
 
+  it("shows category usage and disables deleting categories linked to books", async () => {
+    const listStudyCategories = vi.fn().mockResolvedValue({
+      categories: [
+        {
+          id: "category-linked",
+          name: "Ciberseguranca",
+          subcategories: ["Pentest"],
+          archived: false
+        },
+        {
+          id: "category-free",
+          name: "Historia",
+          subcategories: ["Brasil"],
+          archived: false
+        }
+      ]
+    });
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-linked-category",
+          book_id: "book-linked-category",
+          content: "Livro de pentest.",
+          language: "Pt",
+          source_type: "pdf",
+          source_path: "/tmp/pentest.pdf"
+        }
+      ]
+    });
+    const loadDocumentStudyMetadata = vi.fn().mockResolvedValue({
+      document_id: "document-linked-category",
+      category: "Ciberseguranca",
+      subcategory: "Pentest",
+      description: ""
+    });
+
+    renderApp({
+      listStudyCategories,
+      listImportedDocuments,
+      loadDocumentStudyMetadata
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Gerenciar categorias" }));
+    const categoriesDialog = await screen.findByRole("dialog", {
+      name: "Gerenciar categorias"
+    });
+    const categoriesQueries = within(categoriesDialog);
+
+    const categoryItems = Array.from(
+      categoriesDialog.querySelectorAll(".category-manager-list li")
+    ) as HTMLElement[];
+    const linkedCategoryItem =
+      categoryItems.find((item) => within(item).queryByText("Ciberseguranca")) ?? null;
+    const freeCategoryItem =
+      categoryItems.find((item) => within(item).queryByText("Historia")) ?? null;
+
+    expect(linkedCategoryItem).not.toBeNull();
+    expect(freeCategoryItem).not.toBeNull();
+    expect(within(linkedCategoryItem as HTMLElement).getByText("1 livro vinculado")).toBeInTheDocument();
+    expect(within(freeCategoryItem as HTMLElement).getByText("0 livros vinculados")).toBeInTheDocument();
+    expect(within(linkedCategoryItem as HTMLElement).getByRole("button", { name: "Excluir" })).toBeDisabled();
+    expect(within(freeCategoryItem as HTMLElement).getByRole("button", { name: "Excluir" })).toBeEnabled();
+  });
+
   it("filters saved books by category and opens them from Meus Livros", async () => {
     const listImportedDocuments = vi.fn().mockResolvedValue({
       documents: [

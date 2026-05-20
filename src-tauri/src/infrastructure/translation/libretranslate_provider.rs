@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    app::{TranslationProvider, TranslationProviderError},
+    app::{TranslationProvider, TranslationProviderError, TranslationProviderId},
     domain::Language,
 };
 
@@ -124,6 +124,10 @@ impl<C> TranslationProvider for LibreTranslateProvider<C>
 where
     C: LibreTranslateClient,
 {
+    fn provider_id(&self) -> TranslationProviderId {
+        TranslationProviderId::LibreTranslate
+    }
+
     fn translate_text(
         &self,
         text: &str,

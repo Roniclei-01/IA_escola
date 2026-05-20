@@ -291,6 +291,13 @@ export const resources = {
         translationSameLanguage: "O idioma escolhido e o mesmo do documento original.",
         translationStatusCached: "Traducao carregada do cache local.",
         translationStatusGenerated: "Traducao gerada agora e salva localmente.",
+        translationProviderStatus: "Provedor: {{provider}}.",
+        translationProviders: {
+          unknown: "Nao identificado",
+          libretranslate: "LibreTranslate",
+          ollama: "Ollama",
+          mixed: "LibreTranslate + Ollama"
+        },
         translateDocument: "Traduzir pagina atual",
         retranslateDocument: "Retraduzir pagina",
         translatingDocumentAction: "Traduzindo",
@@ -759,6 +766,13 @@ export const resources = {
         translationSameLanguage: "The selected language is the same as the original document.",
         translationStatusCached: "Translation loaded from the local cache.",
         translationStatusGenerated: "Translation generated now and saved locally.",
+        translationProviderStatus: "Provider: {{provider}}.",
+        translationProviders: {
+          unknown: "Unknown",
+          libretranslate: "LibreTranslate",
+          ollama: "Ollama",
+          mixed: "LibreTranslate + Ollama"
+        },
         translateDocument: "Translate current page",
         retranslateDocument: "Retranslate page",
         translatingDocumentAction: "Translating",
@@ -1227,6 +1241,13 @@ export const resources = {
         translationSameLanguage: "El idioma elegido es el mismo del documento original.",
         translationStatusCached: "Traduccion cargada desde la cache local.",
         translationStatusGenerated: "Traduccion generada ahora y guardada localmente.",
+        translationProviderStatus: "Proveedor: {{provider}}.",
+        translationProviders: {
+          unknown: "No identificado",
+          libretranslate: "LibreTranslate",
+          ollama: "Ollama",
+          mixed: "LibreTranslate + Ollama"
+        },
         translateDocument: "Traducir pagina actual",
         retranslateDocument: "Retraducir pagina",
         translatingDocumentAction: "Traduciendo",

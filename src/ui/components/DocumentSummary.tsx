@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ImportTextBookResponse } from "../../infrastructure/tauri/import-text-book";
 import type { RenderPdfPageResponse } from "../../infrastructure/tauri/render-pdf-page";
+import type { TranslationProviderId } from "../../infrastructure/tauri/translate-document";
 
 const COLLAPSED_PREVIEW_LENGTH = 900;
 const READER_PAGE_LENGTH = 1_200;
@@ -42,6 +43,8 @@ interface DocumentSummaryProps {
     translationSameLanguage: string;
     translationStatusCached: string;
     translationStatusGenerated: string;
+    translationProviderStatus: (provider: string) => string;
+    translationProviderLabel: (provider: TranslationProviderId) => string;
     translateDocument: string;
     retranslateDocument: string;
     translatingDocument: string;
@@ -64,6 +67,7 @@ interface DocumentSummaryProps {
   readerTargetLanguage: ImportTextBookResponse["language"];
   translatedPagesByIndex: Record<number, string>;
   translatedPageSourcesByIndex: Record<number, ReaderPageTranslationSource>;
+  translatedPageProvidersByIndex: Record<number, TranslationProviderId>;
   translatedReaderPageIndexes: number[];
   renderedPdfPage: RenderPdfPageResponse | null;
   isRenderingPdfPage?: boolean;
@@ -92,6 +96,7 @@ export function DocumentSummary({
   readerTargetLanguage,
   translatedPagesByIndex,
   translatedPageSourcesByIndex,
+  translatedPageProvidersByIndex,
   translatedReaderPageIndexes,
   renderedPdfPage,
   isRenderingPdfPage = false,
@@ -127,6 +132,7 @@ export function DocumentSummary({
     ? currentOriginalPage
     : translatedPagesByIndex[currentReaderPage] ?? "";
   const currentTranslationSource = translatedPageSourcesByIndex[currentReaderPage];
+  const currentTranslationProvider = translatedPageProvidersByIndex[currentReaderPage];
   const isPdfDocument = document.source_type === "pdf" && Boolean(document.source_path);
   const renderedPageCount = renderedPdfPage?.page_count ?? null;
   const translatedReaderPageLabels = useMemo(
@@ -324,9 +330,20 @@ export function DocumentSummary({
         {isSameLanguage ? <p className="reader-note">{labels.translationSameLanguage}</p> : null}
         {currentTranslatedPage && !isSameLanguage ? (
           <p className="reader-translation-status">
-            {currentTranslationSource === "cache"
-              ? labels.translationStatusCached
-              : labels.translationStatusGenerated}
+            <span>
+              {currentTranslationSource === "cache"
+                ? labels.translationStatusCached
+                : labels.translationStatusGenerated}
+            </span>
+            {currentTranslationSource === "generated" &&
+            currentTranslationProvider &&
+            currentTranslationProvider !== "unknown" ? (
+              <span>
+                {labels.translationProviderStatus(
+                  labels.translationProviderLabel(currentTranslationProvider)
+                )}
+              </span>
+            ) : null}
           </p>
         ) : null}
         <div className="document-reader-grid">

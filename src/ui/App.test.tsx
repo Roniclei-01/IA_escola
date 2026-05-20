@@ -1882,7 +1882,8 @@ describe("App", () => {
       document_id: "document-reader",
       source_language: "Pt",
       target_language: "En",
-      translated_content: "Translated text for reading."
+      translated_content: "Translated text for reading.",
+      translation_provider: "libretranslate"
     });
 
     renderApp({
@@ -1924,6 +1925,7 @@ describe("App", () => {
     });
     expect(await screen.findByText("Translated text for reading.")).toBeInTheDocument();
     expect(screen.getByText("Traducao gerada agora e salva localmente.")).toBeInTheDocument();
+    expect(screen.getByText("Provedor: LibreTranslate.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retraduzir pagina" })).toBeInTheDocument();
   });
 

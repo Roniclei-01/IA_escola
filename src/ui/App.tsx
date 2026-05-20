@@ -43,6 +43,7 @@ import {
 } from "../infrastructure/tauri/generate-study-cards";
 import {
   translateDocument as defaultTranslateDocument,
+  type TranslationProviderId,
   type TranslateDocumentRequest,
   type TranslateDocumentResponse
 } from "../infrastructure/tauri/translate-document";
@@ -1708,6 +1709,9 @@ export function App({
   const [translatedDocumentPageSources, setTranslatedDocumentPageSources] = useState<
     Record<number, ReaderPageTranslationSource>
   >({});
+  const [translatedDocumentPageProviders, setTranslatedDocumentPageProviders] = useState<
+    Record<number, TranslationProviderId>
+  >({});
   const [translatedReaderPageIndexes, setTranslatedReaderPageIndexes] = useState<number[]>([]);
   const [pdfReaderPage, setPdfReaderPage] = useState(1);
   const [pdfReaderZoom, setPdfReaderZoom] = useState(1);
@@ -2028,6 +2032,15 @@ export function App({
     setTranslatedReaderPageIndexes((currentIndexes) =>
       normalizePageIndexes([...currentIndexes, pageIndex])
     );
+  }
+
+  function forgetTranslatedReaderPageProvider(pageIndex: number) {
+    setTranslatedDocumentPageProviders((currentProviders) => {
+      const nextProviders = { ...currentProviders };
+      delete nextProviders[pageIndex];
+
+      return nextProviders;
+    });
   }
 
   function handleCancelOperation() {
@@ -2641,6 +2654,7 @@ export function App({
     if (targetLanguage === sourceLanguage) {
       setTranslatedDocumentPages({});
       setTranslatedDocumentPageSources({});
+      setTranslatedDocumentPageProviders({});
       setTranslatedReaderPageIndexes([]);
       return;
     }
@@ -2666,6 +2680,7 @@ export function App({
         cachedTranslation ? { 0: cachedTranslation.translated_content } : {}
       );
       setTranslatedDocumentPageSources(cachedTranslation ? { 0: "cache" } : {});
+      setTranslatedDocumentPageProviders({});
       if (cachedTranslation) {
         rememberTranslatedReaderPageIndex(0);
       }
@@ -2710,6 +2725,7 @@ export function App({
     setReaderTargetLanguage(language);
     setTranslatedDocumentPages({});
     setTranslatedDocumentPageSources({});
+    setTranslatedDocumentPageProviders({});
     setTranslatedReaderPageIndexes([]);
 
     if (document) {
@@ -2753,6 +2769,7 @@ export function App({
         ...currentSources,
         [pageIndex]: "cache"
       }));
+      forgetTranslatedReaderPageProvider(pageIndex);
       rememberTranslatedReaderPageIndex(pageIndex);
     } catch {
       if (isCurrentTranslationLoad(translationLoadToken)) {
@@ -2782,6 +2799,7 @@ export function App({
     if (readerTargetLanguage === sourceLanguage) {
       setTranslatedDocumentPages({});
       setTranslatedDocumentPageSources({});
+      setTranslatedDocumentPageProviders({});
       setTranslatedReaderPageIndexes([]);
       return;
     }
@@ -2824,6 +2842,7 @@ export function App({
             ...currentSources,
             [pageIndex]: "cache"
           }));
+          forgetTranslatedReaderPageProvider(pageIndex);
           rememberTranslatedReaderPageIndex(pageIndex);
           return;
         }
@@ -2847,6 +2866,10 @@ export function App({
       setTranslatedDocumentPageSources((currentSources) => ({
         ...currentSources,
         [pageIndex]: "generated"
+      }));
+      setTranslatedDocumentPageProviders((currentProviders) => ({
+        ...currentProviders,
+        [pageIndex]: response.translation_provider
       }));
       rememberTranslatedReaderPageIndex(pageIndex);
     } catch (unknownError) {
@@ -2884,6 +2907,7 @@ export function App({
     setReaderTargetLanguage("En");
     setTranslatedDocumentPages({});
     setTranslatedDocumentPageSources({});
+    setTranslatedDocumentPageProviders({});
     setTranslatedReaderPageIndexes([]);
     setActiveCardIndex(0);
     setIsAnswerVisible(false);
@@ -2943,6 +2967,7 @@ export function App({
       );
       setTranslatedDocumentPages({});
       setTranslatedDocumentPageSources({});
+      setTranslatedDocumentPageProviders({});
       setTranslatedReaderPageIndexes([]);
       setDocumentChunks(chunkResponse.chunks);
       setSavedDocuments((currentDocuments) => [...currentDocuments, currentImportedDocument]);
@@ -2987,6 +3012,7 @@ export function App({
       setReaderTargetLanguage("En");
       setTranslatedDocumentPages({});
       setTranslatedDocumentPageSources({});
+      setTranslatedDocumentPageProviders({});
       setTranslatedReaderPageIndexes([]);
       setActiveCardIndex(0);
       setIsAnswerVisible(false);
@@ -3017,6 +3043,7 @@ export function App({
     setReaderTargetLanguage(targetLanguage);
     setTranslatedDocumentPages({});
     setTranslatedDocumentPageSources({});
+    setTranslatedDocumentPageProviders({});
     setTranslatedReaderPageIndexes([]);
     void loadPersistedTranslationForDocument(selectedDocument, targetLanguage);
     setChunkCount(null);
@@ -3610,6 +3637,7 @@ export function App({
         setReaderTargetLanguage("En");
         setTranslatedDocumentPages({});
         setTranslatedDocumentPageSources({});
+        setTranslatedDocumentPageProviders({});
         setTranslatedReaderPageIndexes([]);
         setActiveCardIndex(0);
         setIsAnswerVisible(false);
@@ -5071,6 +5099,10 @@ export function App({
               translationSameLanguage: t("library.translationSameLanguage"),
               translationStatusCached: t("library.translationStatusCached"),
               translationStatusGenerated: t("library.translationStatusGenerated"),
+              translationProviderStatus: (provider) =>
+                t("library.translationProviderStatus", { provider }),
+              translationProviderLabel: (provider) =>
+                t(`library.translationProviders.${provider}`),
               translateDocument: t("library.translateDocument"),
               retranslateDocument: t("library.retranslateDocument"),
               translatingDocument: t("library.translatingDocumentAction"),
@@ -5099,6 +5131,7 @@ export function App({
             readerTargetLanguage={readerTargetLanguage}
             translatedPagesByIndex={translatedDocumentPages}
             translatedPageSourcesByIndex={translatedDocumentPageSources}
+            translatedPageProvidersByIndex={translatedDocumentPageProviders}
             translatedReaderPageIndexes={translatedReaderPageIndexes}
             renderedPdfPage={renderedPdfPage}
             isRenderingPdfPage={isRenderingPdfPage}

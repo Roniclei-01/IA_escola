@@ -1305,6 +1305,9 @@ h1 {
 }
 
 .reader-translation-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   width: fit-content;
   margin: 0;
   padding: 8px 10px;

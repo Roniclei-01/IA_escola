@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ImportTextBookResponse } from "./import-text-book";
 
+export type TranslationProviderId = "unknown" | "libretranslate" | "ollama" | "mixed";
+
 export interface TranslateDocumentRequest {
   document_id: string;
   content: string;
@@ -16,6 +18,7 @@ export interface TranslateDocumentResponse {
   target_language: ImportTextBookResponse["language"];
   translated_content: string;
   page_index?: number;
+  translation_provider: TranslationProviderId;
 }
 
 export async function translateDocument(

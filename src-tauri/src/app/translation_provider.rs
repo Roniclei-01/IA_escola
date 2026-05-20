@@ -7,6 +7,15 @@ use crate::{
     domain::Language,
 };
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TranslationProviderId {
+    Unknown,
+    LibreTranslate,
+    Ollama,
+    Mixed,
+}
+
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 pub enum TranslationProviderError {
     #[error("translation provider is unavailable")]
@@ -16,6 +25,14 @@ pub enum TranslationProviderError {
 }
 
 pub trait TranslationProvider {
+    fn provider_id(&self) -> TranslationProviderId {
+        TranslationProviderId::Unknown
+    }
+
+    fn used_provider_id(&self) -> TranslationProviderId {
+        self.provider_id()
+    }
+
     fn translate_text(
         &self,
         text: &str,
@@ -35,6 +52,10 @@ impl<'a> ModelAdapterTranslationProvider<'a> {
 }
 
 impl TranslationProvider for ModelAdapterTranslationProvider<'_> {
+    fn provider_id(&self) -> TranslationProviderId {
+        TranslationProviderId::Ollama
+    }
+
     fn translate_text(
         &self,
         text: &str,
@@ -55,6 +76,8 @@ pub struct FallbackTranslationProvider<'a> {
     primary: &'a dyn TranslationProvider,
     fallback: &'a dyn TranslationProvider,
     primary_failed: Cell<bool>,
+    used_primary: Cell<bool>,
+    used_fallback: Cell<bool>,
 }
 
 impl<'a> FallbackTranslationProvider<'a> {
@@ -66,11 +89,22 @@ impl<'a> FallbackTranslationProvider<'a> {
             primary,
             fallback,
             primary_failed: Cell::new(false),
+            used_primary: Cell::new(false),
+            used_fallback: Cell::new(false),
         }
     }
 }
 
 impl TranslationProvider for FallbackTranslationProvider<'_> {
+    fn used_provider_id(&self) -> TranslationProviderId {
+        match (self.used_primary.get(), self.used_fallback.get()) {
+            (true, true) => TranslationProviderId::Mixed,
+            (true, false) => self.primary.used_provider_id(),
+            (false, true) => self.fallback.used_provider_id(),
+            (false, false) => TranslationProviderId::Unknown,
+        }
+    }
+
     fn translate_text(
         &self,
         text: &str,
@@ -83,13 +117,20 @@ impl TranslationProvider for FallbackTranslationProvider<'_> {
                 source_language.clone(),
                 target_language.clone(),
             ) {
-                Ok(translated_text) => return Ok(translated_text),
+                Ok(translated_text) => {
+                    self.used_primary.set(true);
+                    return Ok(translated_text);
+                }
                 Err(_) => self.primary_failed.set(true),
             }
         }
 
-        self.fallback
-            .translate_text(text, source_language, target_language)
+        let translated_text =
+            self.fallback
+                .translate_text(text, source_language, target_language)?;
+        self.used_fallback.set(true);
+
+        Ok(translated_text)
     }
 }
 
@@ -130,12 +171,16 @@ fn map_model_error(error: ModelAdapterError) -> TranslationProviderError {
 mod tests {
     use std::cell::RefCell;
 
-    use super::{FallbackTranslationProvider, TranslationProvider, TranslationProviderError};
+    use super::{
+        FallbackTranslationProvider, TranslationProvider, TranslationProviderError,
+        TranslationProviderId,
+    };
     use crate::domain::Language;
 
     struct FakeTranslationProvider {
         result: Result<String, TranslationProviderError>,
         received_texts: RefCell<Vec<String>>,
+        provider_id: TranslationProviderId,
     }
 
     impl TranslationProvider for FakeTranslationProvider {
@@ -149,6 +194,10 @@ mod tests {
 
             self.result.clone()
         }
+
+        fn provider_id(&self) -> TranslationProviderId {
+            self.provider_id
+        }
     }
 
     #[test]
@@ -156,10 +205,12 @@ mod tests {
         let primary = FakeTranslationProvider {
             result: Err(TranslationProviderError::Unavailable),
             received_texts: RefCell::new(Vec::new()),
+            provider_id: TranslationProviderId::LibreTranslate,
         };
         let fallback = FakeTranslationProvider {
             result: Ok("Texto traduzido pelo fallback.".to_owned()),
             received_texts: RefCell::new(Vec::new()),
+            provider_id: TranslationProviderId::Ollama,
         };
         let provider = FallbackTranslationProvider::new(&primary, &fallback);
 
@@ -183,10 +234,12 @@ mod tests {
         let primary = FakeTranslationProvider {
             result: Err(TranslationProviderError::Unavailable),
             received_texts: RefCell::new(Vec::new()),
+            provider_id: TranslationProviderId::LibreTranslate,
         };
         let fallback = FakeTranslationProvider {
             result: Ok("Texto traduzido pelo fallback.".to_owned()),
             received_texts: RefCell::new(Vec::new()),
+            provider_id: TranslationProviderId::Ollama,
         };
         let provider = FallbackTranslationProvider::new(&primary, &fallback);
 
@@ -209,10 +262,12 @@ mod tests {
         let primary = FakeTranslationProvider {
             result: Ok("Texto traduzido pelo provedor principal.".to_owned()),
             received_texts: RefCell::new(Vec::new()),
+            provider_id: TranslationProviderId::LibreTranslate,
         };
         let fallback = FakeTranslationProvider {
             result: Ok("Texto traduzido pelo fallback.".to_owned()),
             received_texts: RefCell::new(Vec::new()),
+            provider_id: TranslationProviderId::Ollama,
         };
         let provider = FallbackTranslationProvider::new(&primary, &fallback);
 
@@ -226,5 +281,26 @@ mod tests {
             ["Original text."]
         );
         assert!(fallback.received_texts.borrow().is_empty());
+    }
+
+    #[test]
+    fn reports_provider_used_by_fallback_translation_provider() {
+        let primary = FakeTranslationProvider {
+            result: Err(TranslationProviderError::Unavailable),
+            received_texts: RefCell::new(Vec::new()),
+            provider_id: TranslationProviderId::LibreTranslate,
+        };
+        let fallback = FakeTranslationProvider {
+            result: Ok("Texto traduzido pelo fallback.".to_owned()),
+            received_texts: RefCell::new(Vec::new()),
+            provider_id: TranslationProviderId::Ollama,
+        };
+        let provider = FallbackTranslationProvider::new(&primary, &fallback);
+
+        provider
+            .translate_text("Original.", Language::En, Language::Pt)
+            .unwrap();
+
+        assert_eq!(provider.used_provider_id(), TranslationProviderId::Ollama);
     }
 }

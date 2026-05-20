@@ -192,3 +192,183 @@ test("imports a document, generates a card and records a review", async ({ page 
     page.getByLabel("Estudo", { exact: true }).getByText("Acertos: 1 | Erros: 0 | Dificeis: 0")
   ).toBeVisible();
 });
+
+test("imports a document using a custom study category", async ({ page }) => {
+  await page.addInitScript(() => {
+    const document = {
+      document_id: "document-custom-category-e2e",
+      book_id: "book-custom-category-e2e",
+      content: "Conteudo sobre testes de invasao em ambiente controlado.",
+      language: "Pt",
+      source_type: "txt",
+      source_path: "/tmp/pentest.txt"
+    };
+    const chunk = {
+      id: "chunk-custom-category-e2e",
+      book_id: "book-custom-category-e2e",
+      document_id: "document-custom-category-e2e",
+      position: 0,
+      content: "Conteudo sobre testes de invasao em ambiente controlado.",
+      token_estimate: 8
+    };
+    const categories: Array<{
+      id: string;
+      name: string;
+      subcategories: string[];
+      archived: boolean;
+    }> = [];
+    const metadataByDocumentId: Record<
+      string,
+      {
+        document_id: string;
+        category: string;
+        subcategory: string;
+        description: string;
+      }
+    > = {};
+    const callbacks = new Map<number, unknown>();
+    let callbackId = 1;
+    const tauriWindow = window as TauriInternalsWindow;
+
+    tauriWindow.__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args?: Record<string, unknown>) => {
+        switch (cmd) {
+          case "list_imported_documents":
+            return { documents: [] };
+          case "list_archived_documents":
+            return { documents: [] };
+          case "load_ollama_settings":
+            return { base_url: "http://127.0.0.1:11434", model: "llama3.2:1b" };
+          case "load_notification_settings":
+            return {
+              study_goal_reminders_enabled: true,
+              study_goal_reminder_time: "08:00"
+            };
+          case "test_ocr_dependencies":
+            return { pdftoppm_available: true, tesseract_available: true };
+          case "list_study_categories":
+            return { categories };
+          case "save_study_category": {
+            const request = args?.request as {
+              id?: string | null;
+              name: string;
+              subcategories: string[];
+            };
+            const savedCategory = {
+              id: request.id ?? "category-custom-e2e",
+              name: request.name,
+              subcategories: request.subcategories,
+              archived: false
+            };
+
+            categories.splice(0, categories.length, savedCategory);
+
+            return savedCategory;
+          }
+          case "load_study_category_default":
+            return { category: "Geral", subcategory: "Sem subcategoria" };
+          case "save_study_category_default":
+            return args?.request;
+          case "import_text_book":
+            return document;
+          case "chunk_text_document":
+            return { chunks: [chunk] };
+          case "save_document_study_metadata": {
+            const request = args?.request as {
+              document_id: string;
+              category: string;
+              subcategory: string;
+              description: string;
+            };
+
+            metadataByDocumentId[request.document_id] = request;
+
+            return request;
+          }
+          case "load_document_study_metadata":
+            return metadataByDocumentId[String(args?.documentId)] ?? null;
+          case "load_meditation_notes":
+            return { notes: [] };
+          case "load_pdf_reader_preference":
+            return {
+              document_id: "document-custom-category-e2e",
+              page: 1,
+              zoom: 1,
+              reader_page: 1
+            };
+          case "save_pdf_reader_preference":
+            return args?.preference;
+          case "list_document_page_translations":
+            return { page_indexes: [] };
+          case "load_document_translation":
+            return { translation: null };
+          case "load_study_goal":
+            return null;
+          case "list_study_cards":
+            return [];
+          case "list_study_reviews":
+            return [];
+          case "list_study_session_summaries":
+            return { summaries: [] };
+          case "list_document_chunks":
+            return { chunks: [chunk] };
+          default:
+            throw new Error(`Comando Tauri nao mockado no E2E: ${cmd}`);
+        }
+      },
+      transformCallback: (callback: unknown) => {
+        const id = callbackId;
+        callbackId += 1;
+        callbacks.set(id, callback);
+        return id;
+      },
+      unregisterCallback: (id: number) => {
+        callbacks.delete(id);
+      },
+      runCallback: (id: number, payload: unknown) => {
+        const callback = callbacks.get(id);
+        if (typeof callback === "function") {
+          callback(payload);
+        }
+      },
+      callbacks,
+      convertFileSrc: (filePath: string) => filePath,
+      metadata: {
+        currentWindow: { label: "main" },
+        currentWebview: { label: "main" }
+      }
+    };
+  });
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Gerenciar categorias" }).click();
+  const categoriesDialog = page.getByRole("dialog", { name: "Gerenciar categorias" });
+  await expect(categoriesDialog).toBeVisible();
+  await categoriesDialog.getByLabel("Nome da categoria").fill("Ciberseguranca");
+  await categoriesDialog.getByLabel("Subcategorias").fill("Pentest");
+  await categoriesDialog.getByRole("button", { name: "Salvar categoria" }).click();
+  await expect(categoriesDialog.getByText("Categoria salva.")).toBeVisible();
+  await categoriesDialog.getByRole("button", { name: "Fechar categorias" }).click();
+
+  await page
+    .getByLabel("Importacao e IA")
+    .getByRole("button", { name: "Importar livro" })
+    .click();
+  const importDialog = page.getByRole("dialog", { name: "Importar livro" });
+  await expect(importDialog).toBeVisible();
+  await importDialog.locator("#import-category").selectOption("Ciberseguranca");
+  await importDialog.locator("#import-subcategory").selectOption("Pentest");
+  await importDialog.getByLabel("Caminho do arquivo .txt ou .pdf").fill("/tmp/pentest.txt");
+  await importDialog.getByRole("button", { name: "Importar" }).click();
+
+  await expect(page.getByRole("heading", { name: "Previa do conteudo" })).toBeVisible();
+  await expect(page.getByText("1 chunk gerado")).toBeVisible();
+  await page.getByRole("button", { name: "Voltar para biblioteca" }).click();
+
+  await expect(page.getByRole("heading", { name: "Ciberseguranca" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Pentest/ })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Conteudo sobre testes de invasao/ })
+  ).toBeVisible();
+});

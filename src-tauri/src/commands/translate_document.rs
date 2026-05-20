@@ -3,8 +3,9 @@ use uuid::Uuid;
 
 use crate::{
     app::{
-        translate_document as translate_document_content, ModelAdapterTranslationProvider,
+        translate_document_with_provider_status, ModelAdapterTranslationProvider,
         TranslateDocumentError, TranslationProvider, TranslationProviderError,
+        TranslationProviderId,
     },
     domain::Language,
     infrastructure::storage::{SQLiteStorage, StorageError},
@@ -30,6 +31,7 @@ pub struct TranslateDocumentResponse {
     pub target_language: Language,
     pub translated_content: String,
     pub page_index: Option<u32>,
+    pub translation_provider: TranslationProviderId,
 }
 
 pub fn translate_document_with_provider(
@@ -42,7 +44,7 @@ pub fn translate_document_with_provider(
         return Err("Documento invalido para traducao.".to_owned());
     }
 
-    let translated_content = translate_document_content(
+    let translated_document = translate_document_with_provider_status(
         &request.content,
         request.source_language.clone(),
         request.target_language.clone(),
@@ -54,8 +56,9 @@ pub fn translate_document_with_provider(
         document_id: document_id.to_owned(),
         source_language: request.source_language,
         target_language: request.target_language,
-        translated_content,
+        translated_content: translated_document.content,
         page_index: request.page_index,
+        translation_provider: translated_document.provider,
     })
 }
 
@@ -173,7 +176,7 @@ fn format_storage_error(_error: StorageError) -> String {
 mod tests {
     use super::{translate_document_with_adapter, TranslateDocumentRequest};
     use crate::{
-        app::{FlashcardConfig, ModelAdapter, ModelAdapterError},
+        app::{FlashcardConfig, ModelAdapter, ModelAdapterError, TranslationProviderId},
         domain::{DocumentChunk, Language, StudyCard},
         infrastructure::storage::SQLiteStorage,
     };
@@ -220,6 +223,7 @@ mod tests {
         assert_eq!(response.source_language, Language::Pt);
         assert_eq!(response.target_language, Language::En);
         assert_eq!(response.page_index, None);
+        assert_eq!(response.translation_provider, TranslationProviderId::Ollama);
         assert!(response.translated_content.contains("Translated:"));
     }
 

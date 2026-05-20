@@ -37,7 +37,12 @@ pub fn list_study_categories_from_storage(
     storage
         .list_study_categories(include_archived)
         .map_err(format_list_error)
-        .map(|categories| categories.into_iter().map(StudyCategoryResponse::from).collect())
+        .map(|categories| {
+            categories
+                .into_iter()
+                .map(StudyCategoryResponse::from)
+                .collect()
+        })
 }
 
 pub fn save_study_category_with_storage(
@@ -52,9 +57,7 @@ pub fn save_study_category_with_storage(
     }
 
     let existing_category = match request.id {
-        Some(id) => storage
-            .load_study_category(id)
-            .map_err(format_list_error)?,
+        Some(id) => storage.load_study_category(id).map_err(format_list_error)?,
         None => None,
     };
     let category = StudyCategoryRecord {
@@ -296,10 +299,7 @@ mod tests {
             &storage,
         );
 
-        assert_eq!(
-            result.unwrap_err(),
-            "Informe pelo menos uma subcategoria."
-        );
+        assert_eq!(result.unwrap_err(), "Informe pelo menos uma subcategoria.");
     }
 
     #[test]
@@ -315,18 +315,22 @@ mod tests {
         )
         .unwrap();
 
-        let archived =
-            archive_study_category_with_storage(DeleteStudyCategoryRequest { id: category.id }, &storage)
-                .unwrap();
+        let archived = archive_study_category_with_storage(
+            DeleteStudyCategoryRequest { id: category.id },
+            &storage,
+        )
+        .unwrap();
 
         assert!(archived.archived);
         assert!(list_study_categories_from_storage(&storage, false)
             .unwrap()
             .is_empty());
 
-        let restored =
-            restore_study_category_with_storage(DeleteStudyCategoryRequest { id: category.id }, &storage)
-                .unwrap();
+        let restored = restore_study_category_with_storage(
+            DeleteStudyCategoryRequest { id: category.id },
+            &storage,
+        )
+        .unwrap();
 
         assert!(!restored.archived);
         assert_eq!(
@@ -359,8 +363,10 @@ mod tests {
             )
             .unwrap();
 
-        let result =
-            delete_study_category_with_storage(DeleteStudyCategoryRequest { id: category.id }, &storage);
+        let result = delete_study_category_with_storage(
+            DeleteStudyCategoryRequest { id: category.id },
+            &storage,
+        );
 
         assert_eq!(
             result.unwrap_err(),

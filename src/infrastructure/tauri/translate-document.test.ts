@@ -18,7 +18,8 @@ describe("translateDocument", () => {
       document_id: "document-1",
       source_language: "Pt",
       target_language: "En",
-      translated_content: "Translated content."
+      translated_content: "Translated content.",
+      translation_provider: "libretranslate"
     });
 
     const result = await translateDocument({
@@ -37,6 +38,7 @@ describe("translateDocument", () => {
       }
     });
     expect(result.translated_content).toBe("Translated content.");
+    expect(result.translation_provider).toBe("libretranslate");
   });
 
   it("passes an optional reader page index", async () => {
@@ -45,6 +47,7 @@ describe("translateDocument", () => {
       source_language: "Pt",
       target_language: "En",
       translated_content: "Translated page.",
+      translation_provider: "ollama",
       page_index: 2
     });
 
@@ -66,5 +69,6 @@ describe("translateDocument", () => {
       }
     });
     expect(result.page_index).toBe(2);
+    expect(result.translation_provider).toBe("ollama");
   });
 });

@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 use crate::{
-    app::{TranslationProvider, TranslationProviderError},
+    app::{TranslationProvider, TranslationProviderError, TranslationProviderId},
     domain::Language,
 };
 
@@ -17,12 +17,28 @@ pub enum TranslateDocumentError {
     Provider(#[from] TranslationProviderError),
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct TranslatedDocument {
+    pub content: String,
+    pub provider: TranslationProviderId,
+}
+
 pub fn translate_document(
     content: &str,
     source_language: Language,
     target_language: Language,
     provider: &dyn TranslationProvider,
 ) -> Result<String, TranslateDocumentError> {
+    translate_document_with_provider_status(content, source_language, target_language, provider)
+        .map(|translated_document| translated_document.content)
+}
+
+pub fn translate_document_with_provider_status(
+    content: &str,
+    source_language: Language,
+    target_language: Language,
+    provider: &dyn TranslationProvider,
+) -> Result<TranslatedDocument, TranslateDocumentError> {
     let content = content.trim();
 
     if content.is_empty() {
@@ -30,7 +46,10 @@ pub fn translate_document(
     }
 
     if source_language == target_language {
-        return Ok(content.to_owned());
+        return Ok(TranslatedDocument {
+            content: content.to_owned(),
+            provider: TranslationProviderId::Unknown,
+        });
     }
 
     let translation_chunks = split_translation_chunks(content, TRANSLATION_CHUNK_TARGET_CHARS);
@@ -49,7 +68,10 @@ pub fn translate_document(
         translated_chunks.push(translated_chunk);
     }
 
-    Ok(translated_chunks.join("\n\n"))
+    Ok(TranslatedDocument {
+        content: translated_chunks.join("\n\n"),
+        provider: provider.used_provider_id(),
+    })
 }
 
 fn split_translation_chunks(content: &str, target_chars: usize) -> Vec<String> {
@@ -116,9 +138,11 @@ fn push_long_translation_segment(chunks: &mut Vec<String>, segment: &str, target
 mod tests {
     use std::cell::{Cell, RefCell};
 
-    use super::{translate_document, TranslateDocumentError};
+    use super::{
+        translate_document, translate_document_with_provider_status, TranslateDocumentError,
+    };
     use crate::{
-        app::{TranslationProvider, TranslationProviderError},
+        app::{TranslationProvider, TranslationProviderError, TranslationProviderId},
         domain::Language,
     };
 
@@ -129,6 +153,10 @@ mod tests {
     }
 
     impl TranslationProvider for FakeTranslationProvider {
+        fn provider_id(&self) -> TranslationProviderId {
+            TranslationProviderId::LibreTranslate
+        }
+
         fn translate_text(
             &self,
             text: &str,
@@ -175,6 +203,26 @@ mod tests {
         assert!(translated.contains("Translated content"));
         assert!(translated.contains("Conteudo tecnico."));
         assert_eq!(provider.calls.get(), 1);
+    }
+
+    #[test]
+    fn reports_translation_provider_used_by_document_translation() {
+        let provider = FakeTranslationProvider {
+            result: Ok("Translated content".to_owned()),
+            calls: Cell::new(0),
+            received_texts: RefCell::new(Vec::new()),
+        };
+
+        let translated = translate_document_with_provider_status(
+            "Conteudo tecnico.",
+            Language::Pt,
+            Language::En,
+            &provider,
+        )
+        .unwrap();
+
+        assert_eq!(translated.provider, TranslationProviderId::LibreTranslate);
+        assert!(translated.content.contains("Translated content"));
     }
 
     #[test]

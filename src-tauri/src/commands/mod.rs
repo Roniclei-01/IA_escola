@@ -190,8 +190,7 @@ pub use study_categories::{
 };
 pub use study_category_default::{
     default_study_category_default, load_study_category_default_from_storage,
-    save_study_category_default_with_storage, StudyCategoryDefault,
-    StudyCategoryDefaultRequest,
+    save_study_category_default_with_storage, StudyCategoryDefault, StudyCategoryDefaultRequest,
 };
 pub use study_goals::{
     load_study_goal_from_storage, save_study_goal_with_storage, SaveStudyGoalRequest,

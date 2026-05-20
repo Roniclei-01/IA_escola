@@ -959,10 +959,7 @@ impl SQLiteStorage {
         Ok(Some(metadata))
     }
 
-    pub fn save_study_category(
-        &self,
-        category: &StudyCategoryRecord,
-    ) -> Result<(), StorageError> {
+    pub fn save_study_category(&self, category: &StudyCategoryRecord) -> Result<(), StorageError> {
         let serialized_subcategories = serde_json::to_string(&category.subcategories)
             .map_err(StorageError::InvalidStudyCategorySubcategories)?;
 
@@ -1043,14 +1040,25 @@ impl SQLiteStorage {
             .query([category_id.to_string()])
             .map_err(StorageError::ListStudyCategoriesFailed)?;
 
-        let Some(row) = rows.next().map_err(StorageError::ListStudyCategoriesFailed)? else {
+        let Some(row) = rows
+            .next()
+            .map_err(StorageError::ListStudyCategoriesFailed)?
+        else {
             return Ok(None);
         };
         let raw_category = RawStudyCategory {
-            id: row.get(0).map_err(StorageError::ListStudyCategoriesFailed)?,
-            name: row.get(1).map_err(StorageError::ListStudyCategoriesFailed)?,
-            subcategories: row.get(2).map_err(StorageError::ListStudyCategoriesFailed)?,
-            archived: row.get(3).map_err(StorageError::ListStudyCategoriesFailed)?,
+            id: row
+                .get(0)
+                .map_err(StorageError::ListStudyCategoriesFailed)?,
+            name: row
+                .get(1)
+                .map_err(StorageError::ListStudyCategoriesFailed)?,
+            subcategories: row
+                .get(2)
+                .map_err(StorageError::ListStudyCategoriesFailed)?,
+            archived: row
+                .get(3)
+                .map_err(StorageError::ListStudyCategoriesFailed)?,
         };
 
         raw_category.try_into().map(Some)

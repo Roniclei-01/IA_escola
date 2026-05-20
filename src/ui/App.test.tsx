@@ -2536,6 +2536,66 @@ describe("App", () => {
     );
   });
 
+  it("keeps generated cards before the original PDF preview", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-pdf-card-order",
+      book_id: "book-pdf-card-order",
+      content: "Texto extraido do PDF para estudo.",
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/card-order.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({
+      chunks: [
+        {
+          id: "chunk-card-order",
+          book_id: "book-pdf-card-order",
+          document_id: "document-pdf-card-order",
+          position: 0,
+          content: "Chapter 1 explains network protocols and communication layers.",
+          token_estimate: 8
+        }
+      ]
+    });
+    const renderPdfPage = vi.fn().mockResolvedValue({
+      page: 1,
+      page_count: 1,
+      image_data_url: "data:image/png;base64,UEFHSU5BMQ=="
+    });
+    const generateCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-order",
+        bookId: "book-pdf-card-order",
+        chunkId: "chunk-card-order",
+        front: "Pergunta visual antes do PDF",
+        back: "Resposta",
+        tags: ["ordem"]
+      }
+    ]);
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      renderPdfPage,
+      generateCards,
+      saveStudyCards: saveCards,
+      enableDevelopmentFallback: false
+    });
+
+    fillImportFilePath("/tmp/card-order.pdf");
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+    expect(await screen.findByText("0 card gerado")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerar cards" }));
+
+    const cardFront = await screen.findByText("Pergunta visual antes do PDF");
+    const pdfHeading = screen.getByRole("heading", { name: "PDF original" });
+
+    expect(cardFront.compareDocumentPosition(pdfHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+  });
+
   it("restores and saves the PDF reader page and zoom per document", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-pdf-position",
@@ -3063,27 +3123,65 @@ describe("App", () => {
     expect(saveStudyCards).toHaveBeenCalledWith([incrementalCard]);
   });
 
-  it("limits initial Ollama generation to the first chunks of a large document", async () => {
+  it("limits initial Ollama generation to study chunks of a large document", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-large",
       book_id: "book-large",
       content: "Conteudo grande para estudo.",
       language: "Pt"
     });
-    const chunks = Array.from({ length: 5 }, (_, index) => ({
-      id: `chunk-${index + 1}`,
-      book_id: "book-large",
-      document_id: "document-large",
-      position: index,
-      content: `Chunk ${index + 1}.`,
-      token_estimate: 2
-    }));
+    const chunks = [
+      {
+        id: "chunk-1",
+        book_id: "book-large",
+        document_id: "document-large",
+        position: 0,
+        content:
+          "Copyright 2024 Publisher. All rights reserved. Where those designations appear, trademark claims were printed.",
+        token_estimate: 18
+      },
+      {
+        id: "chunk-2",
+        book_id: "book-large",
+        document_id: "document-large",
+        position: 1,
+        content: "Table of contents. Chapter 1. Chapter 2. Preface. About the author.",
+        token_estimate: 12
+      },
+      {
+        id: "chunk-3",
+        book_id: "book-large",
+        document_id: "document-large",
+        position: 2,
+        content:
+          "Chapter 1 introduces computer network architecture and explains how protocol layers organize communication between systems.",
+        token_estimate: 20
+      },
+      {
+        id: "chunk-4",
+        book_id: "book-large",
+        document_id: "document-large",
+        position: 3,
+        content:
+          "The TCP protocol provides reliable data transfer by acknowledging packets and retransmitting missing segments.",
+        token_estimate: 16
+      },
+      {
+        id: "chunk-5",
+        book_id: "book-large",
+        document_id: "document-large",
+        position: 4,
+        content:
+          "Application layer protocols define how processes exchange messages between clients and servers in a network.",
+        token_estimate: 16
+      }
+    ];
     const chunkTextDocument = vi.fn().mockResolvedValue({ chunks });
     const generateCards = vi.fn().mockResolvedValue([
       {
         id: "card-1",
         bookId: "book-large",
-        chunkId: "chunk-1",
+        chunkId: "chunk-3",
         front: "Pergunta 1",
         back: "Resposta 1",
         tags: ["large"]
@@ -3091,7 +3189,7 @@ describe("App", () => {
       {
         id: "card-2",
         bookId: "book-large",
-        chunkId: "chunk-2",
+        chunkId: "chunk-4",
         front: "Pergunta 2",
         back: "Resposta 2",
         tags: ["large"]
@@ -3099,7 +3197,7 @@ describe("App", () => {
       {
         id: "card-3",
         bookId: "book-large",
-        chunkId: "chunk-3",
+        chunkId: "chunk-5",
         front: "Pergunta 3",
         back: "Resposta 3",
         tags: ["large"]
@@ -3121,12 +3219,12 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(generateCards).toHaveBeenCalledWith(
-        chunks.slice(0, 3),
+        chunks.slice(2, 5),
         expect.objectContaining({ onProgress: expect.any(Function) })
       );
     });
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Para evitar travamentos, foram gerados cards dos 3 primeiros chunks de 5."
+      "Para evitar travamentos, foram gerados cards de 3 chunks de estudo entre 5 chunks."
     );
     expect(screen.getByText("5 chunks gerados")).toBeInTheDocument();
     expect(screen.getByText("3 cards gerados")).toBeInTheDocument();
@@ -3660,7 +3758,12 @@ describe("App", () => {
         back: "TCP",
         tags: ["redes"],
         cardType: "multiple_choice",
-        choices: ["TCP", "UDP", "ARP", "ICMP"],
+        choices: [
+          "Alternativa A: TCP",
+          "Alternativa B: UDP",
+          "Alternativa C: ARP",
+          "Alternativa D: ICMP"
+        ],
         correctChoiceIndex: 0,
         explanation: "TCP confirma entrega e reenvia pacotes perdidos."
       }
@@ -3681,6 +3784,7 @@ describe("App", () => {
 
     expect(await screen.findByText("Qual protocolo entrega dados de forma confiavel?")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Alternativas" })).toBeInTheDocument();
+    expect(screen.queryByText(/Alternativa A:/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /UDP/ }));
     expect(screen.getByRole("button", { name: /UDP/ })).toHaveAttribute("aria-pressed", "true");
 
@@ -4365,7 +4469,9 @@ describe("App", () => {
       recurrence: "weekly"
     });
     const notifyStudyGoalReminder = vi.fn();
-    const cancelStudyGoalReminder = vi.fn();
+    const cancelStudyGoalReminder = vi
+      .fn()
+      .mockRejectedValue(new Error("Command cancel not found"));
 
     renderApp({
       listImportedDocuments,
@@ -4398,6 +4504,7 @@ describe("App", () => {
     });
     expect(notifyStudyGoalReminder).not.toHaveBeenCalled();
     expect(cancelStudyGoalReminder).toHaveBeenCalled();
+    expect(screen.queryByText("Command cancel not found")).not.toBeInTheDocument();
   });
 
   it("persists the study goal reminder time", async () => {

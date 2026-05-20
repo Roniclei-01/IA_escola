@@ -42,6 +42,45 @@ describe("study card persistence", () => {
     expect(toStudyCard(persistedCard)).toEqual(card);
   });
 
+  it("normalizes redundant multiple choice labels when mapping cards", () => {
+    const card = {
+      id: "card-1",
+      bookId: "book-1",
+      chunkId: "chunk-1",
+      front: "Qual protocolo confirma entrega?",
+      back: "TCP",
+      tags: ["redes"],
+      cardType: "multiple_choice" as const,
+      choices: [
+        "Alternativa A: TCP",
+        "Alternativa B: UDP",
+        "Alternativa C: ARP",
+        "Alternativa D: ICMP"
+      ],
+      correctChoiceIndex: 0
+    };
+
+    expect(toPersistedStudyCard(card).choices).toEqual(["TCP", "UDP", "ARP", "ICMP"]);
+    expect(
+      toStudyCard({
+        id: "card-1",
+        book_id: "book-1",
+        chunk_id: "chunk-1",
+        front: "Qual protocolo confirma entrega?",
+        back: "TCP",
+        tags: ["redes"],
+        card_type: "multiple_choice",
+        choices: [
+          "Alternativa A: TCP",
+          "Alternativa B: UDP",
+          "Alternativa C: ARP",
+          "Alternativa D: ICMP"
+        ],
+        correct_choice_index: 0
+      }).choices
+    ).toEqual(["TCP", "UDP", "ARP", "ICMP"]);
+  });
+
   it("invokes the Tauri save_study_cards command", async () => {
     invokeMock.mockResolvedValue({
       cards: [

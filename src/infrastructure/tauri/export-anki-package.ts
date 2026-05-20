@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import type { StudyCard } from "../../domain/model-adapter";
+import { normalizeMultipleChoiceChoices } from "../../domain/study-card-formatting";
 
 export interface ExportAnkiPackageResponse {
   file_path: string;
@@ -14,7 +15,7 @@ function toExportCard(card: StudyCard) {
     back: card.back,
     tags: card.tags,
     ...(card.cardType ? { card_type: card.cardType } : {}),
-    ...(card.choices ? { choices: card.choices } : {}),
+    ...(card.choices ? { choices: normalizeMultipleChoiceChoices(card.choices) } : {}),
     ...(card.correctChoiceIndex !== undefined
       ? { correct_choice_index: card.correctChoiceIndex }
       : {}),

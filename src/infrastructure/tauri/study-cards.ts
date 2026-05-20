@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { StudyCard } from "../../domain/model-adapter";
+import { normalizeMultipleChoiceChoices } from "../../domain/study-card-formatting";
 
 export interface PersistedStudyCard {
   id: string;
@@ -42,7 +43,7 @@ export function toPersistedStudyCard(card: StudyCard): PersistedStudyCard {
   }
 
   if (card.choices) {
-    persistedCard.choices = card.choices;
+    persistedCard.choices = normalizeMultipleChoiceChoices(card.choices);
   }
 
   if (card.correctChoiceIndex !== undefined) {
@@ -71,7 +72,7 @@ export function toStudyCard(card: PersistedStudyCard): StudyCard {
   }
 
   if (card.choices) {
-    studyCard.choices = card.choices;
+    studyCard.choices = normalizeMultipleChoiceChoices(card.choices);
   }
 
   if (card.correct_choice_index !== undefined) {

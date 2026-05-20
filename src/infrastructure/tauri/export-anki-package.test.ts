@@ -77,7 +77,12 @@ describe("exportAnkiPackage", () => {
         back: "TCP",
         tags: ["redes"],
         cardType: "multiple_choice",
-        choices: ["TCP", "UDP", "ARP", "ICMP"],
+        choices: [
+          "Alternativa A: TCP",
+          "Alternativa B: UDP",
+          "Alternativa C: ARP",
+          "Alternativa D: ICMP"
+        ],
         correctChoiceIndex: 0,
         explanation: "TCP controla entrega e retransmissao."
       }

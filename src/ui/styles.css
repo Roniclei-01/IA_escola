@@ -3528,6 +3528,52 @@ h1 {
   box-shadow: 0 18px 38px rgb(0 0 0 / 0.18);
 }
 
+.app-shell[data-theme="dark"] .background-generation-panel {
+  color: #f0f7f2;
+  border-color: #3b5b49;
+  background: #122018;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.42);
+}
+
+.app-shell[data-theme="dark"] .background-generation-panel h2 {
+  color: #f3fbf5;
+}
+
+.app-shell[data-theme="dark"] .background-generation-panel p {
+  color: #cce1d3;
+}
+
+.app-shell[data-theme="dark"] .background-generation-panel span {
+  color: inherit;
+}
+
+.app-shell[data-theme="dark"] .background-generation-panel .processing-spinner {
+  border-color: #2f4638;
+  border-top-color: #75d39d;
+}
+
+.app-shell[data-theme="dark"] .background-generation-panel .processing-queue-bar {
+  background: #25362c;
+}
+
+.app-shell[data-theme="dark"] .background-generation-panel .processing-queue-bar span {
+  background: #75d39d;
+}
+
+.app-shell[data-theme="dark"] .background-generation-panel .processing-queue div {
+  color: #f0f7f2;
+  border-color: #3b5b49;
+  background: #f4fbf7;
+}
+
+.app-shell[data-theme="dark"] .background-generation-panel .processing-queue dt {
+  color: #42604e;
+}
+
+.app-shell[data-theme="dark"] .background-generation-panel .processing-queue dd {
+  color: #122018;
+}
+
 .app-shell[data-theme="dark"] :is(
   .study-page-toolbar,
   .library-navigation

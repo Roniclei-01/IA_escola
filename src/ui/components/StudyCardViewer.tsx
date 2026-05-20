@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { StudyCard } from "../../domain/model-adapter";
+import { normalizeMultipleChoiceChoices } from "../../domain/study-card-formatting";
 
 export type CardReview = "again" | "hard" | "easy";
 
@@ -46,16 +47,19 @@ export function StudyCardViewer({
 }: StudyCardViewerProps) {
   const [selectedChoiceIndex, setSelectedChoiceIndex] = useState<number | null>(null);
   const choices = card.choices ?? [];
+  const displayChoices = normalizeMultipleChoiceChoices(choices);
   const correctChoiceIndex = card.correctChoiceIndex ?? null;
   const isMultipleChoice =
     card.cardType === "multiple_choice" && choices.length > 0 && correctChoiceIndex !== null;
   const correctChoice =
-    isMultipleChoice && correctChoiceIndex >= 0 && correctChoiceIndex < choices.length
-      ? choices[correctChoiceIndex]
+    isMultipleChoice && correctChoiceIndex >= 0 && correctChoiceIndex < displayChoices.length
+      ? displayChoices[correctChoiceIndex]
       : card.back;
   const selectedChoice =
-    selectedChoiceIndex !== null && selectedChoiceIndex >= 0 && selectedChoiceIndex < choices.length
-      ? choices[selectedChoiceIndex]
+    selectedChoiceIndex !== null &&
+    selectedChoiceIndex >= 0 &&
+    selectedChoiceIndex < displayChoices.length
+      ? displayChoices[selectedChoiceIndex]
       : null;
 
   useEffect(() => {
@@ -73,7 +77,7 @@ export function StudyCardViewer({
       <p className="card-front">{card.front}</p>
       {isMultipleChoice ? (
         <div className="multiple-choice-options" role="group" aria-label={labels.multipleChoiceOptions}>
-          {choices.map((choice, index) => {
+          {displayChoices.map((choice, index) => {
             const isSelected = selectedChoiceIndex === index;
             const isCorrect = correctChoiceIndex === index;
             const answerState = isAnswerVisible

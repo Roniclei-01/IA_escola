@@ -344,14 +344,18 @@ fn build_flashcard_prompt(chunks: &[DocumentChunk], config: &FlashcardConfig) ->
         "Voce gera cards de estudo em formato de multipla escolha. \
 Responda em {language}. \
 Retorne somente um array JSON valido, sem markdown e sem texto fora do JSON. \
-Crie exatamente {cards_per_chunk} card(s) por chunk. \
+Crie no maximo {cards_per_chunk} card(s) por chunk. \
+Use somente conteudo estudavel do livro. \
+Nao gere cards sobre capa, copyright, marcas registradas, ISBN, sumario, dedicatoria, prefacio, autores, editora ou metadados editoriais; se o chunk tiver apenas esse tipo de conteudo, retorne [] para ele. \
 Cada item deve ter este formato: {example}. \
-Cada card precisa ter uma pergunta clara, quatro alternativas coerentes, apenas uma alternativa correta e uma explicacao curta. \
+Cada card precisa ter uma pergunta autocontida, quatro alternativas coerentes, apenas uma alternativa correta e uma explicacao curta baseada no chunk. \
+As alternativas erradas precisam ser plausiveis, mas claramente incorretas segundo o trecho. \
+Nunca escreva a letra ou o rotulo da opcao dentro do texto da alternativa; nao use textos como 'A) ...', 'Alternativa A: ...', 'Opcao A', 'Alternative A' ou 'Option A'. \
 Use correct_choice_index com indice baseado em zero, entre 0 e 3. \
 Use exatamente o chunk_id informado em cada chunk.\n\nChunks:\n{chunk_lines}",
         cards_per_chunk = config.cards_per_chunk,
         language = language,
-        example = r#"{"chunk_id":"uuid","front":"pergunta","choices":["alternativa A","alternativa B","alternativa C","alternativa D"],"correct_choice_index":0,"explanation":"por que a alternativa correta esta certa","tags":["tag"]}"#,
+        example = r#"{"chunk_id":"uuid","front":"pergunta conceitual baseada no trecho","choices":["resposta correta especifica","distrator plausivel","distrator plausivel","distrator plausivel"],"correct_choice_index":0,"explanation":"por que a alternativa correta esta certa no trecho","tags":["tag"]}"#,
         chunk_lines = chunk_lines
     )
 }
@@ -499,7 +503,8 @@ fn parsed_flashcard_from_value(value: &Value) -> Result<ParsedFlashcard, ModelAd
     let front = raw_card
         .front
         .ok_or_else(|| invalid_flashcards_reason("campo front/question/pergunta ausente"))?;
-    let (back, correct_choice_index) = if raw_card.choices.is_empty() {
+    let choices = raw_card.choices;
+    let (back, correct_choice_index) = if choices.is_empty() {
         (
             raw_card
                 .back
@@ -507,28 +512,74 @@ fn parsed_flashcard_from_value(value: &Value) -> Result<ParsedFlashcard, ModelAd
             None,
         )
     } else {
+        let correct_answer_candidate = raw_card
+            .correct_answer
+            .as_deref()
+            .or(raw_card.back.as_deref());
         let correct_choice_index = parse_correct_choice_index(
             raw_card.correct_choice_index.as_ref(),
-            raw_card.correct_answer.as_deref(),
-            &raw_card.choices,
+            correct_answer_candidate,
+            &choices,
         )?;
         let back = raw_card
             .back
             .or(raw_card.correct_answer)
-            .unwrap_or_else(|| raw_card.choices[correct_choice_index].clone());
+            .unwrap_or_else(|| choices[correct_choice_index].clone());
 
         (back, Some(correct_choice_index))
     };
+
+    if is_editorial_or_legal_flashcard(&front, &back, &choices) {
+        return Err(invalid_flashcards_reason(
+            "card usa conteudo editorial ou legal, nao conteudo de estudo",
+        ));
+    }
 
     Ok(ParsedFlashcard {
         chunk_id: raw_card.chunk_id,
         front,
         back,
         tags: raw_card.tags,
-        choices: raw_card.choices,
+        choices,
         correct_choice_index,
         explanation: raw_card.explanation,
     })
+}
+
+fn is_editorial_or_legal_flashcard(front: &str, back: &str, choices: &[String]) -> bool {
+    let choices_text = choices.join(" ");
+    let content = format!("{front} {back} {choices_text}").to_lowercase();
+    let strong_terms = [
+        "all rights reserved",
+        "where those designations appear",
+        "trademark",
+        "copyright",
+        "isbn",
+        "printed in",
+        "permission",
+        "publisher",
+        "media, inc",
+    ];
+    let front_matter_terms = [
+        "dedication",
+        "acknowledg",
+        "table of contents",
+        "brief contents",
+        "preface",
+        "foreword",
+        "about the author",
+        "library of congress",
+    ];
+    let strong_score = strong_terms
+        .iter()
+        .filter(|term| content.contains(*term))
+        .count();
+    let front_matter_score = front_matter_terms
+        .iter()
+        .filter(|term| content.contains(*term))
+        .count();
+
+    strong_score >= 1 || front_matter_score >= 2
 }
 
 fn parse_correct_choice_index(
@@ -541,6 +592,10 @@ fn parse_correct_choice_index(
             .iter()
             .position(|choice| choice.trim().eq_ignore_ascii_case(correct_answer.trim()))
         {
+            return Ok(index);
+        }
+
+        if let Some(index) = parse_correct_choice_index_text(correct_answer) {
             return Ok(index);
         }
     }
@@ -751,6 +806,12 @@ mod tests {
         assert!(adapter.client.requests.borrow()[0]
             .prompt
             .contains("multipla escolha"));
+        assert!(adapter.client.requests.borrow()[0]
+            .prompt
+            .contains("Use somente conteudo estudavel do livro"));
+        assert!(adapter.client.requests.borrow()[0]
+            .prompt
+            .contains("Nunca escreva a letra ou o rotulo da opcao"));
     }
 
     #[test]
@@ -794,6 +855,101 @@ mod tests {
             Some("TCP confirma entrega e reenvia dados perdidos.")
         );
         assert_eq!(cards[0].tags, vec!["redes"]);
+    }
+
+    #[test]
+    fn accepts_multiple_choice_flashcards_with_correct_answer_in_back() {
+        let chunk = chunk();
+        let response = format!(
+            r#"[{{"chunk_id":"{}","front":"Qual alternativa descreve TCP?","choices":["Confiavel","Sem conexao","Resolve nomes","Criptografa discos"],"back":"Confiavel","explanation":"TCP confirma entrega.","tags":["redes"]}}]"#,
+            chunk.id
+        );
+        let adapter = OllamaModelAdapter::new(
+            FakeOllamaClient::available(response),
+            OllamaModelConfig {
+                model: "llama3.2:1b".to_owned(),
+            },
+        );
+
+        let cards = adapter
+            .create_flashcards(
+                &[chunk],
+                &FlashcardConfig {
+                    cards_per_chunk: 1,
+                    language: Language::Pt,
+                },
+            )
+            .unwrap();
+
+        assert_eq!(cards[0].card_type, StudyCardType::MultipleChoice);
+        assert_eq!(cards[0].back, "Confiavel");
+        assert_eq!(cards[0].correct_choice_index, Some(0));
+        assert_eq!(
+            cards[0].explanation.as_deref(),
+            Some("TCP confirma entrega.")
+        );
+    }
+
+    #[test]
+    fn rejects_multiple_choice_flashcards_with_placeholder_choices() {
+        let chunk = chunk();
+        let response = format!(
+            r#"[{{"chunk_id":"{}","front":"Qual alternativa descreve TCP?","choices":["Alternativa A","Alternativa B","Alternativa C","Alternativa D"],"correct_choice_index":0,"explanation":"Explicacao generica.","tags":["redes"]}}]"#,
+            chunk.id
+        );
+        let adapter = OllamaModelAdapter::new(
+            FakeOllamaClient::available(response),
+            OllamaModelConfig {
+                model: "llama3.2:1b".to_owned(),
+            },
+        );
+
+        let error = adapter
+            .create_flashcards(
+                &[chunk],
+                &FlashcardConfig {
+                    cards_per_chunk: 1,
+                    language: Language::Pt,
+                },
+            )
+            .unwrap_err();
+
+        assert!(matches!(
+            error,
+            ModelAdapterError::InvalidFlashcards(reason)
+                if reason.contains("generic placeholder")
+        ));
+    }
+
+    #[test]
+    fn rejects_flashcards_generated_from_editorial_or_legal_content() {
+        let chunk = chunk();
+        let response = format!(
+            r#"[{{"chunk_id":"{}","front":"Where those designations appear in this book, what did the publisher do?","choices":["Printed trademark claims in caps","Explained the TCP handshake","Defined application protocols","Described packet switching"],"correct_choice_index":0,"explanation":"The sentence is about trademark claims.","tags":["editorial"]}}]"#,
+            chunk.id
+        );
+        let adapter = OllamaModelAdapter::new(
+            FakeOllamaClient::available(response),
+            OllamaModelConfig {
+                model: "llama3.2:1b".to_owned(),
+            },
+        );
+
+        let error = adapter
+            .create_flashcards(
+                &[chunk],
+                &FlashcardConfig {
+                    cards_per_chunk: 1,
+                    language: Language::Pt,
+                },
+            )
+            .unwrap_err();
+
+        assert!(matches!(
+            error,
+            ModelAdapterError::InvalidFlashcards(reason)
+                if reason.contains("conteudo editorial ou legal")
+        ));
     }
 
     #[test]

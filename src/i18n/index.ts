@@ -303,7 +303,7 @@ export const resources = {
         cardCount_one: "{{count}} card gerado",
         cardCount_other: "{{count}} cards gerados",
         cardGenerationLimited:
-          "Para evitar travamentos, foram gerados cards dos {{count}} primeiros chunks de {{total}}.",
+          "Para evitar travamentos, foram gerados cards de {{count}} chunks de estudo entre {{total}} chunks.",
         cardGenerationSkippedChunks:
           "Alguns chunks falharam no Ollama. Foram ignorados {{count}} de {{total}} chunks; use Gerar mais cards para tentar novamente.",
         generateCards: "Gerar cards",
@@ -815,7 +815,7 @@ export const resources = {
         cardCount_one: "{{count}} card generated",
         cardCount_other: "{{count}} cards generated",
         cardGenerationLimited:
-          "To avoid freezes, cards were generated from the first {{count}} chunks out of {{total}}.",
+          "To avoid freezes, cards were generated from {{count}} study chunks out of {{total}} chunks.",
         cardGenerationSkippedChunks:
           "Some chunks failed in Ollama. {{count}} of {{total}} chunks were skipped; use Generate more cards to try again.",
         generateCards: "Generate cards",
@@ -1327,7 +1327,7 @@ export const resources = {
         cardCount_one: "{{count}} card generado",
         cardCount_other: "{{count}} cards generados",
         cardGenerationLimited:
-          "Para evitar bloqueos, se generaron cards de los primeros {{count}} chunks de {{total}}.",
+          "Para evitar bloqueos, se generaron cards de {{count}} chunks de estudio entre {{total}} chunks.",
         cardGenerationSkippedChunks:
           "Algunos chunks fallaron en Ollama. Se omitieron {{count}} de {{total}} chunks; use Generar mas cards para intentar de nuevo.",
         generateCards: "Generar cards",

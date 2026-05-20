@@ -42,6 +42,8 @@ pub enum StudyCardError {
     EmptyChoice,
     #[error("multiple choice card choices must be unique")]
     DuplicateChoice,
+    #[error("multiple choice card choice cannot be a generic placeholder")]
+    GenericChoicePlaceholder,
     #[error("multiple choice card correct choice index is invalid")]
     InvalidCorrectChoiceIndex,
     #[error("multiple choice card must use multiple choice metadata")]
@@ -155,11 +157,18 @@ fn normalize_choices(choices: Vec<String>) -> Result<Vec<String>, StudyCardError
 
     let normalized_choices = choices
         .into_iter()
-        .map(|choice| choice.trim().to_owned())
+        .map(|choice| strip_choice_label_prefix(&choice))
         .collect::<Vec<_>>();
 
     if normalized_choices.iter().any(|choice| choice.is_empty()) {
         return Err(StudyCardError::EmptyChoice);
+    }
+
+    if normalized_choices
+        .iter()
+        .any(|choice| is_generic_choice_placeholder(choice))
+    {
+        return Err(StudyCardError::GenericChoicePlaceholder);
     }
 
     let mut unique_choices = std::collections::HashSet::new();
@@ -171,6 +180,73 @@ fn normalize_choices(choices: Vec<String>) -> Result<Vec<String>, StudyCardError
     }
 
     Ok(normalized_choices)
+}
+
+fn is_generic_choice_placeholder(choice: &str) -> bool {
+    let normalized = choice
+        .trim()
+        .to_lowercase()
+        .replace(['.', ':', '-', '_'], " ");
+    let words = normalized.split_whitespace().collect::<Vec<_>>();
+
+    if words.len() != 2 {
+        return false;
+    }
+
+    let prefix = words[0];
+    let suffix = words[1];
+
+    matches!(
+        prefix,
+        "alternativa" | "opcao" | "opção" | "alternative" | "option" | "resposta" | "answer"
+    ) && matches!(suffix, "a" | "b" | "c" | "d")
+}
+
+fn strip_choice_label_prefix(choice: &str) -> String {
+    let trimmed = choice.trim();
+    let separators = [":", ".", ")", "-", "–"];
+    let lower = trimmed.to_lowercase();
+    let prefixes = [
+        "alternativa",
+        "opcao",
+        "opção",
+        "alternative",
+        "option",
+        "resposta",
+        "answer",
+    ];
+
+    for prefix in prefixes {
+        for letter in ["a", "b", "c", "d"] {
+            for separator in separators {
+                let marker = format!("{prefix} {letter}{separator}");
+
+                if lower.starts_with(&marker) {
+                    let candidate = trimmed[marker.len()..].trim();
+
+                    if !candidate.is_empty() {
+                        return candidate.to_owned();
+                    }
+                }
+            }
+        }
+    }
+
+    for letter in ["a", "b", "c", "d"] {
+        for separator in separators {
+            let marker = format!("{letter}{separator}");
+
+            if lower.starts_with(&marker) {
+                let candidate = trimmed[marker.len()..].trim();
+
+                if !candidate.is_empty() {
+                    return candidate.to_owned();
+                }
+            }
+        }
+    }
+
+    trimmed.to_owned()
 }
 
 #[cfg(test)]
@@ -240,6 +316,28 @@ mod tests {
     }
 
     #[test]
+    fn strips_redundant_multiple_choice_labels() {
+        let card = StudyCard::new_multiple_choice(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            "Qual protocolo confirma entrega?",
+            vec![
+                "Alternativa A: TCP".to_owned(),
+                "Alternativa B: UDP".to_owned(),
+                "C) ARP".to_owned(),
+                "D. ICMP".to_owned(),
+            ],
+            0,
+            Some("TCP confirma a entrega.".to_owned()),
+            vec!["redes".to_owned()],
+        )
+        .unwrap();
+
+        assert_eq!(card.choices, vec!["TCP", "UDP", "ARP", "ICMP"]);
+        assert_eq!(card.back, "TCP");
+    }
+
+    #[test]
     fn rejects_multiple_choice_without_four_choices() {
         let result = StudyCard::new_multiple_choice(
             Uuid::new_v4(),
@@ -261,10 +359,10 @@ mod tests {
             Uuid::new_v4(),
             "Pergunta",
             vec![
-                "A".to_owned(),
-                "B".to_owned(),
-                "C".to_owned(),
-                "D".to_owned(),
+                "TCP".to_owned(),
+                "UDP".to_owned(),
+                "ARP".to_owned(),
+                "ICMP".to_owned(),
             ],
             4,
             None,
@@ -284,10 +382,10 @@ mod tests {
             Uuid::new_v4(),
             "Pergunta",
             vec![
-                "A".to_owned(),
-                "B".to_owned(),
-                "a".to_owned(),
-                "D".to_owned(),
+                "TCP".to_owned(),
+                "UDP".to_owned(),
+                "tcp".to_owned(),
+                "ICMP".to_owned(),
             ],
             0,
             None,
@@ -295,5 +393,28 @@ mod tests {
         );
 
         assert_eq!(result.unwrap_err(), StudyCardError::DuplicateChoice);
+    }
+
+    #[test]
+    fn rejects_multiple_choice_with_generic_placeholder_choices() {
+        let result = StudyCard::new_multiple_choice(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            "Pergunta",
+            vec![
+                "Alternativa A".to_owned(),
+                "Alternativa B".to_owned(),
+                "Alternativa C".to_owned(),
+                "Alternativa D".to_owned(),
+            ],
+            0,
+            None,
+            vec![],
+        );
+
+        assert_eq!(
+            result.unwrap_err(),
+            StudyCardError::GenericChoicePlaceholder
+        );
     }
 }

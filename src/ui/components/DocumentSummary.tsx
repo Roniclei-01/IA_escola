@@ -209,75 +209,6 @@ export function DocumentSummary({
           </button>
         </div>
       ) : null}
-      {isPdfDocument ? (
-        <section className="pdf-page-reader" aria-labelledby="pdf-page-reader-title">
-          <div className="pdf-page-reader-header">
-            <h3 id="pdf-page-reader-title">{labels.pdfReaderTitle}</h3>
-            <div className="pdf-page-controls">
-              <span>
-                {renderedPageCount
-                  ? labels.pdfPageStatus(pdfReaderPage, renderedPageCount)
-                  : labels.pdfPageStatus(pdfReaderPage, pdfReaderPage)}
-              </span>
-              <label htmlFor="pdf-reader-zoom">
-                {labels.pdfZoomLabel}
-                <select
-                  id="pdf-reader-zoom"
-                  value={String(pdfReaderZoom)}
-                  onChange={(event) => onPdfReaderZoomChange(Number(event.target.value))}
-                >
-                  <option value="0.85">85%</option>
-                  <option value="1">100%</option>
-                  <option value="1.25">125%</option>
-                  <option value="1.5">150%</option>
-                </select>
-              </label>
-            </div>
-          </div>
-          {isRenderingPdfPage ? (
-            <p className="pdf-page-status" role="status">
-              {labels.renderingPdfPage}
-            </p>
-          ) : null}
-          {renderedPdfPage ? (
-            <div className="pdf-page-frame">
-              <img
-                alt={labels.pdfPageImageAlt(renderedPdfPage.page)}
-                src={renderedPdfPage.image_data_url}
-                style={{ width: `${Math.round(pdfReaderZoom * 100)}%` }}
-              />
-            </div>
-          ) : null}
-          <div className="pdf-page-footer-controls">
-            <button
-              type="button"
-              aria-label={labels.previousPdfPageLabel}
-              title={labels.previousPdfPageLabel}
-              disabled={isRenderingPdfPage || pdfReaderPage <= 1}
-              onClick={() => onPdfReaderPageChange(Math.max(pdfReaderPage - 1, 1))}
-            >
-              {labels.previousPdfPage}
-            </button>
-            <span>
-              {renderedPageCount
-                ? labels.pdfPageStatus(pdfReaderPage, renderedPageCount)
-                : labels.pdfPageStatus(pdfReaderPage, pdfReaderPage)}
-            </span>
-            <button
-              type="button"
-              aria-label={labels.nextPdfPageLabel}
-              title={labels.nextPdfPageLabel}
-              disabled={
-                isRenderingPdfPage ||
-                (renderedPageCount !== null && pdfReaderPage >= renderedPageCount)
-              }
-              onClick={() => onPdfReaderPageChange(pdfReaderPage + 1)}
-            >
-              {labels.nextPdfPage}
-            </button>
-          </div>
-        </section>
-      ) : null}
       <section className="document-reader" aria-labelledby="document-reader-title">
         <div className="document-reader-header">
           <h3 id="document-reader-title">{labels.readerTitle}</h3>
@@ -426,6 +357,75 @@ export function DocumentSummary({
           <pre className="document-content-preview">{previewContent}</pre>
         ) : null}
       </section>
+      {isPdfDocument ? (
+        <section className="pdf-page-reader" aria-labelledby="pdf-page-reader-title">
+          <div className="pdf-page-reader-header">
+            <h3 id="pdf-page-reader-title">{labels.pdfReaderTitle}</h3>
+            <div className="pdf-page-controls">
+              <span>
+                {renderedPageCount
+                  ? labels.pdfPageStatus(pdfReaderPage, renderedPageCount)
+                  : labels.pdfPageStatus(pdfReaderPage, pdfReaderPage)}
+              </span>
+              <label htmlFor="pdf-reader-zoom">
+                {labels.pdfZoomLabel}
+                <select
+                  id="pdf-reader-zoom"
+                  value={String(pdfReaderZoom)}
+                  onChange={(event) => onPdfReaderZoomChange(Number(event.target.value))}
+                >
+                  <option value="0.85">85%</option>
+                  <option value="1">100%</option>
+                  <option value="1.25">125%</option>
+                  <option value="1.5">150%</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          {isRenderingPdfPage ? (
+            <p className="pdf-page-status" role="status">
+              {labels.renderingPdfPage}
+            </p>
+          ) : null}
+          {renderedPdfPage ? (
+            <div className="pdf-page-frame">
+              <img
+                alt={labels.pdfPageImageAlt(renderedPdfPage.page)}
+                src={renderedPdfPage.image_data_url}
+                style={{ width: `${Math.round(pdfReaderZoom * 100)}%` }}
+              />
+            </div>
+          ) : null}
+          <div className="pdf-page-footer-controls">
+            <button
+              type="button"
+              aria-label={labels.previousPdfPageLabel}
+              title={labels.previousPdfPageLabel}
+              disabled={isRenderingPdfPage || pdfReaderPage <= 1}
+              onClick={() => onPdfReaderPageChange(Math.max(pdfReaderPage - 1, 1))}
+            >
+              {labels.previousPdfPage}
+            </button>
+            <span>
+              {renderedPageCount
+                ? labels.pdfPageStatus(pdfReaderPage, renderedPageCount)
+                : labels.pdfPageStatus(pdfReaderPage, pdfReaderPage)}
+            </span>
+            <button
+              type="button"
+              aria-label={labels.nextPdfPageLabel}
+              title={labels.nextPdfPageLabel}
+              disabled={
+                isRenderingPdfPage ||
+                (renderedPageCount !== null && pdfReaderPage >= renderedPageCount)
+              }
+              onClick={() => onPdfReaderPageChange(pdfReaderPage + 1)}
+            >
+              {labels.nextPdfPage}
+            </button>
+          </div>
+        </section>
+      ) : null}
     </section>
   );
 }

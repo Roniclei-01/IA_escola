@@ -142,6 +142,7 @@ import {
   UI_LANGUAGE_STORAGE_KEY,
   type UiLanguage
 } from "../i18n";
+import { stripMultipleChoiceLabelPrefix } from "../domain/study-card-formatting";
 import { ImportPanel } from "./components/ImportPanel";
 import {
   DocumentSummary,
@@ -281,6 +282,73 @@ const STUDY_GOAL_REMINDER_NOTIFICATION_ID = 1001;
 export const UI_THEME_STORAGE_KEY = "estudo-ia-local.ui-theme";
 const DEFAULT_STUDY_CATEGORY = "Geral";
 const DEFAULT_STUDY_SUBCATEGORY = "Sem subcategoria";
+const FRONT_MATTER_CHUNK_TERMS = [
+  "all rights reserved",
+  "copyright",
+  "trademark",
+  "where those designations appear",
+  "printed in",
+  "manufactured in",
+  "isbn",
+  "library of congress",
+  "cataloging-in-publication",
+  "cataloguing in publication",
+  "permission",
+  "dedication",
+  "acknowledg",
+  "about the author",
+  "about the authors",
+  "table of contents",
+  "brief contents",
+  "contents",
+  "preface",
+  "foreword",
+  "publisher",
+  "editor",
+  "oreilly",
+  "media, inc",
+  "pearson",
+  "ciscopress",
+  "no starch press"
+];
+const STUDY_CONTENT_CHUNK_TERMS = [
+  "algorithm",
+  "application",
+  "architecture",
+  "attack",
+  "chapter",
+  "code",
+  "concept",
+  "configuration",
+  "data",
+  "definition",
+  "example",
+  "function",
+  "layer",
+  "method",
+  "model",
+  "network",
+  "process",
+  "programming",
+  "protocol",
+  "security",
+  "server",
+  "system",
+  "tcp",
+  "udp",
+  "capitulo",
+  "conceito",
+  "definicao",
+  "exemplo",
+  "funcao",
+  "metodo",
+  "modelo",
+  "programacao",
+  "protocolo",
+  "rede",
+  "seguranca",
+  "sistema"
+];
 const ACADEMIC_CATEGORIES = [
   {
     category: DEFAULT_STUDY_CATEGORY,
@@ -695,30 +763,38 @@ function scheduleForStudyGoalRecurrence(
 async function defaultNotifyStudyGoalReminder(
   notification: StudyGoalReminderNotification
 ): Promise<void> {
-  let permissionGranted = await isPermissionGranted();
+  try {
+    let permissionGranted = await isPermissionGranted();
 
-  if (!permissionGranted) {
-    const permission = await requestPermission();
-    permissionGranted = permission === "granted";
-  }
+    if (!permissionGranted) {
+      const permission = await requestPermission();
+      permissionGranted = permission === "granted";
+    }
 
-  if (permissionGranted) {
-    const schedule = scheduleForStudyGoalRecurrence(
-      notification.recurrence,
-      notification.reminderTime
-    );
+    if (permissionGranted) {
+      const schedule = scheduleForStudyGoalRecurrence(
+        notification.recurrence,
+        notification.reminderTime
+      );
 
-    sendNotification({
-      id: STUDY_GOAL_REMINDER_NOTIFICATION_ID,
-      title: notification.title,
-      body: notification.body,
-      ...(schedule ? { schedule } : {})
-    });
+      sendNotification({
+        id: STUDY_GOAL_REMINDER_NOTIFICATION_ID,
+        title: notification.title,
+        body: notification.body,
+        ...(schedule ? { schedule } : {})
+      });
+    }
+  } catch {
+    // Native notifications are optional; study goal persistence must not fail because of them.
   }
 }
 
 async function defaultCancelStudyGoalReminder(): Promise<void> {
-  await cancel([STUDY_GOAL_REMINDER_NOTIFICATION_ID]);
+  try {
+    await cancel([STUDY_GOAL_REMINDER_NOTIFICATION_ID]);
+  } catch {
+    // The notification plugin can be unavailable in some desktop/runtime builds.
+  }
 }
 
 interface DocumentProgressSummary {
@@ -1390,7 +1466,10 @@ function formatMultipleChoiceQuestion(card: StudyCard): string {
 
   const choices = card.choices ?? [];
   const formattedChoices = choices
-    .map((choice, index) => `${String.fromCharCode(65 + index)}) ${choice}`)
+    .map(
+      (choice, index) =>
+        `${String.fromCharCode(65 + index)}) ${stripMultipleChoiceLabelPrefix(choice)}`
+    )
     .join(" | ");
 
   return `${card.front} ${formattedChoices}`;
@@ -1402,7 +1481,9 @@ function formatMultipleChoiceAnswer(card: StudyCard): string {
   }
 
   const choices = card.choices ?? [];
-  const correctChoice = choices[card.correctChoiceIndex ?? 0] ?? card.back;
+  const correctChoice = stripMultipleChoiceLabelPrefix(
+    choices[card.correctChoiceIndex ?? 0] ?? card.back
+  );
   const explanation = card.explanation?.trim();
 
   return explanation
@@ -1835,6 +1916,76 @@ function shouldEnableMockAiFallback() {
   return import.meta.env.VITE_ENABLE_MOCK_AI_FALLBACK === "true";
 }
 
+function selectCardGenerationChunks(
+  chunks: ImportedDocumentChunk[],
+  limit: number
+): ImportedDocumentChunk[] {
+  const studyChunks = chunks.filter(isLikelyStudyContentChunk);
+
+  if (studyChunks.length > 0) {
+    return studyChunks.slice(0, limit);
+  }
+
+  return chunks.filter((chunk) => !isLikelyFrontMatterOnlyChunk(chunk)).slice(0, limit);
+}
+
+function isLikelyStudyContentChunk(chunk: ImportedDocumentChunk): boolean {
+  const content = normalizeChunkContentForCardGeneration(chunk.content);
+
+  if (content.length === 0) {
+    return false;
+  }
+
+  const frontMatterScore = countChunkTerms(content, FRONT_MATTER_CHUNK_TERMS);
+  const studyContentScore = countChunkTerms(content, STUDY_CONTENT_CHUNK_TERMS);
+  const hasChapterBodySignal =
+    /\b(chapter|capitulo|capítulo)\s+\d+\b/.test(content) ||
+    /\b(section|secao|seção)\s+\d+\b/.test(content);
+
+  if (frontMatterScore >= 2 && studyContentScore < 2) {
+    return false;
+  }
+
+  if (frontMatterScore > 0 && studyContentScore === 0 && !hasChapterBodySignal) {
+    return false;
+  }
+
+  if (content.length < 120 && studyContentScore === 0 && !hasChapterBodySignal) {
+    return false;
+  }
+
+  return true;
+}
+
+function isLikelyFrontMatterOnlyChunk(chunk: ImportedDocumentChunk): boolean {
+  const content = normalizeChunkContentForCardGeneration(chunk.content);
+
+  if (content.length === 0) {
+    return true;
+  }
+
+  const frontMatterScore = countChunkTerms(content, FRONT_MATTER_CHUNK_TERMS);
+  const studyContentScore = countChunkTerms(content, STUDY_CONTENT_CHUNK_TERMS);
+  const isContentsChunk =
+    content.includes("table of contents") ||
+    content.includes("brief contents") ||
+    /^contents\b/.test(content);
+
+  return (
+    (frontMatterScore >= 2 && studyContentScore < 2) ||
+    (frontMatterScore > 0 && studyContentScore === 0) ||
+    (isContentsChunk && studyContentScore < 3)
+  );
+}
+
+function normalizeChunkContentForCardGeneration(content: string): string {
+  return content.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function countChunkTerms(content: string, terms: string[]): number {
+  return terms.reduce((count, term) => (content.includes(term) ? count + 1 : count), 0);
+}
+
 function getErrorMessage(unknownError: unknown, fallbackMessage: string) {
   if (unknownError instanceof Error && unknownError.message.trim().length > 0) {
     return unknownError.message;
@@ -2191,11 +2342,19 @@ export function App({
     operationStatus === "generatingCardsWithOllama" ||
     operationStatus === "savingStudyCards";
   const generatedCardChunkIds = new Set(cards.map((card) => card.chunkId));
+  const remainingCardGenerationChunks = documentChunks.filter(
+    (chunk) => !generatedCardChunkIds.has(chunk.id)
+  );
+  const remainingStudyCardGenerationChunks = selectCardGenerationChunks(
+    remainingCardGenerationChunks,
+    INITIAL_CARD_GENERATION_CHUNK_LIMIT
+  );
   const canGenerateMoreCards =
     Boolean(document) &&
-    chunkCount !== null &&
     cards.length > 0 &&
-    generatedCardChunkIds.size < chunkCount;
+    (documentChunks.length > 0
+      ? remainingStudyCardGenerationChunks.length > 0
+      : chunkCount !== null && generatedCardChunkIds.size < chunkCount);
   const dueStudyQueue = buildDueStudyQueue(
     cards,
     cardReviewSchedules,
@@ -2317,15 +2476,18 @@ export function App({
     operationToken: number,
     options: Pick<GenerateStudyCardsOptions, "onChunkCards"> = {}
   ): Promise<StudyCard[]> {
-    const chunksForGeneration = chunks.slice(0, INITIAL_CARD_GENERATION_CHUNK_LIMIT);
+    const chunksForGeneration = selectCardGenerationChunks(
+      chunks,
+      INITIAL_CARD_GENERATION_CHUNK_LIMIT
+    );
     let skippedChunkCount = 0;
     setCardGenerationProgress(null);
     setCardGenerationQueueProgress(null);
 
-    if (chunks.length > INITIAL_CARD_GENERATION_CHUNK_LIMIT) {
+    if (chunks.length > INITIAL_CARD_GENERATION_CHUNK_LIMIT && chunksForGeneration.length > 0) {
       setWarning(
         t("library.cardGenerationLimited", {
-          count: INITIAL_CARD_GENERATION_CHUNK_LIMIT,
+          count: chunksForGeneration.length,
           total: chunks.length
         })
       );
@@ -4187,7 +4349,11 @@ export function App({
       setStudyGoalReminderTime(settings.study_goal_reminder_time);
 
       if (!settings.study_goal_reminders_enabled) {
-        await cancelStudyGoalReminder();
+        try {
+          await cancelStudyGoalReminder();
+        } catch {
+          // Reminder cancellation is best effort; saved settings are the source of truth.
+        }
       }
     } catch (unknownError) {
       setError(getErrorMessage(unknownError, t("settings.notificationSettingsSaveError")));
@@ -4249,19 +4415,34 @@ export function App({
         savedGoalProgress && savedGoalProgress.remainingReviews > 0
           ? studyGoalAlertKey(savedGoal.recurrence)
           : null;
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError, t("study.goalSaveError")));
+      return;
+    }
 
-      if (isStudyGoalNotificationEnabled && savedGoalProgress && savedGoalAlertKey) {
+    const savedGoalProgress = buildStudyGoalProgress(
+      studySessionSummaries,
+      targetReviews,
+      activeStudyReviewGoalRecurrence
+    );
+    const savedGoalAlertKey =
+      savedGoalProgress && savedGoalProgress.remainingReviews > 0
+        ? studyGoalAlertKey(activeStudyReviewGoalRecurrence)
+        : null;
+
+    if (isStudyGoalNotificationEnabled && savedGoalProgress && savedGoalAlertKey) {
+      try {
         await notifyStudyGoalReminder({
           title: t("study.goalNotificationTitle"),
           body: t(savedGoalAlertKey, {
             count: savedGoalProgress.remainingReviews
           }),
-          recurrence: savedGoal.recurrence,
+          recurrence: activeStudyReviewGoalRecurrence,
           reminderTime: studyGoalReminderTime
         });
+      } catch {
+        // Notification scheduling is best effort and must not invalidate the saved goal.
       }
-    } catch (unknownError) {
-      setError(getErrorMessage(unknownError, t("study.goalSaveError")));
     }
   }
 

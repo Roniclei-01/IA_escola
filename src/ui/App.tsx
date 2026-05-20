@@ -539,6 +539,12 @@ function defaultReaderTargetLanguage(
   return sourceLanguage === "En" ? "Pt" : "En";
 }
 
+function hasUsableTranslationContent(
+  translation: TranslateDocumentResponse | null | undefined
+): translation is TranslateDocumentResponse {
+  return Boolean(translation?.translated_content.trim());
+}
+
 function inferDocumentLanguage(document: ImportTextBookResponse): DocumentLanguage {
   const words = document.content
     .toLowerCase()
@@ -2507,11 +2513,15 @@ export function App({
         return;
       }
 
+      const cachedTranslation = hasUsableTranslationContent(response.translation)
+        ? response.translation
+        : null;
+
       setTranslatedDocumentPages(
-        response.translation ? { 0: response.translation.translated_content } : {}
+        cachedTranslation ? { 0: cachedTranslation.translated_content } : {}
       );
-      setTranslatedDocumentPageSources(response.translation ? { 0: "cache" } : {});
-      if (response.translation) {
+      setTranslatedDocumentPageSources(cachedTranslation ? { 0: "cache" } : {});
+      if (cachedTranslation) {
         rememberTranslatedReaderPageIndex(0);
       }
     } catch {
@@ -2582,13 +2592,17 @@ export function App({
         pageIndex
       );
 
-      if (!isCurrentTranslationLoad(translationLoadToken) || !response.translation) {
+      const cachedTranslation = hasUsableTranslationContent(response.translation)
+        ? response.translation
+        : null;
+
+      if (!isCurrentTranslationLoad(translationLoadToken) || !cachedTranslation) {
         return;
       }
 
       setTranslatedDocumentPages((currentPages) => ({
         ...currentPages,
-        [pageIndex]: response.translation?.translated_content ?? ""
+        [pageIndex]: cachedTranslation.translated_content
       }));
       setTranslatedDocumentPageSources((currentSources) => ({
         ...currentSources,
@@ -2652,10 +2666,14 @@ export function App({
           return;
         }
 
-        if (cachedTranslation.translation) {
+        const cachedPageTranslation = hasUsableTranslationContent(cachedTranslation.translation)
+          ? cachedTranslation.translation
+          : null;
+
+        if (cachedPageTranslation) {
           setTranslatedDocumentPages((currentPages) => ({
             ...currentPages,
-            [pageIndex]: cachedTranslation.translation?.translated_content ?? ""
+            [pageIndex]: cachedPageTranslation.translated_content
           }));
           setTranslatedDocumentPageSources((currentSources) => ({
             ...currentSources,

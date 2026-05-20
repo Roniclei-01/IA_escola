@@ -15,6 +15,7 @@ O projeto deve ser um aplicativo desktop local-first, seguro e extensivel, capaz
 | Banco local | SQLite | Persistencia simples, offline e distribuivel |
 | Query layer inicial | rusqlite no Rust | Camada sincrona, simples e suficiente para comandos Tauri locais |
 | IA local | Ollama | Primeiro runtime local, acessado via adaptador |
+| Traducao local | LibreTranslate | Provedor dedicado para traducao fiel, com Ollama apenas como fallback |
 | i18n | i18next | Suporte a Portugues, Ingles e Espanhol |
 | Testes frontend | Vitest + Testing Library | Testes unitarios de UI e logica |
 | Testes E2E | Playwright | Validacao de fluxos reais do usuario |
@@ -94,7 +95,7 @@ Componentes:
 - `EbookConversionService` em fase posterior para formatos proprietarios sem DRM, começando por AZW3 convertido localmente para EPUB quando ferramenta externa compativel estiver disponivel.
 - `KpfImportAdapter` apenas como estudo experimental futuro, evitando acoplamento do MVP a um formato pouco aberto e mais instavel.
 - `OllamaModelAdapter`.
-- `TranslationAdapter` em fase posterior, preferencialmente local-first, para gerar uma versao traduzida do PDF no idioma escolhido.
+- `TranslationProvider`, com `LibreTranslateProvider` local como principal e fallback para Ollama quando o servico dedicado nao estiver disponivel.
 - `ReaderWindowService` em fase posterior, para abrir ou organizar duas janelas/paineis: texto original e texto traduzido.
 - `VectorIndex` em fase posterior.
 - `LicenseService` em fase comercial.
@@ -114,7 +115,7 @@ Regras:
 
 ## 5. Estrutura modular para IAs
 
-O dominio nao deve depender de Ollama. Toda IA deve implementar uma interface comum.
+O dominio nao deve depender de Ollama. Geracao de cards e traducao seguem portas separadas, porque um LLM generativo nao e o melhor mecanismo para traducao fiel de paginas inteiras.
 
 Interface conceitual:
 
@@ -122,14 +123,19 @@ Interface conceitual:
 interface ModelAdapter {
   generateText(prompt: string, options: GenerationOptions): Promise<string>;
   createFlashcards(chunks: DocumentChunk[], config: FlashcardConfig): Promise<StudyCard[]>;
-  translate?(text: string, targetLanguage: Language): Promise<string>;
   summarize?(text: string): Promise<string>;
+}
+
+interface TranslationProvider {
+  translateText(text: string, sourceLanguage: Language, targetLanguage: Language): Promise<string>;
 }
 ```
 
 Adaptadores previstos:
 
 - `OllamaModelAdapter` no MVP, iniciado no backend Rust com cliente injetavel, cliente HTTP local, comando de teste de conexao, painel de configuracao na UI, comando de geracao de cards, progresso por fila de chunks em painel de segundo plano, feedback visual durante operacoes longas e fallback mockado apenas em desenvolvimento.
+- `LibreTranslateProvider` para leitura traduzida sob demanda, acessando `http://127.0.0.1:5000` como servico local dedicado.
+- `FallbackTranslationProvider`, que tenta LibreTranslate primeiro e usa Ollama apenas quando o provedor dedicado falhar.
 - `LlamaCppModelAdapter` em fase futura.
 - `OpenAIModelAdapter` opcional para recursos pagos ou nuvem.
 - `MockModelAdapter` para testes.
@@ -151,7 +157,7 @@ Tabelas ja iniciadas:
 - `app_settings`.
 
 `documents` guarda tambem `source_type`, `source_path` e `archived_at`, permitindo diferenciar TXT/PDF, mostrar origem na UI, retirar documentos da biblioteca ativa sem apagar dados imediatamente, restaurar itens arquivados e excluir definitivamente documentos arquivados com limpeza dos dados de estudo relacionados.
-`document_translations` guarda a leitura traduzida por documento e idioma de destino, permitindo reutilizacao offline sem chamar o Ollama novamente ao reabrir o material. A traducao de documentos longos deve ser feita em lotes menores para respeitar limite de contexto do modelo local, reduzir respostas parciais de modelos leves e evitar bloqueios perceptiveis da janela.
+`document_translations` guarda a leitura traduzida por documento e idioma de destino, permitindo reutilizacao offline sem chamar o provedor de traducao novamente ao reabrir o material. A traducao de documentos longos deve ser feita em lotes menores, preferencialmente com LibreTranslate local, reduzindo respostas parciais de modelos leves e evitando bloqueios perceptiveis da janela.
 `study_reviews` guarda `rating`, `priority`, `next_review_at` e `session_id`, formando a base para revisao espacada, filas de estudo por prioridade, metricas de retencao, cards mais dificeis, filtros de periodo, tendencia por sessao, evolucao semanal de dificuldade e agrupamento de rodadas.
 `study_sessions` registra o documento estudado e o inicio da rodada.
 `app_settings` guarda configuracoes locais, metas de revisao por documento, incluindo recorrencia geral, diaria ou semanal, marcador da pagina de leitura por documento, classificacao de estudo por documento com categoria, subcategoria e descricao, e multiplas entradas de `Anotacao` com os resumos pessoais do leitor por documento.
@@ -209,7 +215,7 @@ Detalhes estao em `docs/testing-strategy.md`.
 - Adicionar EPUB sem DRM com extracao de texto e capitulos.
 - Avaliar AZW3 sem DRM por conversao local para EPUB, sem suporte a remocao de DRM.
 - Manter KPF como item experimental ou conversao futura, sem bloquear a evolucao principal do produto.
-- Melhorar leitura traduzida com controle de progresso por lote e reprocessamento por idioma.
+- Melhorar leitura traduzida com configuracao visual do provedor, controle de progresso por lote e reprocessamento por idioma.
 - Evoluir `Anotacao` com busca e exportacao das anotacoes.
 - Evoluir categorias e subcategorias para manutencao dedicada, filtros e modelo padrao por categoria.
 - Criar resumos e exercicios.

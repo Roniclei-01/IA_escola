@@ -190,14 +190,16 @@ Execute este roteiro no app desktop com `npm run tauri dev` e registre o resulta
 1. Abrir um documento importado.
 2. Confirmar que a tela mostra `Idioma original` e `Idioma escolhido` lado a lado.
 3. Usar `Proxima pagina` e `Pagina anterior` para confirmar que o arquivo completo fica acessivel no leitor.
-4. Selecionar um idioma diferente do idioma original do documento.
-5. Clicar em `Gerar leitura traduzida`.
-6. Confirmar que a traducao aparece no painel `Idioma escolhido`.
-7. Confirmar que documentos longos sao traduzidos em lotes sem travar a janela.
-8. Fechar e abrir o app ou selecionar o documento novamente.
-9. Confirmar que a traducao salva reaparece sem chamar a geracao novamente.
-10. Confirmar que a importacao do documento nao gera traducao automaticamente.
-11. Avancar paginas no leitor, fechar e reabrir o documento, e confirmar que o marcador retoma a pagina onde parou.
+4. Subir LibreTranslate local em `http://127.0.0.1:5000` para validar a rota dedicada.
+5. Selecionar um idioma diferente do idioma original do documento.
+6. Clicar em `Gerar leitura traduzida`.
+7. Confirmar que a traducao aparece no painel `Idioma escolhido`.
+8. Confirmar que documentos longos sao traduzidos em lotes sem travar a janela.
+9. Fechar e abrir o app ou selecionar o documento novamente.
+10. Confirmar que a traducao salva reaparece sem chamar a geracao novamente.
+11. Parar o LibreTranslate e confirmar que a traducao tenta o fallback Ollama com erro controlado quando o modelo tambem falhar.
+12. Confirmar que a importacao do documento nao gera traducao automaticamente.
+13. Avancar paginas no leitor, fechar e reabrir o documento, e confirmar que o marcador retoma a pagina onde parou.
 
 ### Funcionalidades futuras documentadas
 

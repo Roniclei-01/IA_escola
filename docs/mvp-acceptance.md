@@ -204,10 +204,12 @@ Atualizado em 2026-05-19 com `npm run create:mvp-samples`.
 - [x] Abrir um documento importado.
 - [x] Confirmar que `Idioma original` e `Idioma escolhido` aparecem lado a lado.
 - [x] Usar `Proxima pagina` e `Pagina anterior` para confirmar acesso ao arquivo completo.
+- [ ] Rodar LibreTranslate local em `http://127.0.0.1:5000` para validar a traducao dedicada.
 - [x] Selecionar um idioma diferente do original.
 - [x] Clicar em `Gerar leitura traduzida`.
 - [x] Confirmar que a traducao aparece no painel `Idioma escolhido`.
 - [x] Confirmar que documentos longos sao traduzidos em lotes sem travar a janela.
+- [ ] Confirmar que, sem LibreTranslate, o app tenta fallback via Ollama e mostra erro controlado se tambem falhar.
 - [x] Fechar e abrir o app ou selecionar o documento novamente.
 - [x] Confirmar que a traducao salva reaparece sem precisar gerar novamente.
 - [x] Confirmar que a importacao nao gera traducao automaticamente.

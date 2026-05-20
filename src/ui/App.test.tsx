@@ -1832,6 +1832,56 @@ describe("App", () => {
     expect(screen.getByText("Traducao gerada agora e salva localmente.")).toBeInTheDocument();
   });
 
+  it("ignores empty cached reader translations and calls the model", async () => {
+    const importTextBook = vi.fn().mockResolvedValue({
+      document_id: "document-empty-cache-reader",
+      book_id: "book-empty-cache-reader",
+      content: "Texto original sem cache valido.",
+      language: "Pt",
+      source_type: "pdf",
+      source_path: "/tmp/empty-cache.pdf"
+    });
+    const chunkTextDocument = vi.fn().mockResolvedValue({ chunks: [] });
+    const loadDocumentTranslation = vi.fn().mockResolvedValue({
+      translation: {
+        document_id: "document-empty-cache-reader",
+        source_language: "Pt",
+        target_language: "En",
+        translated_content: "   "
+      }
+    });
+    const translateDocument = vi.fn().mockResolvedValue({
+      document_id: "document-empty-cache-reader",
+      source_language: "Pt",
+      target_language: "En",
+      translated_content: "Generated translation after empty cache."
+    });
+
+    renderApp({
+      importTextBook,
+      chunkTextDocument,
+      loadDocumentTranslation,
+      translateDocument
+    });
+
+    fillImportFilePath("/tmp/empty-cache.pdf");
+    fireEvent.click(screen.getByRole("button", { name: "Importar" }));
+
+    expect(await screen.findByRole("heading", { name: "Leitura do documento" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Traduzir pagina atual" }));
+
+    await waitFor(() => {
+      expect(translateDocument).toHaveBeenCalledWith({
+        document_id: "document-empty-cache-reader",
+        content: "Texto original sem cache valido.",
+        source_language: "Pt",
+        target_language: "En",
+        page_index: 0
+      });
+    });
+    expect(await screen.findByText("Generated translation after empty cache.")).toBeInTheDocument();
+  });
+
   it("loads a cached translated page automatically when navigating the reader", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-reader-navigation-cache",

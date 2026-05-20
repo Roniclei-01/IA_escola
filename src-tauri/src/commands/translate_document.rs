@@ -3,11 +3,15 @@ use uuid::Uuid;
 
 use crate::{
     app::{
-        translate_document as translate_document_content, ModelAdapterError, TranslateDocumentError,
+        translate_document as translate_document_content, ModelAdapterTranslationProvider,
+        TranslateDocumentError, TranslationProvider, TranslationProviderError,
     },
     domain::Language,
     infrastructure::storage::{SQLiteStorage, StorageError},
 };
+
+#[cfg(feature = "tauri-app")]
+const DEFAULT_LIBRETRANSLATE_BASE_URL: &str = "http://127.0.0.1:5000";
 
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
 pub struct TranslateDocumentRequest {
@@ -28,9 +32,9 @@ pub struct TranslateDocumentResponse {
     pub page_index: Option<u32>,
 }
 
-pub fn translate_document_with_adapter(
+pub fn translate_document_with_provider(
     request: TranslateDocumentRequest,
-    adapter: &dyn crate::app::ModelAdapter,
+    provider: &dyn TranslationProvider,
 ) -> Result<TranslateDocumentResponse, String> {
     let document_id = request.document_id.trim();
 
@@ -42,7 +46,7 @@ pub fn translate_document_with_adapter(
         &request.content,
         request.source_language.clone(),
         request.target_language.clone(),
-        adapter,
+        provider,
     )
     .map_err(format_translation_error)?;
 
@@ -55,13 +59,22 @@ pub fn translate_document_with_adapter(
     })
 }
 
-pub fn translate_document_with_adapter_and_storage(
+pub fn translate_document_with_adapter(
     request: TranslateDocumentRequest,
     adapter: &dyn crate::app::ModelAdapter,
+) -> Result<TranslateDocumentResponse, String> {
+    let provider = ModelAdapterTranslationProvider::new(adapter);
+
+    translate_document_with_provider(request, &provider)
+}
+
+pub fn translate_document_with_provider_and_storage(
+    request: TranslateDocumentRequest,
+    provider: &dyn TranslationProvider,
     storage: &SQLiteStorage,
 ) -> Result<TranslateDocumentResponse, String> {
     let should_persist = request.persist.unwrap_or(true);
-    let response = translate_document_with_adapter(request, adapter)?;
+    let response = translate_document_with_provider(request, provider)?;
     let document_id = Uuid::parse_str(&response.document_id)
         .map_err(|_| "Documento invalido para traducao.".to_owned())?;
 
@@ -91,6 +104,16 @@ pub fn translate_document_with_adapter_and_storage(
     Ok(response)
 }
 
+pub fn translate_document_with_adapter_and_storage(
+    request: TranslateDocumentRequest,
+    adapter: &dyn crate::app::ModelAdapter,
+    storage: &SQLiteStorage,
+) -> Result<TranslateDocumentResponse, String> {
+    let provider = ModelAdapterTranslationProvider::new(adapter);
+
+    translate_document_with_provider_and_storage(request, &provider, storage)
+}
+
 #[cfg(feature = "tauri-app")]
 #[tauri::command]
 pub async fn translate_document(
@@ -99,18 +122,29 @@ pub async fn translate_document(
 ) -> Result<TranslateDocumentResponse, String> {
     tauri::async_runtime::spawn_blocking(move || {
         use crate::infrastructure::ai::{OllamaHttpClient, OllamaModelAdapter, OllamaModelConfig};
+        use crate::infrastructure::translation::{
+            LibreTranslateHttpClient, LibreTranslateProvider,
+        };
 
         let storage = crate::commands::app_storage::open_app_storage(&app_handle)?;
         let settings =
             crate::commands::ollama_settings::load_ollama_settings_from_storage(&storage)?;
+        let libretranslate_provider = LibreTranslateProvider::new(LibreTranslateHttpClient::new(
+            DEFAULT_LIBRETRANSLATE_BASE_URL,
+        ));
         let adapter = OllamaModelAdapter::new(
             OllamaHttpClient::new(settings.base_url),
             OllamaModelConfig {
                 model: settings.model,
             },
         );
+        let ollama_provider = ModelAdapterTranslationProvider::new(&adapter);
+        let provider = crate::app::FallbackTranslationProvider::new(
+            &libretranslate_provider,
+            &ollama_provider,
+        );
 
-        translate_document_with_adapter_and_storage(request, &adapter, &storage)
+        translate_document_with_provider_and_storage(request, &provider, &storage)
     })
     .await
     .map_err(|_| "Nao foi possivel concluir a traducao do documento.".to_owned())?
@@ -119,12 +153,14 @@ pub async fn translate_document(
 fn format_translation_error(error: TranslateDocumentError) -> String {
     match error {
         TranslateDocumentError::EmptyContent => "Nao ha conteudo para traduzir.".to_owned(),
-        TranslateDocumentError::Model(ModelAdapterError::Unavailable) => {
-            "Nao foi possivel traduzir com o Ollama. Verifique a conexao e o modelo configurado."
-                .to_owned()
+        TranslateDocumentError::EmptyTranslation => {
+            "O servico de traducao nao retornou texto traduzido. Tente novamente ou use outro provedor.".to_owned()
         }
-        TranslateDocumentError::Model(ModelAdapterError::InvalidFlashcards(_)) => {
-            "O Ollama respondeu em um formato invalido para traducao.".to_owned()
+        TranslateDocumentError::Provider(TranslationProviderError::Unavailable) => {
+            "Nao foi possivel traduzir. Verifique se o LibreTranslate esta aberto ou se o Ollama fallback esta configurado.".to_owned()
+        }
+        TranslateDocumentError::Provider(TranslationProviderError::InvalidResponse(_)) => {
+            "O servico de traducao respondeu em um formato invalido.".to_owned()
         }
     }
 }
@@ -198,12 +234,12 @@ mod tests {
     }
 
     #[test]
-    fn formats_ollama_failure_for_ui() {
+    fn formats_translation_provider_failure_for_ui() {
         let result = translate_document_with_adapter(request(), &FakeModelAdapter { fail: true });
 
         assert_eq!(
             result.unwrap_err(),
-            "Nao foi possivel traduzir com o Ollama. Verifique a conexao e o modelo configurado."
+            "Nao foi possivel traduzir. Verifique se o LibreTranslate esta aberto ou se o Ollama fallback esta configurado."
         );
     }
 

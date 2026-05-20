@@ -13,6 +13,7 @@ O projeto sera construido com:
 - **rusqlite** como primeira camada de acesso SQLite no backend Rust.
 - **Ollama** como primeiro runtime de IA local.
 - **ModelAdapter** como camada de abstracao para suportar outros provedores no futuro.
+- **LibreTranslate local** como provedor preferencial para traducao fiel, com Ollama apenas como fallback.
 - **i18next** para interface em Portugues, Ingles e Espanhol.
 - **Vitest, Playwright e testes Rust** antes da escrita de funcionalidades de aplicacao.
 
@@ -94,6 +95,8 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - comando `generate_study_cards` usando Ollama e configuracoes salvas;
 - UI usando Ollama por padrao com `llama3.2:1b` para reduzir gargalo local, com testes ainda injetando geradores previsiveis;
 - timeout na geracao de cards com Ollama para evitar espera indefinida em modelos lentos;
+- porta `TranslationProvider` no backend Rust, separando traducao dedicada da geracao de texto do Ollama;
+- cliente local `LibreTranslateProvider` para traducao de paginas, com fallback automatico para Ollama quando o LibreTranslate nao estiver disponivel;
 - importacao separada da geracao de cards, permitindo subir TXT/PDF, revisar a previa e iniciar a IA apenas quando o usuario desejar;
 - geracao sob demanda limitada aos primeiros chunks, com acao incremental para gerar mais cards sem sobrecarregar o modelo local;
 - progresso de geracao por fila de chunks em painel de segundo plano, com contadores de concluidos, falhas e pendentes durante o processamento do Ollama;
@@ -138,7 +141,7 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 - exibicao do tipo e caminho de origem na biblioteca e na previa do documento;
 - seletor de idioma da interface entre Portugues, Ingles e Espanhol, com persistencia local;
 - leitura paginada lado a lado do documento original e da versao em idioma escolhido;
-- traducao sob demanda do conteudo ativo via Ollama em lotes menores, sem gerar automaticamente durante a importacao;
+- traducao sob demanda do conteudo ativo via LibreTranslate local em lotes menores, com Ollama apenas como fallback, sem gerar automaticamente durante a importacao;
 - persistencia das traducoes geradas por documento para reutilizacao offline ao reabrir o material;
 - marcador automatico da pagina de leitura para retomar o estudo no ponto onde parou;
 - tela principal dedicada a `Importacao e IA` e `Biblioteca`, com `Estudo ativo` aberto em pagina secundaria;
@@ -159,20 +162,29 @@ Ja existe a fundacao do app com Tauri, React, TypeScript, Rust, i18n e testes au
 ## Fluxo de uso recomendado
 
 1. Instale um modelo leve no Ollama, como `llama3.2:1b`.
-2. Abra o app desktop e clique em `Testar` na secao Ollama.
-3. Navegue pela biblioteca escolhendo uma categoria academica e, se necessario, uma subcategoria.
-4. Clique em `Importar livro`, escolha categoria/subcategoria e importe um arquivo `.txt` ou `.pdf`.
-5. Aguarde a importacao e a divisao em chunks; o app abre a pagina secundaria de estudo do documento.
-6. Revise a previa do conteudo importado e use `Voltar para biblioteca` quando quiser retornar a navegacao principal.
-7. Clique em `Gerar cards` quando quiser iniciar a IA.
-8. Se o documento tiver muitos chunks, a acao de geracao processa apenas o lote inicial para evitar travamentos.
-9. Use `Gerar mais cards` para processar os proximos chunks sob demanda.
-10. No painel `Leitura do documento`, use `Proxima pagina` e `Pagina anterior` para ler o arquivo completo; o marcador da pagina atual e salvo para retomar depois.
-11. Escolha o idioma de leitura e clique em `Gerar leitura traduzida` quando desejar traduzir. Ao reabrir o documento, a traducao salva e reaproveitada.
-12. Use `Meus Livros` para abrir rapidamente os documentos da categoria e subcategoria selecionadas.
-13. Revise os cards gerados e acompanhe historico, fila de revisao e metas.
+2. Para traducao mais fiel, rode um LibreTranslate local em `http://127.0.0.1:5000`. Sem ele, o app tenta usar Ollama como fallback, mas a traducao pode ser menos completa.
+3. Abra o app desktop e clique em `Testar` na secao Ollama.
+4. Navegue pela biblioteca escolhendo uma categoria academica e, se necessario, uma subcategoria.
+5. Clique em `Importar livro`, escolha categoria/subcategoria e importe um arquivo `.txt` ou `.pdf`.
+6. Aguarde a importacao e a divisao em chunks; o app abre a pagina secundaria de estudo do documento.
+7. Revise a previa do conteudo importado e use `Voltar para biblioteca` quando quiser retornar a navegacao principal.
+8. Clique em `Gerar cards` quando quiser iniciar a IA.
+9. Se o documento tiver muitos chunks, a acao de geracao processa apenas o lote inicial para evitar travamentos.
+10. Use `Gerar mais cards` para processar os proximos chunks sob demanda.
+11. No painel `Leitura do documento`, use `Proxima pagina` e `Pagina anterior` para ler o arquivo completo; o marcador da pagina atual e salvo para retomar depois.
+12. Escolha o idioma de leitura e clique em `Gerar leitura traduzida` quando desejar traduzir. Ao reabrir o documento, a traducao salva e reaproveitada.
+13. Use `Meus Livros` para abrir rapidamente os documentos da categoria e subcategoria selecionadas.
+14. Revise os cards gerados e acompanhe historico, fila de revisao e metas.
 
 Durante operacoes longas, botoes de geracao e acoes da biblioteca ficam bloqueados para evitar cliques duplicados ou troca de documento no meio do processamento.
+
+Para subir o provedor de traducao dedicado em desenvolvimento, uma opcao pratica e usar Docker:
+
+```bash
+docker run --rm -p 5000:5000 libretranslate/libretranslate --load-only en,pt,es
+```
+
+O primeiro carregamento pode baixar modelos de traducao. Se esse servico nao estiver ativo, o app continua funcionando e tenta traduzir via Ollama, mas essa rota e tratada como fallback.
 
 ### Fase de expansao
 

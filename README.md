@@ -190,6 +190,8 @@ O primeiro carregamento pode baixar modelos de traducao. Se esse servico nao est
 
 ### Fase de expansao
 
+O roadmap detalhado das proximas fatias esta em `docs/post-mvp-roadmap.md`.
+
 - Importacao de EPUB sem DRM como primeiro formato rico pos-MVP, com extracao de texto, capitulos e suporte posterior a imagens no leitor.
 - Avaliacao de AZW3 sem DRM em fase posterior, preferencialmente por conversao local para EPUB quando houver ferramenta compativel instalada, como Calibre.
 - KPF deve permanecer fora do escopo imediato; se entrar no produto, sera tratado como importacao experimental ou fluxo de conversao para formato aberto.
@@ -246,6 +248,7 @@ data/
   indexes/
 docs/
   architecture.md
+  post-mvp-roadmap.md
   software-modeling-uml.md
   testing-strategy.md
   uml/

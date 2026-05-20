@@ -211,6 +211,8 @@ Detalhes estao em `docs/testing-strategy.md`.
 
 ### Etapa 3: Conteudo rico
 
+Detalhamento das fatias pos-MVP: `docs/post-mvp-roadmap.md`.
+
 - Melhorar suporte a PDFs com metadados, paginacao e PDFs digitalizados.
 - Adicionar EPUB sem DRM com extracao de texto e capitulos.
 - Avaliar AZW3 sem DRM por conversao local para EPUB, sem suporte a remocao de DRM.

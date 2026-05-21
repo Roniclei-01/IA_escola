@@ -322,7 +322,9 @@ export function canonicalLicensePayload(license: Omit<CommercialLicense, "signat
   ].join("|");
 }
 
-function buildCommercialLicense(event: CommercialWebhookEvent): Omit<CommercialLicense, "signature"> {
+export function buildCommercialLicense(
+  event: CommercialWebhookEvent
+): Omit<CommercialLicense, "signature"> {
   return {
     id: `license_${event.gateway}_${event.gateway_object_id}`,
     plan: event.plan,
@@ -333,7 +335,7 @@ function buildCommercialLicense(event: CommercialWebhookEvent): Omit<CommercialL
   };
 }
 
-function buildProcessedWebhookRecord(
+export function buildProcessedWebhookRecord(
   event: CommercialWebhookEvent,
   resultStatus: CommercialProcessedWebhookResultStatus,
   licenseId: string | null

@@ -15,6 +15,7 @@
     "check": "npm run test && cargo test --manifest-path src-tauri/Cargo.toml --no-default-features",
     "check:mvp": "npm run check && npm run build && npm run test:e2e",
     "check:production-config": "node scripts/check-production-config.mjs",
+    "commercial:postgres:migrate": "node scripts/migrate-commercial-postgres.mjs",
     "check:mvp:env": "bash scripts/check-mvp-environment.sh",
     "check:mvp:appimage": "bash scripts/smoke-test-appimage.sh",
     "create:mvp-samples": "bash scripts/create-mvp-samples.sh",
@@ -25,6 +26,7 @@
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-notification": "^2.3.3",
     "i18next": "^25.0.0",
+    "pg": "^8.21.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^15.0.0"

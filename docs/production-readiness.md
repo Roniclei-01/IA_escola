@@ -373,14 +373,35 @@ Status inicial:
 - adaptador `Request`/`Response` criado em
   `src/commercial/license-fetch-adapter.ts` para deploy futuro em runtime
   compativel com Fetch sem prender o backend comercial a um framework;
+- verificador real de assinatura Paddle criado em
+  `src/commercial/paddle-signature-verifier.ts`;
+- header `Paddle-Signature` validado com HMAC-SHA256, timestamp e comparacao
+  segura;
 - assinador Ed25519 comercial criado em
   `src/commercial/license-ed25519-signer.ts`;
 - app desktop valida licencas Ed25519 offline com chave publica embutida;
 - assinaturas legadas de teste sao rejeitadas pelo app;
+- runtime comercial configuravel por ambiente criado em
+  `src/commercial/commercial-runtime.ts`;
+- runtime exige `COMMERCIAL_LICENSE_PRIVATE_KEY_PEM`,
+  `COMMERCIAL_LICENSE_STORE_PATH` e `PADDLE_WEBHOOK_SECRET_KEY`;
+- contrato assincrono de backend/API/fetch criado para storage remoto;
+- runtime PostgreSQL criado em `src/commercial/commercial-postgres-runtime.ts`;
+- adaptador PostgreSQL transacional criado em
+  `src/commercial/license-postgres-repository.ts`;
+- adaptador concreto para `pg` criado em `src/commercial/pg-commercial-client.ts`;
+- schema PostgreSQL base criado com tabelas `commercial_licenses` e
+  `commercial_processed_webhooks`;
+- script `npm run commercial:postgres:migrate` criado para aplicar o schema no
+  PostgreSQL real usando `COMMERCIAL_DATABASE_URL` ou `DATABASE_URL`;
 - porta `CommercialLicenseRepository` criada para separar regra comercial de
   armazenamento;
+- porta `AsyncCommercialLicenseRepository` criada para separar regra comercial
+  de storage remoto;
 - repositorio persistente por snapshot criado em
   `src/commercial/license-persistent-repository.ts`;
+- store JSON em arquivo criado em `src/commercial/license-file-snapshot-store.ts`
+  para homologacao e beta em instancia unica;
 - webhooks processados passam a ter registro de auditoria com resultado do
   processamento;
 - licencas emitidas continuam disponiveis apos recriar o repositorio;
@@ -404,10 +425,17 @@ Validado em 2026-05-21:
   passou com 18 testes.
 - `npm run test -- src/commercial/license-ed25519-signer.test.ts src/commercial/license-backend.test.ts src/commercial/license-api.test.ts src/commercial/license-fetch-adapter.test.ts src/commercial/license-persistent-repository.test.ts`
   passou com 20 testes;
+- `npm run test -- src/commercial/paddle-signature-verifier.test.ts src/commercial/license-file-snapshot-store.test.ts src/commercial/commercial-runtime.test.ts src/commercial/license-ed25519-signer.test.ts src/commercial/license-api.test.ts`
+  passou com 17 testes;
+- `npm run test -- src/commercial/license-postgres-repository.test.ts src/commercial/commercial-postgres-runtime.test.ts src/commercial/commercial-runtime.test.ts`
+  passou com 7 testes;
+- `npm run test -- src/commercial/pg-commercial-client.test.ts src/commercial/license-postgres-repository.test.ts src/commercial/commercial-postgres-runtime.test.ts`
+  passou com 13 testes;
+- `node --check scripts/migrate-commercial-postgres.mjs` passou;
 - `cargo test --manifest-path src-tauri/Cargo.toml --no-default-features license`
   passou com 17 testes de licenca e entitlement filtrados;
 - `npm run build` passou;
-- `npm run check` passou com 204 testes Vitest e 207 testes Rust;
+- `npm run check` passou com 226 testes Vitest e 207 testes Rust;
 - `npm run check:production-config` passou.
 
 ### Fatia P5: assinatura e atualizacao

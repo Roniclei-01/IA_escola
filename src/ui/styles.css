@@ -1594,18 +1594,23 @@ h1 {
 
 .category-grid strong,
 .subcategory-grid strong {
+  grid-column: 2;
+  min-width: 0;
   align-self: end;
   color: #101e19;
   font-size: 0.98rem;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .category-grid button > span:not(.category-card-icon),
-.subcategory-grid span {
+.subcategory-grid button > span:not(.category-card-icon) {
   grid-column: 2;
+  min-width: 0;
   color: #526256;
   font-size: 0.85rem;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .subcategory-navigation {

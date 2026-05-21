@@ -242,6 +242,47 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: /Geral/ })).toBeInTheDocument();
   });
 
+  it("uses sidebar categories and settings actions to focus their sections", async () => {
+    renderApp();
+
+    const categoriesHeading = await screen.findByRole("heading", {
+      name: "Categorias academicas"
+    });
+    const categoriesSection = categoriesHeading.closest("section");
+    const settingsHeading = screen.getByRole("heading", { name: "Importacao e IA" });
+    const settingsSection = settingsHeading.closest("section");
+
+    expect(categoriesSection).not.toBeNull();
+    expect(settingsSection).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver categorias" }));
+    await waitFor(() => {
+      expect(categoriesSection).toHaveFocus();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver configuracoes" }));
+    await waitFor(() => {
+      expect(settingsSection).toHaveFocus();
+    });
+  });
+
+  it("keeps subcategory cards aligned with icons after choosing a category", async () => {
+    renderApp();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Educacao e Pedagogia/ }));
+
+    const allSubcategoriesButton = await screen.findByRole("button", {
+      name: /Todas as subcategorias/
+    });
+    const assessmentButton = await screen.findByRole("button", {
+      name: /Avaliacao educacional/
+    });
+
+    expect(allSubcategoriesButton.querySelector(".category-card-icon")).not.toBeNull();
+    expect(assessmentButton.querySelector(".category-card-icon")).not.toBeNull();
+    expect(within(assessmentButton).getByText("Avaliacao educacional")).toBeInTheDocument();
+  });
+
   it("opens the active study in a secondary page and returns to the library", async () => {
     const importTextBook = vi.fn().mockResolvedValue({
       document_id: "document-secondary-page",
@@ -3797,7 +3838,12 @@ describe("App", () => {
     expect(screen.getByRole("group", { name: "Alternativas" })).toBeInTheDocument();
     expect(screen.queryByText(/Alternativa A:/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /UDP/ }));
-    expect(screen.getByRole("button", { name: /UDP/ })).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /UDP/ })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Revelar resposta" }));
 

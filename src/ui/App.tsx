@@ -2077,6 +2077,8 @@ export function App({
   const meditationLoadTokenRef = useRef(0);
   const documentStudyMetadataLoadTokenRef = useRef(0);
   const activeStudyPanelRef = useRef<HTMLElement | null>(null);
+  const settingsPanelRef = useRef<HTMLElement | null>(null);
+  const categoriesPanelRef = useRef<HTMLElement | null>(null);
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>(() =>
     normalizeUiLanguage(i18n.language)
   );
@@ -3639,6 +3641,33 @@ export function App({
     }, 0);
   }
 
+  function focusWorkspaceSection(section: HTMLElement | null) {
+    if (!section) {
+      return;
+    }
+
+    if (typeof section.scrollIntoView === "function") {
+      section.scrollIntoView({ block: "start" });
+    }
+    section.focus({ preventScroll: true });
+  }
+
+  function handleNavigateToCategories() {
+    setCurrentView("library");
+    setSelectedCategoryFilter("");
+    setSelectedSubcategoryFilter("");
+    window.setTimeout(() => {
+      focusWorkspaceSection(categoriesPanelRef.current);
+    }, 0);
+  }
+
+  function handleNavigateToSettings() {
+    setCurrentView("library");
+    window.setTimeout(() => {
+      focusWorkspaceSection(settingsPanelRef.current);
+    }, 0);
+  }
+
   function openImportDialog() {
     const category =
       selectedCategoryFilter.trim() || studyCategoryDefault.category || DEFAULT_STUDY_CATEGORY;
@@ -4924,12 +4953,16 @@ export function App({
           <button
             type="button"
             aria-label={t("app.sidebarCategoriesAction")}
-            onClick={() => setSelectedCategoryFilter("")}
+            onClick={handleNavigateToCategories}
           >
             <span className="sidebar-icon sidebar-icon-grid" aria-hidden="true" />
             <span aria-hidden="true">{t("app.sidebarCategories")}</span>
           </button>
-          <button type="button" aria-label={t("app.sidebarSettingsAction")}>
+          <button
+            type="button"
+            aria-label={t("app.sidebarSettingsAction")}
+            onClick={handleNavigateToSettings}
+          >
             <span className="sidebar-icon sidebar-icon-settings" aria-hidden="true" />
             <span aria-hidden="true">{t("app.sidebarSettings")}</span>
           </button>
@@ -5361,7 +5394,12 @@ export function App({
         <div className={isLibraryView ? "workspace-grid" : "study-page"}>
           {isLibraryView ? (
             <>
-          <section className="workspace-panel import-settings-panel" aria-labelledby="import-settings-title">
+          <section
+            ref={settingsPanelRef}
+            className="workspace-panel import-settings-panel"
+            aria-labelledby="import-settings-title"
+            tabIndex={-1}
+          >
             <div className="import-cta-card">
               <div>
                 <h2 id="import-settings-title">{t("layout.importAndAi")}</h2>
@@ -5420,7 +5458,12 @@ export function App({
 
           <section className="workspace-panel library-panel" aria-labelledby="library-panel-title">
             <h2 id="library-panel-title">{t("layout.library")}</h2>
-            <section className="library-navigation" aria-labelledby="library-navigation-title">
+            <section
+              ref={categoriesPanelRef}
+              className="library-navigation"
+              aria-labelledby="library-navigation-title"
+              tabIndex={-1}
+            >
               <div className="library-navigation-header">
                 <div>
                   <h2 id="library-navigation-title">{t("library.categoriesTitle")}</h2>
@@ -5470,6 +5513,7 @@ export function App({
                         className={!selectedSubcategoryFilter ? "is-active" : undefined}
                         onClick={() => setSelectedSubcategoryFilter("")}
                       >
+                        <AcademicCategoryIcon category={selectedCategoryFilter} />
                         <strong>{t("library.allSubcategories")}</strong>
                         <span>
                           {t("library.categoryBookCount", {
@@ -5491,6 +5535,7 @@ export function App({
                           }
                           onClick={() => setSelectedSubcategoryFilter(subcategory)}
                         >
+                          <AcademicCategoryIcon category={selectedCategoryFilter} />
                           <strong>{getAcademicSubcategoryDisplayName(subcategory, t)}</strong>
                           <span>
                             {t("library.categoryBookCount", {

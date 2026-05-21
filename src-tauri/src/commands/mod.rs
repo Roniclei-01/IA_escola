@@ -9,6 +9,7 @@ pub mod export_anki_package;
 pub mod export_text_file;
 pub mod generate_study_cards;
 pub mod import_text_book;
+pub mod license;
 pub mod list_archived_documents;
 pub mod list_document_chunks;
 pub mod list_document_page_translations;
@@ -51,6 +52,8 @@ pub use export_text_file::export_text_file;
 pub use generate_study_cards::generate_study_cards;
 #[cfg(feature = "tauri-app")]
 pub use import_text_book::import_text_book;
+#[cfg(feature = "tauri-app")]
+pub use license::{activate_license, load_license_status};
 #[cfg(feature = "tauri-app")]
 pub use list_archived_documents::list_archived_documents;
 #[cfg(feature = "tauri-app")]
@@ -129,6 +132,9 @@ pub use generate_study_cards::{
 };
 pub use import_text_book::{
     import_text_book_from_path, import_text_book_with_storage, ImportTextBookResponse,
+};
+pub use license::{
+    activate_license_with_storage, load_license_status_from_storage, ActivateLicenseRequest,
 };
 pub use list_archived_documents::{
     list_archived_documents_from_storage, ListArchivedDocumentsResponse,

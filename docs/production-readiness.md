@@ -275,6 +275,31 @@ Aceite:
 - app identifica Pro com licenca assinada;
 - testes nao dependem de rede.
 
+Status inicial:
+
+- entidade `License` criada no dominio Rust;
+- `LicenseService` criado com verificador local de assinatura de teste;
+- comandos Tauri `load_license_status` e `activate_license` criados;
+- licenca local persistida em `app_settings` com a chave `license.local.v1`;
+- wrapper TypeScript criado para carregar status e ativar licenca;
+- testes cobrem licenca ausente, Pro valida, expirada, assinatura invalida e
+  persistencia local.
+
+Observacao:
+
+- a assinatura atual e um verificador local de teste para preparar a arquitetura;
+- antes da venda real, a P4 deve substituir a emissao por assinatura assimetrica
+  feita no backend comercial com chave privada fora do app.
+
+Validado em 2026-05-20:
+
+- `cargo test --manifest-path src-tauri/Cargo.toml --no-default-features license`
+  passou com 10 testes de licenca;
+- `npm run test -- src/infrastructure/tauri/license.test.ts` passou com 2 testes;
+- `npm run check` passou com 180 testes Vitest e 198 testes Rust;
+- `npm run check:production-config` passou;
+- `npm run build` passou.
+
 ### Fatia P3: gates de recurso
 
 Escopo:

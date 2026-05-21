@@ -1,5 +1,6 @@
 pub mod chunk_document;
 pub mod generate_flashcards;
+pub mod license_service;
 pub mod model_adapter;
 pub mod translate_document;
 pub mod translation_provider;

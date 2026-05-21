@@ -1,4 +1,5 @@
 pub mod chunk_document;
+pub mod entitlement_guard;
 pub mod generate_flashcards;
 pub mod license_service;
 pub mod model_adapter;

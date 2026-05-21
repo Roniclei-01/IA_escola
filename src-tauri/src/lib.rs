@@ -36,6 +36,7 @@ pub fn run() {
             commands::list_study_reviews::list_study_reviews,
             commands::license::load_license_status,
             commands::license::activate_license,
+            commands::entitlements::check_entitlement,
             commands::test_ocr_dependencies::test_ocr_dependencies,
             commands::test_ollama_connection::test_ollama_connection,
             commands::ollama_settings::load_ollama_settings,

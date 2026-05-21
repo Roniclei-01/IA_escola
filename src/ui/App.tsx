@@ -128,6 +128,13 @@ import {
   exportAnkiPackage as defaultExportAnkiPackage,
   type ExportAnkiPackageResponse
 } from "../infrastructure/tauri/export-anki-package";
+import {
+  checkEntitlement as defaultCheckEntitlement,
+  ENTITLEMENT_EXPORT_ANKI_APKG,
+  ENTITLEMENT_EXPORT_REPORT_PDF,
+  type EntitlementDecision,
+  type EntitlementKey
+} from "../infrastructure/tauri/entitlements";
 import { exportTextFile as defaultExportTextFile } from "../infrastructure/tauri/export-text-file";
 import {
   addMeditationNote as defaultAddMeditationNote,
@@ -242,6 +249,7 @@ interface AppProps {
     deckName: string,
     cards: StudyCard[]
   ) => Promise<ExportAnkiPackageResponse | null> | ExportAnkiPackageResponse | null;
+  checkEntitlement?: (key: EntitlementKey) => Promise<EntitlementDecision>;
   loadMeditationNotes?: (documentId: string) => Promise<MeditationNotesResponse>;
   addMeditationNote?: (documentId: string, content: string) => Promise<MeditationNotesResponse>;
   updateMeditationNote?: (
@@ -2048,6 +2056,7 @@ export function App({
   saveNotificationSettings = defaultSaveNotificationSettings,
   testOcrDependencies = defaultTestOcrDependencies,
   exportAnkiPackage = defaultExportAnkiPackage,
+  checkEntitlement = defaultCheckEntitlement,
   loadMeditationNotes = defaultLoadMeditationNotes,
   addMeditationNote = defaultAddMeditationNote,
   updateMeditationNote = defaultUpdateMeditationNote,
@@ -4469,8 +4478,32 @@ export function App({
     setPrintableReportPreviewHtml(buildPrintableStudySessionReport(document, studySessionSummaries));
   }
 
-  function handleExportPrintableStudySessionReport() {
+  async function ensureEntitlement(key: EntitlementKey, featureName: string): Promise<boolean> {
+    try {
+      const decision = await checkEntitlement(key);
+
+      if (decision.allowed) {
+        return true;
+      }
+
+      setError(
+        t("license.featureLocked", {
+          feature: featureName
+        })
+      );
+      return false;
+    } catch {
+      setError(t("license.featureCheckError"));
+      return false;
+    }
+  }
+
+  async function handleExportPrintableStudySessionReport() {
     if (!document || studySessionSummaries.length === 0) {
+      return;
+    }
+
+    if (!(await ensureEntitlement(ENTITLEMENT_EXPORT_REPORT_PDF, t("study.exportSessionPdfReport")))) {
       return;
     }
 
@@ -4490,6 +4523,9 @@ export function App({
 
     try {
       setError(null);
+      if (!(await ensureEntitlement(ENTITLEMENT_EXPORT_ANKI_APKG, t("study.exportAnkiPackage")))) {
+        return;
+      }
       await exportAnkiPackage(fileName, getDocumentTitle(document), cards);
     } catch (unknownError) {
       setError(getErrorMessage(unknownError, t("study.exportFileError")));

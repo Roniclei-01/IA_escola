@@ -138,6 +138,13 @@ const loadDefaultPdfReaderPreference = vi.fn().mockImplementation(async (documen
   reader_page: 1
 }));
 const saveDefaultPdfReaderPreference = vi.fn().mockImplementation(async (preference: unknown) => preference);
+const checkAllEntitlements = vi.fn().mockImplementation(async (key: string) => ({
+  key,
+  allowed: true,
+  plan: "pro",
+  reason: "entitled",
+  limit: null
+}));
 
 function renderApp(props: ComponentProps<typeof App> = {}) {
   return render(
@@ -174,6 +181,7 @@ function renderApp(props: ComponentProps<typeof App> = {}) {
       renderPdfPage={renderDefaultPdfPage}
       loadPdfReaderPreference={loadDefaultPdfReaderPreference}
       savePdfReaderPreference={saveDefaultPdfReaderPreference}
+      checkEntitlement={checkAllEntitlements}
       {...props}
     />
   );
@@ -206,6 +214,7 @@ describe("App", () => {
     renderDefaultPdfPage.mockClear();
     loadDefaultPdfReaderPreference.mockClear();
     saveDefaultPdfReaderPreference.mockClear();
+    checkAllEntitlements.mockClear();
     listNoDocumentPageTranslations.mockClear();
     loadNoDocumentStudyMetadata.mockClear();
     listNoStudyCategories.mockClear();
@@ -4021,10 +4030,12 @@ describe("App", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Exportar PDF" }));
 
-    expect(printStudySessionReport).toHaveBeenCalledWith(
-      "relatorio-estudo-document-pdf-report.pdf",
-      expect.stringContaining("<title>Relatorio de estudo - Historia geral</title>")
-    );
+    await waitFor(() => {
+      expect(printStudySessionReport).toHaveBeenCalledWith(
+        "relatorio-estudo-document-pdf-report.pdf",
+        expect.stringContaining("<title>Relatorio de estudo - Historia geral</title>")
+      );
+    });
     expect(printStudySessionReport.mock.calls[0][1]).toContain('<header class="report-cover">');
     expect(printStudySessionReport.mock.calls[0][1]).toContain("<h1>Relatorio de estudo - Historia geral</h1>");
     expect(printStudySessionReport.mock.calls[0][1]).toContain("@bottom-center");
@@ -4603,11 +4614,61 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Exportar Anki .apkg" }));
 
-    expect(exportAnkiPackage).toHaveBeenCalledWith(
-      "anki-document-anki.apkg",
-      "Biologia celular.",
-      cards
-    );
+    await waitFor(() => {
+      expect(exportAnkiPackage).toHaveBeenCalledWith(
+        "anki-document-anki.apkg",
+        "Biologia celular.",
+        cards
+      );
+    });
+  });
+
+  it("blocks Anki APKG export when the license does not include the Pro entitlement", async () => {
+    const exportAnkiPackage = vi.fn();
+    const checkEntitlement = vi.fn().mockResolvedValue({
+      key: "export.anki.apkg",
+      allowed: false,
+      plan: "free",
+      reason: "license_required",
+      limit: null
+    });
+    const listImportedDocuments = vi.fn().mockResolvedValue({
+      documents: [
+        {
+          document_id: "document-anki-free",
+          book_id: "book-anki-free",
+          content: "Biologia celular.",
+          language: "Pt",
+          source_type: "txt",
+          source_path: "/tmp/biologia.txt"
+        }
+      ]
+    });
+    const listStudyCards = vi.fn().mockResolvedValue([
+      {
+        id: "card-1",
+        bookId: "book-anki-free",
+        chunkId: "chunk-1",
+        front: "O que e celula?",
+        back: "Unidade basica da vida.",
+        tags: ["biologia"]
+      }
+    ]);
+
+    renderApp({
+      checkEntitlement,
+      exportAnkiPackage,
+      listImportedDocuments,
+      listStudyCards
+    });
+    selectLibraryCategory();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Biologia celular/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Exportar Anki .apkg" }));
+
+    expect(checkEntitlement).toHaveBeenCalledWith("export.anki.apkg");
+    expect(await screen.findByText(/Exportar Anki .apkg e um recurso Pro/)).toBeInTheDocument();
+    expect(exportAnkiPackage).not.toHaveBeenCalled();
   });
 
   it("exports study cards as an Anki TSV deck", async () => {

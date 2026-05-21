@@ -374,6 +374,10 @@ export const resources = {
         reviews_other: "{{count}} revisoes",
         accuracy: "{{percent}}% acertos"
       },
+      license: {
+        featureLocked: "{{feature}} e um recurso Pro. Seus dados continuam acessiveis nos formatos gratuitos.",
+        featureCheckError: "Nao foi possivel validar a licenca local."
+      },
       study: {
         title: "Estudo",
         progress: "Card {{current}} de {{total}}",
@@ -886,6 +890,10 @@ export const resources = {
         reviews_other: "{{count}} reviews",
         accuracy: "{{percent}}% correct"
       },
+      license: {
+        featureLocked: "{{feature}} is a Pro feature. Your data remains available in free formats.",
+        featureCheckError: "Could not validate the local license."
+      },
       study: {
         title: "Study",
         progress: "Card {{current}} of {{total}}",
@@ -1397,6 +1405,10 @@ export const resources = {
         reviews_one: "{{count}} revision",
         reviews_other: "{{count}} revisiones",
         accuracy: "{{percent}}% aciertos"
+      },
+      license: {
+        featureLocked: "{{feature}} es un recurso Pro. Tus datos siguen disponibles en formatos gratuitos.",
+        featureCheckError: "No fue posible validar la licencia local."
       },
       study: {
         title: "Estudio",

@@ -315,6 +315,28 @@ Aceite:
 - usuario Pro usa recurso sem atrito;
 - dados locais continuam acessiveis.
 
+Status inicial:
+
+- `EntitlementGuard` criado no backend Rust;
+- comando Tauri `check_entitlement` criado;
+- wrapper TypeScript `checkEntitlement` criado;
+- recursos gratuitos declarados para manter dados acessiveis, incluindo TSV e
+  relatorio Markdown;
+- exportacao Anki `.apkg` e exportacao de relatorio PDF passam a exigir
+  entitlement Pro;
+- UI exibe mensagem clara quando um recurso Pro esta bloqueado;
+- exportacoes gratuitas continuam funcionando sem licenca paga.
+
+Validado em 2026-05-20:
+
+- `cargo test --manifest-path src-tauri/Cargo.toml --no-default-features entitlement`
+  passou com 9 testes;
+- `npm run test -- src/infrastructure/tauri/entitlements.test.ts src/ui/App.test.tsx`
+  passou com 90 testes;
+- `npm run check` passou com 182 testes Vitest e 206 testes Rust;
+- `npm run check:production-config` passou;
+- `npm run build` passou.
+
 ### Fatia P4: backend comercial minimo
 
 Escopo:
@@ -330,6 +352,24 @@ Aceite:
 - compra sandbox gera licenca;
 - app ativa licenca;
 - webhook duplicado nao duplica licenca.
+
+Status inicial:
+
+- Paddle mantido como gateway recomendado para a primeira versao comercial;
+- contrato inicial documentado em `docs/commercial-backend-contract.md`;
+- nucleo puro de backend comercial criado em `src/commercial/license-backend.ts`;
+- webhook Paddle normalizado para evento comercial interno;
+- assinatura de webhook e obrigatoria por interface injetada;
+- licenca emitida no formato compativel com o app desktop;
+- idempotencia por `event_id` implementada;
+- eventos sem pagamento ativo sao ignorados e nao emitem licenca.
+
+Validado em 2026-05-20:
+
+- `npm run test -- src/commercial/license-backend.test.ts` passou com 5 testes;
+- `npm run check` passou com 187 testes Vitest e 206 testes Rust;
+- `npm run check:production-config` passou;
+- `npm run build` passou.
 
 ### Fatia P5: assinatura e atualizacao
 

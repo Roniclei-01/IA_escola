@@ -206,6 +206,9 @@ O roadmap detalhado das proximas fatias esta em `docs/post-mvp-roadmap.md`.
 
 ### Fase de produto comercial
 
+O plano operacional para producao, licenciamento e monetizacao esta em
+`docs/production-readiness.md`.
+
 - Instaladores assinados.
 - Licenca local e ativacao opcional online.
 - Backups e sincronizacao opcional.

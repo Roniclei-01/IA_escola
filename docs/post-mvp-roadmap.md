@@ -178,6 +178,8 @@ Aceite:
 
 Objetivo: preparar distribuicao e monetizacao sem quebrar o modelo local-first.
 
+Plano detalhado: `docs/production-readiness.md`.
+
 Escopo inicial:
 
 - instaladores assinados;

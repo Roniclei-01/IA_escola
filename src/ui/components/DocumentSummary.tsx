@@ -323,9 +323,9 @@ export function DocumentSummary({
             ) : null}
           </article>
           <article className="reader-pane reader-pane-translated">
+            {meditationSlot ? <div className="reader-pane-tools">{meditationSlot}</div> : null}
             <div className="reader-pane-heading">
               <h4>{labels.translatedPaneTitle}</h4>
-              {meditationSlot ? <div className="reader-pane-tools">{meditationSlot}</div> : null}
             </div>
             {currentTranslatedPage ? (
               <p>{currentTranslatedPage}</p>

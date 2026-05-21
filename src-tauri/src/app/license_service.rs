@@ -1,11 +1,13 @@
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::{DateTime, Utc};
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::domain::{License, LicenseEntitlement, LicenseError, LicensePlan};
 
-pub const TEST_LICENSE_PUBLIC_KEY: &str = "estudo-ia-local-test-public-key-v1";
+pub const LICENSE_SIGNATURE_PREFIX: &str = "ed25519:";
+pub const LICENSE_PUBLIC_KEY_BASE64: &str = "F+Ksfsj/yWaxljAtTozH/4a6W361PQOEDieKpres/TM=";
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -46,8 +48,8 @@ pub struct LicenseService<V> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TestLicenseSignatureVerifier {
-    public_key: String,
+pub struct Ed25519LicenseSignatureVerifier {
+    public_key_base64: String,
 }
 
 impl<V> LicenseService<V>
@@ -112,32 +114,44 @@ where
     }
 }
 
-impl TestLicenseSignatureVerifier {
-    pub fn new(public_key: impl Into<String>) -> Self {
+impl Ed25519LicenseSignatureVerifier {
+    pub fn new(public_key_base64: impl Into<String>) -> Self {
         Self {
-            public_key: public_key.into(),
+            public_key_base64: public_key_base64.into(),
         }
     }
 
-    fn signature_for_license(&self, license: &License) -> String {
-        test_signature_for_payload(&license.canonical_payload(), &self.public_key)
+    fn verifying_key(&self) -> Option<VerifyingKey> {
+        let public_key_bytes = STANDARD.decode(self.public_key_base64.trim()).ok()?;
+        let public_key_bytes: [u8; 32] = public_key_bytes.try_into().ok()?;
+
+        VerifyingKey::from_bytes(&public_key_bytes).ok()
     }
 }
 
-impl Default for TestLicenseSignatureVerifier {
+impl Default for Ed25519LicenseSignatureVerifier {
     fn default() -> Self {
-        Self::new(TEST_LICENSE_PUBLIC_KEY)
+        Self::new(LICENSE_PUBLIC_KEY_BASE64)
     }
 }
 
-impl LicenseSignatureVerifier for TestLicenseSignatureVerifier {
+impl LicenseSignatureVerifier for Ed25519LicenseSignatureVerifier {
     fn verify(&self, license: &License) -> bool {
-        license.signature == self.signature_for_license(license)
+        let Some(verifying_key) = self.verifying_key() else {
+            return false;
+        };
+        let Some(signature) = ed25519_signature_from_license(license) else {
+            return false;
+        };
+
+        verifying_key
+            .verify(license.canonical_payload().as_bytes(), &signature)
+            .is_ok()
     }
 }
 
-pub fn default_license_service() -> LicenseService<TestLicenseSignatureVerifier> {
-    LicenseService::new(TestLicenseSignatureVerifier::default())
+pub fn default_license_service() -> LicenseService<Ed25519LicenseSignatureVerifier> {
+    LicenseService::new(Ed25519LicenseSignatureVerifier::default())
 }
 
 fn free_status() -> LicenseStatus {
@@ -158,25 +172,41 @@ fn status_with_reason(reason: LicenseStatusReason) -> LicenseStatus {
     }
 }
 
-fn test_signature_for_payload(payload: &str, public_key: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(public_key.as_bytes());
-    hasher.update(b":");
-    hasher.update(payload.as_bytes());
-    let digest = hasher.finalize();
-    format!("test-sha256:{digest:x}")
+fn ed25519_signature_from_license(license: &License) -> Option<Signature> {
+    let signature = license
+        .signature
+        .trim()
+        .strip_prefix(LICENSE_SIGNATURE_PREFIX)?;
+    let signature_bytes = STANDARD.decode(signature).ok()?;
+    let signature_bytes: [u8; 64] = signature_bytes.try_into().ok()?;
+
+    Some(Signature::from_bytes(&signature_bytes))
 }
 
 #[cfg(test)]
 pub fn sign_license_for_tests(license: &License) -> String {
-    TestLicenseSignatureVerifier::default().signature_for_license(license)
+    use ed25519_dalek::{Signer, SigningKey};
+
+    const TEST_LICENSE_PRIVATE_KEY_BYTES: [u8; 32] = [
+        156, 51, 163, 38, 107, 213, 238, 174, 123, 194, 251, 39, 135, 55, 75, 218, 164, 91, 57,
+        100, 58, 254, 13, 8, 42, 92, 166, 89, 47, 174, 164, 84,
+    ];
+
+    let signing_key = SigningKey::from_bytes(&TEST_LICENSE_PRIVATE_KEY_BYTES);
+    let signature = signing_key.sign(license.canonical_payload().as_bytes());
+
+    format!(
+        "{}{}",
+        LICENSE_SIGNATURE_PREFIX,
+        STANDARD.encode(signature.to_bytes())
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
         sign_license_for_tests, LicenseService, LicenseServiceError, LicenseStatusReason,
-        TestLicenseSignatureVerifier,
+        Ed25519LicenseSignatureVerifier,
     };
     use crate::domain::{License, LicenseEntitlement, LicensePlan};
     use chrono::{TimeZone, Utc};
@@ -205,7 +235,7 @@ mod tests {
 
     #[test]
     fn returns_free_status_without_license() {
-        let service = LicenseService::new(TestLicenseSignatureVerifier::default());
+        let service = LicenseService::new(Ed25519LicenseSignatureVerifier::default());
         let now = Utc.with_ymd_and_hms(2026, 5, 21, 0, 0, 0).unwrap();
 
         let status = service.status_from_raw_license(None, now);
@@ -217,7 +247,7 @@ mod tests {
 
     #[test]
     fn validates_signed_pro_license() {
-        let service = LicenseService::new(TestLicenseSignatureVerifier::default());
+        let service = LicenseService::new(Ed25519LicenseSignatureVerifier::default());
         let now = Utc.with_ymd_and_hms(2026, 5, 21, 0, 0, 0).unwrap();
 
         let status = service.status_from_raw_license(Some(&signed_license_json()), now);
@@ -230,7 +260,7 @@ mod tests {
 
     #[test]
     fn rejects_invalid_signature() {
-        let service = LicenseService::new(TestLicenseSignatureVerifier::default());
+        let service = LicenseService::new(Ed25519LicenseSignatureVerifier::default());
         let now = Utc.with_ymd_and_hms(2026, 5, 21, 0, 0, 0).unwrap();
         let mut license = unsigned_license();
         license.signature = "invalid".to_owned();
@@ -244,7 +274,7 @@ mod tests {
 
     #[test]
     fn marks_expired_license_as_inactive() {
-        let service = LicenseService::new(TestLicenseSignatureVerifier::default());
+        let service = LicenseService::new(Ed25519LicenseSignatureVerifier::default());
         let now = Utc.with_ymd_and_hms(2026, 7, 1, 0, 0, 0).unwrap();
 
         let status = service.status_from_raw_license(Some(&signed_license_json()), now);
@@ -252,5 +282,19 @@ mod tests {
         assert_eq!(status.plan, LicensePlan::Free);
         assert_eq!(status.reason, LicenseStatusReason::Expired);
         assert!(!status.active);
+    }
+
+    #[test]
+    fn rejects_legacy_test_hash_signatures() {
+        let service = LicenseService::new(Ed25519LicenseSignatureVerifier::default());
+        let now = Utc.with_ymd_and_hms(2026, 5, 21, 0, 0, 0).unwrap();
+        let mut license = unsigned_license();
+        license.signature = "test-sha256:legacy".to_owned();
+        let raw_license = serde_json::to_string(&license).unwrap();
+
+        assert_eq!(
+            service.validate_raw_license(&raw_license, now),
+            Err(LicenseServiceError::InvalidSignature)
+        );
     }
 }

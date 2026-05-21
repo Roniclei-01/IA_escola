@@ -278,7 +278,7 @@ Aceite:
 Status inicial:
 
 - entidade `License` criada no dominio Rust;
-- `LicenseService` criado com verificador local de assinatura de teste;
+- `LicenseService` criado com verificador Ed25519;
 - comandos Tauri `load_license_status` e `activate_license` criados;
 - licenca local persistida em `app_settings` com a chave `license.local.v1`;
 - wrapper TypeScript criado para carregar status e ativar licenca;
@@ -287,9 +287,10 @@ Status inicial:
 
 Observacao:
 
-- a assinatura atual e um verificador local de teste para preparar a arquitetura;
-- antes da venda real, a P4 deve substituir a emissao por assinatura assimetrica
-  feita no backend comercial com chave privada fora do app.
+- o algoritmo de assinatura ja e assimetrico;
+- antes da venda real, a chave publica de desenvolvimento embutida no app deve
+  ser substituida por uma chave publica de producao;
+- a chave privada de producao deve existir somente no backend comercial.
 
 Validado em 2026-05-20:
 
@@ -372,6 +373,10 @@ Status inicial:
 - adaptador `Request`/`Response` criado em
   `src/commercial/license-fetch-adapter.ts` para deploy futuro em runtime
   compativel com Fetch sem prender o backend comercial a um framework;
+- assinador Ed25519 comercial criado em
+  `src/commercial/license-ed25519-signer.ts`;
+- app desktop valida licencas Ed25519 offline com chave publica embutida;
+- assinaturas legadas de teste sao rejeitadas pelo app;
 - porta `CommercialLicenseRepository` criada para separar regra comercial de
   armazenamento;
 - repositorio persistente por snapshot criado em
@@ -397,8 +402,12 @@ Validado em 2026-05-21:
 
 - `npm run test -- src/commercial/license-backend.test.ts src/commercial/license-api.test.ts src/commercial/license-fetch-adapter.test.ts src/commercial/license-persistent-repository.test.ts`
   passou com 18 testes.
+- `npm run test -- src/commercial/license-ed25519-signer.test.ts src/commercial/license-backend.test.ts src/commercial/license-api.test.ts src/commercial/license-fetch-adapter.test.ts src/commercial/license-persistent-repository.test.ts`
+  passou com 20 testes;
+- `cargo test --manifest-path src-tauri/Cargo.toml --no-default-features license`
+  passou com 17 testes de licenca e entitlement filtrados;
 - `npm run build` passou;
-- `npm run check` passou com 202 testes Vitest e 206 testes Rust;
+- `npm run check` passou com 204 testes Vitest e 207 testes Rust;
 - `npm run check:production-config` passou.
 
 ### Fatia P5: assinatura e atualizacao

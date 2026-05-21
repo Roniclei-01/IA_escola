@@ -103,6 +103,16 @@ Formato compatível com o app desktop:
 }
 ```
 
+A assinatura da licenca usa o formato:
+
+```text
+ed25519:<assinatura-base64>
+```
+
+O payload assinado e a representacao canonica da licenca sem o campo
+`signature`. A chave privada fica somente no backend comercial. O app desktop
+valida a licenca offline usando a chave publica embutida.
+
 ## `POST /webhooks/paddle`
 
 Entrada:
@@ -210,10 +220,12 @@ A fatia inicial esta em:
 
 - `src/commercial/license-backend.ts`;
 - `src/commercial/license-api.ts`;
+- `src/commercial/license-ed25519-signer.ts`;
 - `src/commercial/license-fetch-adapter.ts`;
 - `src/commercial/license-persistent-repository.ts`;
 - `src/commercial/license-backend.test.ts`;
 - `src/commercial/license-api.test.ts`;
+- `src/commercial/license-ed25519-signer.test.ts`;
 - `src/commercial/license-fetch-adapter.test.ts`;
 - `src/commercial/license-persistent-repository.test.ts`.
 
@@ -222,6 +234,8 @@ Ela cobre:
 - normalizacao de webhook Paddle;
 - validacao obrigatoria de assinatura por interface injetada;
 - emissao de licenca;
+- assinatura Ed25519 real para licencas comerciais;
+- validacao offline de licenca Ed25519 no app desktop;
 - idempotencia por `event_id`;
 - persistencia de auditoria dos webhooks processados;
 - persistencia de licencas emitidas por objeto comercial do gateway;
@@ -258,9 +272,21 @@ storage e prova os comportamentos essenciais que o Postgres devera preservar:
 - webhook duplicado continua idempotente apos recriar o repositorio;
 - webhook ignorado tambem fica registrado para auditoria.
 
+## Assinatura de licenca
+
+A assinatura assimetrica Ed25519 esta implementada em duas pontas:
+
+- backend comercial: `Ed25519CommercialLicenseSigner`;
+- app desktop: `Ed25519LicenseSignatureVerifier`.
+
+O backend comercial assina o payload canonico com a chave privada. O app valida
+o payload com a chave publica e rejeita licencas com assinatura ausente,
+assinatura legada de teste ou payload alterado.
+
+Antes de vender, gerar um par de chaves de producao e substituir a chave publica
+de desenvolvimento embutida no app. A chave privada de producao nao deve entrar
+no repositorio, no app desktop, em logs ou em artefatos distribuiveis.
+
 Regra de privacidade mantida: a persistencia comercial guarda apenas metadados
 de pagamento e licenca. Conteudo de livros, texto extraido, anotacoes, paginas
 traduzidas e cards continuam fora do backend comercial.
-
-Antes de vender, substituir o assinador de teste por assinatura assimetrica com
-chave privada mantida somente no backend comercial.

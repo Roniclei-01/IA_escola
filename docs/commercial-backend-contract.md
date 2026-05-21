@@ -22,11 +22,28 @@ controle fiscal e operacional.
 ## Endpoints planejados
 
 ```text
-POST /webhooks/paddle
-POST /licenses/activate
-POST /licenses/refresh
-GET  /licenses/status
+POST /webhooks/paddle      implementado como contrato puro
+POST /licenses/activate    implementado como contrato puro
+POST /licenses/refresh     planejado
+GET  /licenses/status      planejado
 ```
+
+## Adaptador de runtime
+
+O contrato comercial tambem possui um adaptador baseado na API padrao
+`Request`/`Response`:
+
+- `src/commercial/license-fetch-adapter.ts`;
+- `createCommercialFetchHandler()`;
+- `handleCommercialFetchRequest()`.
+
+Esse adaptador permite publicar o mesmo contrato em runtimes compativeis com
+Fetch, como Cloudflare Workers, Deno, Bun ou Node com API Fetch, sem acoplar a
+regra comercial a Express, Fastify ou outro framework.
+
+Regra mantida: o backend comercial continua recebendo apenas metadados de
+pagamento e licenca. Conteudo de livros, texto extraido, anotacoes e cards do
+usuario continuam fora desse fluxo.
 
 ## Fluxo de compra
 
@@ -86,6 +103,76 @@ Formato compatível com o app desktop:
 }
 ```
 
+## `POST /webhooks/paddle`
+
+Entrada:
+
+- metodo `POST`;
+- header `Paddle-Signature`;
+- corpo bruto do webhook Paddle.
+
+Respostas:
+
+```json
+{ "status": "license_issued", "license_id": "license_paddle_txn_01" }
+```
+
+```json
+{ "status": "duplicate", "license_id": "license_paddle_txn_01" }
+```
+
+```json
+{ "status": "ignored", "license_id": null }
+```
+
+Erros:
+
+- `401`: assinatura ausente ou invalida;
+- `400`: payload invalido.
+
+## `POST /licenses/activate`
+
+Entrada minima:
+
+```json
+{
+  "license_id": "license_paddle_txn_01",
+  "customer_email_hash": "hash-do-email-normalizado"
+}
+```
+
+Alternativa:
+
+```json
+{
+  "gateway_object_id": "txn_01",
+  "customer_email_hash": "hash-do-email-normalizado"
+}
+```
+
+Resposta de sucesso:
+
+```json
+{
+  "status": "activated",
+  "license": {
+    "id": "license_paddle_txn_01",
+    "plan": "pro",
+    "customer_email_hash": "hash-do-email-normalizado",
+    "issued_at": "2026-05-20T20:00:00Z",
+    "expires_at": "2026-06-20T20:00:00Z",
+    "entitlements": [],
+    "signature": "assinatura-do-servidor"
+  }
+}
+```
+
+Erros:
+
+- `400`: request invalida;
+- `403`: hash do cliente nao corresponde a licenca;
+- `404`: licenca nao encontrada.
+
 ## Idempotencia
 
 Todo webhook deve ser processado uma unica vez por `event_id`.
@@ -122,7 +209,11 @@ Nunca registrar:
 A fatia inicial esta em:
 
 - `src/commercial/license-backend.ts`;
-- `src/commercial/license-backend.test.ts`.
+- `src/commercial/license-api.ts`;
+- `src/commercial/license-fetch-adapter.ts`;
+- `src/commercial/license-backend.test.ts`;
+- `src/commercial/license-api.test.ts`;
+- `src/commercial/license-fetch-adapter.test.ts`.
 
 Ela cobre:
 
@@ -130,7 +221,11 @@ Ela cobre:
 - validacao obrigatoria de assinatura por interface injetada;
 - emissao de licenca;
 - idempotencia por `event_id`;
-- ignorar eventos sem pagamento ativo.
+- ignorar eventos sem pagamento ativo;
+- contrato puro de API para webhook Paddle;
+- contrato puro de API para ativacao de licenca pelo desktop;
+- adaptador `Request`/`Response` para deploy futuro em runtime compativel com
+  Fetch.
 
 Antes de vender, substituir o assinador de teste por assinatura assimetrica com
 chave privada mantida somente no backend comercial.

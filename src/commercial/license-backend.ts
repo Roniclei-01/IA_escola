@@ -7,6 +7,11 @@ export type CommercialWebhookResultStatus =
   | "ignored"
   | "rejected_invalid_signature"
   | "invalid_payload";
+export type CommercialActivationResultStatus =
+  | "activated"
+  | "not_found"
+  | "customer_mismatch"
+  | "invalid_request";
 
 export interface CommercialLicenseEntitlement {
   key: string;
@@ -65,9 +70,21 @@ export interface CommercialWebhookResult {
   license?: CommercialLicense | null;
 }
 
+export interface CommercialActivationRequest {
+  license_id?: string | null;
+  gateway_object_id?: string | null;
+  customer_email_hash?: string | null;
+}
+
+export interface CommercialActivationResult {
+  status: CommercialActivationResultStatus;
+  license?: CommercialLicense | null;
+}
+
 export class InMemoryCommercialLicenseRepository {
   private readonly processedEventIds = new Set<string>();
   private readonly licensesByObjectId = new Map<string, CommercialLicense>();
+  private readonly objectIdsByLicenseId = new Map<string, string>();
 
   hasProcessedWebhook(eventId: string): boolean {
     return this.processedEventIds.has(eventId);
@@ -81,8 +98,19 @@ export class InMemoryCommercialLicenseRepository {
     return this.licensesByObjectId.get(gatewayObjectId) ?? null;
   }
 
+  findLicenseById(licenseId: string): CommercialLicense | null {
+    const objectId = this.objectIdsByLicenseId.get(licenseId);
+
+    if (!objectId) {
+      return null;
+    }
+
+    return this.findLicenseByGatewayObject(objectId);
+  }
+
   saveLicense(event: CommercialWebhookEvent, license: CommercialLicense): void {
     this.licensesByObjectId.set(event.gateway_object_id, license);
+    this.objectIdsByLicenseId.set(license.id, event.gateway_object_id);
   }
 
   listLicenses(): CommercialLicense[] {
@@ -127,6 +155,35 @@ export class CommercialLicenseBackend {
     return {
       status: "license_issued",
       event,
+      license
+    };
+  }
+
+  activateLicense(request: CommercialActivationRequest): CommercialActivationResult {
+    const license =
+      optionalString(request.license_id) !== null
+        ? this.repository.findLicenseById(optionalString(request.license_id)!)
+        : optionalString(request.gateway_object_id) !== null
+          ? this.repository.findLicenseByGatewayObject(optionalString(request.gateway_object_id)!)
+          : null;
+
+    if (!license) {
+      return {
+        status: "not_found",
+        license: null
+      };
+    }
+
+    const customerEmailHash = optionalString(request.customer_email_hash);
+    if (customerEmailHash && customerEmailHash !== license.customer_email_hash) {
+      return {
+        status: "customer_mismatch",
+        license: null
+      };
+    }
+
+    return {
+      status: "activated",
       license
     };
   }

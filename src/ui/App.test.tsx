@@ -553,7 +553,9 @@ describe("App", () => {
     });
     openImportDialog();
 
-    expect(screen.getByLabelText("Categoria")).toHaveValue("Ciberseguranca");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Categoria")).toHaveValue("Ciberseguranca");
+    });
     expect(screen.getByLabelText("Subcategoria")).toHaveValue("Pentest");
   });
 

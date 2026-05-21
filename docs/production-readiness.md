@@ -362,12 +362,25 @@ Status inicial:
 - assinatura de webhook e obrigatoria por interface injetada;
 - licenca emitida no formato compativel com o app desktop;
 - idempotencia por `event_id` implementada;
-- eventos sem pagamento ativo sao ignorados e nao emitem licenca.
+- eventos sem pagamento ativo sao ignorados e nao emitem licenca;
+- contrato puro de API criado em `src/commercial/license-api.ts`;
+- `POST /webhooks/paddle` responde com status e `license_id`;
+- `POST /licenses/activate` retorna a licenca assinada por `license_id` ou
+  `gateway_object_id`;
+- ativacao rejeita hash de cliente divergente para evitar entregar licenca ao
+  usuario errado;
+- adaptador `Request`/`Response` criado em
+  `src/commercial/license-fetch-adapter.ts` para deploy futuro em runtime
+  compativel com Fetch sem prender o backend comercial a um framework.
 
 Validado em 2026-05-20:
 
 - `npm run test -- src/commercial/license-backend.test.ts` passou com 5 testes;
-- `npm run check` passou com 187 testes Vitest e 206 testes Rust;
+- `npm run test -- src/commercial/license-backend.test.ts src/commercial/license-api.test.ts`
+  passou com 11 testes;
+- `npm run test -- src/commercial/license-backend.test.ts src/commercial/license-api.test.ts src/commercial/license-fetch-adapter.test.ts`
+  passou com 15 testes;
+- `npm run check` passou com 197 testes Vitest e 206 testes Rust;
 - `npm run check:production-config` passou;
 - `npm run build` passou.
 

@@ -2292,13 +2292,13 @@ h1 {
   justify-content: space-between;
   gap: 10px;
   align-items: center;
-  padding-right: 48px;
+  padding-right: 34px;
 }
 
 .reader-pane-tools {
   position: absolute;
-  top: 16px;
-  right: 14px;
+  top: -1px;
+  right: -1px;
   z-index: 2;
   display: inline-grid;
   place-items: center;
@@ -2866,10 +2866,28 @@ h1 {
   position: relative;
 }
 
+.reader-pane-tools .meditation-note-reader {
+  display: inline-grid;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .document-reader .meditation-note-open {
-  color: #23352b;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  color: #2f4d3a;
   border-color: #cfd7d1;
-  background: #ffffff;
+  border-radius: 0 7px 0 8px;
+  background: #f7faf7;
+  box-shadow: none;
+  font-size: 0.92rem;
 }
 
 .meditation-note-open span {
@@ -3609,7 +3627,13 @@ h1 {
 .app-shell[data-theme="dark"] .document-reader .meditation-note-open {
   color: #dff3e7;
   border-color: #365342;
-  background: #1f3429;
+  background: #16231c;
+}
+
+.app-shell[data-theme="dark"] .document-reader .meditation-note-open:hover:not(:disabled) {
+  color: #f4fff7;
+  border-color: #3f7853;
+  background: #1f3c2a;
 }
 
 .app-shell[data-theme="dark"] .reader-pane-collapsed .reader-pane-toggle {

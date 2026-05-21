@@ -211,9 +211,11 @@ A fatia inicial esta em:
 - `src/commercial/license-backend.ts`;
 - `src/commercial/license-api.ts`;
 - `src/commercial/license-fetch-adapter.ts`;
+- `src/commercial/license-persistent-repository.ts`;
 - `src/commercial/license-backend.test.ts`;
 - `src/commercial/license-api.test.ts`;
-- `src/commercial/license-fetch-adapter.test.ts`.
+- `src/commercial/license-fetch-adapter.test.ts`;
+- `src/commercial/license-persistent-repository.test.ts`.
 
 Ela cobre:
 
@@ -221,11 +223,44 @@ Ela cobre:
 - validacao obrigatoria de assinatura por interface injetada;
 - emissao de licenca;
 - idempotencia por `event_id`;
+- persistencia de auditoria dos webhooks processados;
+- persistencia de licencas emitidas por objeto comercial do gateway;
 - ignorar eventos sem pagamento ativo;
 - contrato puro de API para webhook Paddle;
 - contrato puro de API para ativacao de licenca pelo desktop;
 - adaptador `Request`/`Response` para deploy futuro em runtime compativel com
   Fetch.
+
+## Persistencia comercial inicial
+
+A camada comercial agora possui a porta `CommercialLicenseRepository`.
+
+Essa porta separa regra de negocio de armazenamento e permite trocar a
+implementacao em memoria por uma implementacao duravel sem alterar o fluxo de
+webhook, emissao ou ativacao de licenca.
+
+A implementacao inicial duravel e:
+
+- `PersistentCommercialLicenseRepository`;
+- `CommercialLicenseRepositorySnapshotStore`.
+
+Ela persiste:
+
+- webhooks processados;
+- resultado do processamento (`license_issued` ou `ignored`);
+- relacionamento entre objeto do gateway e licenca emitida;
+- licencas emitidas para ativacao posterior pelo app.
+
+Essa fatia ainda nao e o adaptador PostgreSQL real. Ela define o contrato de
+storage e prova os comportamentos essenciais que o Postgres devera preservar:
+
+- licenca continua disponivel apos recriar o repositorio;
+- webhook duplicado continua idempotente apos recriar o repositorio;
+- webhook ignorado tambem fica registrado para auditoria.
+
+Regra de privacidade mantida: a persistencia comercial guarda apenas metadados
+de pagamento e licenca. Conteudo de livros, texto extraido, anotacoes, paginas
+traduzidas e cards continuam fora do backend comercial.
 
 Antes de vender, substituir o assinador de teste por assinatura assimetrica com
 chave privada mantida somente no backend comercial.

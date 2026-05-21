@@ -371,7 +371,16 @@ Status inicial:
   usuario errado;
 - adaptador `Request`/`Response` criado em
   `src/commercial/license-fetch-adapter.ts` para deploy futuro em runtime
-  compativel com Fetch sem prender o backend comercial a um framework.
+  compativel com Fetch sem prender o backend comercial a um framework;
+- porta `CommercialLicenseRepository` criada para separar regra comercial de
+  armazenamento;
+- repositorio persistente por snapshot criado em
+  `src/commercial/license-persistent-repository.ts`;
+- webhooks processados passam a ter registro de auditoria com resultado do
+  processamento;
+- licencas emitidas continuam disponiveis apos recriar o repositorio;
+- idempotencia de webhook duplicado continua valida apos recriar o repositorio;
+- eventos ignorados tambem sao persistidos como auditoria sem emitir licenca.
 
 Validado em 2026-05-20:
 
@@ -383,6 +392,14 @@ Validado em 2026-05-20:
 - `npm run check` passou com 197 testes Vitest e 206 testes Rust;
 - `npm run check:production-config` passou;
 - `npm run build` passou.
+
+Validado em 2026-05-21:
+
+- `npm run test -- src/commercial/license-backend.test.ts src/commercial/license-api.test.ts src/commercial/license-fetch-adapter.test.ts src/commercial/license-persistent-repository.test.ts`
+  passou com 18 testes.
+- `npm run build` passou;
+- `npm run check` passou com 202 testes Vitest e 206 testes Rust;
+- `npm run check:production-config` passou.
 
 ### Fatia P5: assinatura e atualizacao
 

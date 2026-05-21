@@ -81,17 +81,40 @@ export interface CommercialActivationResult {
   license?: CommercialLicense | null;
 }
 
-export class InMemoryCommercialLicenseRepository {
+export type CommercialProcessedWebhookResultStatus = "license_issued" | "ignored";
+
+export interface CommercialProcessedWebhookRecord {
+  gateway: CommercialGateway;
+  gateway_event_id: string;
+  gateway_event_type: string;
+  gateway_object_id: string;
+  gateway_customer_id: string;
+  gateway_subscription_id?: string | null;
+  processed_at: string;
+  result_status: CommercialProcessedWebhookResultStatus;
+  license_id?: string | null;
+}
+
+export interface CommercialLicenseRepository {
+  hasProcessedWebhook(eventId: string): boolean;
+  findLicenseByGatewayObject(gatewayObjectId: string): CommercialLicense | null;
+  findLicenseById(licenseId: string): CommercialLicense | null;
+  saveProcessedWebhook(
+    record: CommercialProcessedWebhookRecord,
+    license?: CommercialLicense | null
+  ): void;
+  listLicenses(): CommercialLicense[];
+  listProcessedWebhooks(): CommercialProcessedWebhookRecord[];
+}
+
+export class InMemoryCommercialLicenseRepository implements CommercialLicenseRepository {
   private readonly processedEventIds = new Set<string>();
+  private readonly processedWebhookRecords = new Map<string, CommercialProcessedWebhookRecord>();
   private readonly licensesByObjectId = new Map<string, CommercialLicense>();
   private readonly objectIdsByLicenseId = new Map<string, string>();
 
   hasProcessedWebhook(eventId: string): boolean {
     return this.processedEventIds.has(eventId);
-  }
-
-  markWebhookProcessed(eventId: string): void {
-    this.processedEventIds.add(eventId);
   }
 
   findLicenseByGatewayObject(gatewayObjectId: string): CommercialLicense | null {
@@ -108,19 +131,39 @@ export class InMemoryCommercialLicenseRepository {
     return this.findLicenseByGatewayObject(objectId);
   }
 
-  saveLicense(event: CommercialWebhookEvent, license: CommercialLicense): void {
-    this.licensesByObjectId.set(event.gateway_object_id, license);
-    this.objectIdsByLicenseId.set(license.id, event.gateway_object_id);
+  saveProcessedWebhook(
+    record: CommercialProcessedWebhookRecord,
+    license?: CommercialLicense | null
+  ): void {
+    if (this.hasProcessedWebhook(record.gateway_event_id)) {
+      return;
+    }
+
+    this.processedEventIds.add(record.gateway_event_id);
+    this.processedWebhookRecords.set(record.gateway_event_id, record);
+
+    if (license) {
+      this.saveLicense(record.gateway_object_id, license);
+    }
   }
 
   listLicenses(): CommercialLicense[] {
     return [...this.licensesByObjectId.values()];
   }
+
+  listProcessedWebhooks(): CommercialProcessedWebhookRecord[] {
+    return [...this.processedWebhookRecords.values()];
+  }
+
+  private saveLicense(gatewayObjectId: string, license: CommercialLicense): void {
+    this.licensesByObjectId.set(gatewayObjectId, license);
+    this.objectIdsByLicenseId.set(license.id, gatewayObjectId);
+  }
 }
 
 export class CommercialLicenseBackend {
   constructor(
-    private readonly repository: InMemoryCommercialLicenseRepository,
+    private readonly repository: CommercialLicenseRepository,
     private readonly signer: CommercialLicenseSigner
   ) {}
 
@@ -133,9 +176,9 @@ export class CommercialLicenseBackend {
       };
     }
 
-    this.repository.markWebhookProcessed(event.gateway_event_id);
-
     if (event.status !== "paid") {
+      this.repository.saveProcessedWebhook(buildProcessedWebhookRecord(event, "ignored", null));
+
       return {
         status: "ignored",
         event,
@@ -150,7 +193,10 @@ export class CommercialLicenseBackend {
       signature
     };
 
-    this.repository.saveLicense(event, license);
+    this.repository.saveProcessedWebhook(
+      buildProcessedWebhookRecord(event, "license_issued", license.id),
+      license
+    );
 
     return {
       status: "license_issued",
@@ -284,6 +330,24 @@ function buildCommercialLicense(event: CommercialWebhookEvent): Omit<CommercialL
     issued_at: event.occurred_at,
     expires_at: event.plan === "lifetime" ? null : event.expires_at ?? null,
     entitlements: entitlementsForPlan(event.plan, event.expires_at)
+  };
+}
+
+function buildProcessedWebhookRecord(
+  event: CommercialWebhookEvent,
+  resultStatus: CommercialProcessedWebhookResultStatus,
+  licenseId: string | null
+): CommercialProcessedWebhookRecord {
+  return {
+    gateway: event.gateway,
+    gateway_event_id: event.gateway_event_id,
+    gateway_event_type: event.gateway_event_type,
+    gateway_object_id: event.gateway_object_id,
+    gateway_customer_id: event.gateway_customer_id,
+    gateway_subscription_id: event.gateway_subscription_id ?? null,
+    processed_at: new Date().toISOString(),
+    result_status: resultStatus,
+    license_id: licenseId
   };
 }
 

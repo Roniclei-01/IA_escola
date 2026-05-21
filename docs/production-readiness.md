@@ -167,6 +167,7 @@ Antes de publicar qualquer versao:
 
 ```bash
 npm run check
+npm run check:production-config
 npm run build
 npm run test:e2e
 npm run tauri build
@@ -225,11 +226,38 @@ Escopo:
 - criar checklist de release por plataforma;
 - documentar variaveis de ambiente de build.
 
+Status inicial:
+
+- `identifier` alterado para `com.estudoialocal.desktop`;
+- CSP de producao definida para bloquear `object-src`, `frame-ancestors` e formularios;
+- `devCsp` separada da CSP de producao para manter o Vite funcionando em desenvolvimento;
+- imagens `data:` continuam permitidas para renderizacao local de paginas PDF;
+- permissoes Tauri mantidas em `core:default`, dialogo de abrir/salvar e notificacoes;
+- `npm run check:production-config` valida automaticamente configuracao Tauri e capabilities.
+
 Aceite:
 
 - app continua abrindo em dev e build;
 - nenhum recurso quebra por CSP;
 - capacidades continuam minimas.
+
+Comandos de validacao:
+
+```bash
+npm run check:production-config
+npm run build
+npm run tauri build
+```
+
+Validado em 2026-05-20:
+
+- `npm run check:production-config` passou;
+- `npm run check` passou com 178 testes Vitest e 188 testes Rust;
+- `npm run build` passou;
+- `npm run tauri build` compilou o binario e gerou `.deb` e `.rpm`;
+- o AppImage precisou de rede para baixar o runtime do `appimagetool`;
+- `npm run tauri build -- --bundles appimage` passou com rede liberada e gerou
+  `src-tauri/target/release/bundle/appimage/Estudo IA Local_0.1.0_amd64.AppImage`.
 
 ### Fatia P2: dominio de licenca
 
